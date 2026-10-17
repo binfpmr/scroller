@@ -5,7 +5,14 @@ find_program(SCROLLER_READELF readelf REQUIRED)
 
 set(SCROLLER_LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/src/boot/efi.ld)
 
+# Only the compiler's own freestanding headers (stdint.h, stddef.h, stdarg.h, ...) are visible: no glibc, and no
+# libstdc++ either (its headers depend on glibc's).
+execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=include
+                OUTPUT_VARIABLE SCROLLER_COMPILER_INCLUDE OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+
 add_compile_options(
+  $<$<COMPILE_LANGUAGE:C,CXX>:-nostdinc>
+  $<$<COMPILE_LANGUAGE:C,CXX>:-isystem${SCROLLER_COMPILER_INCLUDE}>
   $<$<COMPILE_LANGUAGE:C,CXX>:-ffreestanding>
   $<$<COMPILE_LANGUAGE:C,CXX>:-fpie>
   $<$<COMPILE_LANGUAGE:C,CXX>:-fvisibility=hidden>
@@ -14,7 +21,8 @@ add_compile_options(
   $<$<COMPILE_LANGUAGE:C,CXX>:-fdata-sections>
   $<$<COMPILE_LANGUAGE:C,CXX>:-fno-stack-protector>
   $<$<COMPILE_LANGUAGE:C,CXX>:-fno-stack-check>
-  $<$<COMPILE_LANGUAGE:C,CXX>:-fno-stack-clash-protection>
+  $<$<COMPILE_LANG_AND_ID:C,GNU>:-fno-stack-clash-protection>
+  $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-fno-stack-clash-protection>
   $<$<COMPILE_LANGUAGE:C,CXX>:-fcf-protection=none>
   $<$<COMPILE_LANGUAGE:C,CXX>:-fno-asynchronous-unwind-tables>
   $<$<COMPILE_LANGUAGE:C,CXX>:-fno-unwind-tables>

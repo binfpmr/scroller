@@ -1,0 +1,3 @@
+# clangd parses the GCC compile commands; drop GCC-only flags it does not understand.
+CompileFlags:
+  Remove: [-fno-tree-loop-distribute-patterns]
