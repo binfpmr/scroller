@@ -29,6 +29,7 @@ set(SCROLLER_CORE_SOURCES
   src/gfx/draw.cpp
   src/gfx/font.cpp
   src/gfx/present.cpp
+  src/gfx/sprite.cpp
   src/gfx/viewport.cpp
   src/lib/format.cpp
   src/lib/pack.cpp
