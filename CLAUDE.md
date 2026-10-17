@@ -16,7 +16,14 @@ scripts/run-qemu.sh [--debug]                            # interactive run (user
 clang-format -i <files>                                  # Google style, 120 columns (.clang-format)
 ```
 
-(Presets and scripts are created in milestone M0; if they don't exist yet, M0 is the task.)
+Debugging without a window (how Claude can use gdb):
+
+```sh
+python3 tools/qemu.py debug --headless > /tmp/qd.txt 2>&1 &     # wait until /tmp/qd.txt says "qemu: waiting for gdb"
+gdb -batch -x tools/gdb/gdbinit -ex 'break SomeFunction' -ex continue -ex bt -ex 'info locals' -ex kill
+```
+
+The debug log (`build/uefi/debugcon.log`) is the main diagnostic; `Log()` writes to it. Screenshots (`smoke.png`) can be viewed directly.
 
 ## Rules that are easy to get wrong
 

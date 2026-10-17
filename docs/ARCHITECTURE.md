@@ -78,7 +78,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 - Link (roughly): `-nostdlib -static-pie -Wl,--no-dynamic-linker -Wl,-z,norelro -T src/boot/efi.ld`, then `objcopy --target=efi-app-x86_64 --subsystem=10`.
 - UEFI strings are `char16_t` (`u"..."` literals), so no `-fshort-wchar`.
 - No exceptions, no RTTI, no heap `new`/`delete` (allocate from the arena), no global objects with non-trivial constructors (nothing runs them).
-- Headers: compiler freestanding headers (`<stdint.h>`, `<stddef.h>`, `<stdarg.h>`, ...) and libstdc++'s freestanding subset (`<cstdint>`, `<type_traits>`, `<utility>`, `<bit>`, `<array>`, `<span>`, `<concepts>`, ...), as long as it compiles under `-ffreestanding` and needs no runtime library. No allocating containers.
+- Headers: only the compiler's own freestanding C headers (`<stdint.h>`, `<stddef.h>`, `<stdarg.h>`, `<stdbool.h>`, `<limits.h>`, ...); the target build uses `-nostdinc` so glibc headers cannot leak in. The host's libstdc++ headers are not usable (they depend on glibc), so C++ utilities we need (`Span`, `Min`/`Max`, placement new, type traits) live in `lib/`, mostly as thin wrappers over compiler builtins. A real `x86_64-elf` cross GCC would make libstdc++'s freestanding headers available if we ever want them.
 - The compiler may emit calls to `memset`/`memcpy`/`memmove`/`memcmp`; `lib/` provides them.
 - SSE is enabled by UEFI and may be used; floats are allowed, but game physics uses fixed point.
 

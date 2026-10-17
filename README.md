@@ -7,4 +7,11 @@ A small 2D platformer that boots on bare-metal x86_64 via UEFI: 320x240 game scr
 - [docs/WORKFLOW.md](docs/WORKFLOW.md): prerequisites, build, run, debug, writing to USB, development loop
 - [docs/REFERENCES.md](docs/REFERENCES.md): manuals and links
 
-Status: planning, nothing builds yet (milestone M0 next).
+Quick start (prerequisites in [docs/WORKFLOW.md](docs/WORKFLOW.md)):
+
+```sh
+cmake --preset uefi && cmake --build --preset uefi
+scripts/run-qemu.sh
+```
+
+Status: M0 done (boots in QEMU, draws a test pattern); M1 next.

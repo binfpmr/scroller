@@ -11,6 +11,9 @@ volatile int scroller_debugger_wait = 1;
 
 namespace {
 
+// A table of pointers: needs R_X86_64_RELATIVE relocations, so the log line using it also shows crt0.S applied them.
+constexpr const char* kPixelFormatNames[] = {"RGBX", "BGRX", "bitmask", "blt-only"};
+
 // tools/qemu.py sets the QEMU debugcon readback value to this in debug mode; real hardware reads 0xFF here.
 constexpr uint8_t kDebugconReadbackDebug = 0xdb;
 
@@ -91,8 +94,8 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
     return status;
   }
   const EFI_GRAPHICS_OUTPUT_MODE_INFORMATION& info = *gop->Mode->Info;
-  Log("GOP mode %u/%u: %ux%u format %u stride %u fb %p\n", gop->Mode->Mode, gop->Mode->MaxMode,
-      info.HorizontalResolution, info.VerticalResolution, static_cast<unsigned>(info.PixelFormat),
+  Log("GOP mode %u/%u: %ux%u %s stride %u fb %p\n", gop->Mode->Mode, gop->Mode->MaxMode, info.HorizontalResolution,
+      info.VerticalResolution, info.PixelFormat <= PixelBltOnly ? kPixelFormatNames[info.PixelFormat] : "unknown",
       info.PixelsPerScanLine, reinterpret_cast<void*>(gop->Mode->FrameBufferBase));
   if (info.PixelFormat != PixelRedGreenBlueReserved8BitPerColor &&
       info.PixelFormat != PixelBlueGreenRedReserved8BitPerColor) {

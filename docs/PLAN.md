@@ -5,14 +5,15 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 ## M0: toolchain and "hello pixels"
 
 - [x] Install missing tools (see `docs/WORKFLOW.md`)
-- [ ] CMake project with `uefi` (GCC), `uefi-clang` and `host` presets, freestanding toolchain file
-- [ ] `crt0.S` + linker script + `objcopy` to PE; verify relocations are applied and OVMF loads the image
-- [ ] Minimal UEFI headers + `efi_main` that logs to debugcon/serial and fills the screen with a colour
-- [ ] `scripts/build-image.sh`: GPT disk image with a FAT32 ESP (`/EFI/BOOT/BOOTX64.EFI`), plus a bare ESP image for copying onto an existing partition
-- [ ] `scripts/run-qemu.sh` (interactive, `--debug` for gdb stub)
-- [ ] `scripts/smoke-test.sh`: headless boot, wait, capture screenshot + log, fail on missing "boot ok" line
-- [ ] VS Code: build, run, debug (gdb breakpoint in `efi_main` hits with source)
-- [ ] `lib/` basics: mem*, minimal formatted logging
+- [x] CMake project with `uefi` (GCC), `uefi-clang` and `host` presets, freestanding toolchain file
+- [x] `crt0.S` + linker script + `objcopy` to PE; verify relocations are applied and OVMF loads the image
+- [x] Minimal UEFI headers + `efi_main` that logs to debugcon/serial and fills the screen with a colour
+- [x] `scripts/build-image.sh`: GPT disk image with a FAT32 ESP (`/EFI/BOOT/BOOTX64.EFI`), plus a bare ESP image for copying onto an existing partition
+- [x] `scripts/run-qemu.sh` (interactive, `--debug` for gdb stub)
+- [x] `scripts/smoke-test.sh`: headless boot, wait, capture screenshot + log, fail on missing "boot ok" line
+- [x] gdb: breakpoint in `efi_main` hits with source (command line, verified)
+- [ ] VS Code: build, run, debug from the UI (needs a check by a human)
+- [x] `lib/` basics: mem*, minimal formatted logging
 
 ## M1: own the machine
 

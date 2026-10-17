@@ -1,7 +1,5 @@
 # Workflow
 
-> Most commands below refer to files created in milestone M0 (CMake presets, `scripts/`). Until then this is the intended setup.
-
 ## Prerequisites (Ubuntu)
 
 ```sh
@@ -33,19 +31,29 @@ ctest --preset host -R collision      # single test by name regex
 ## Run
 
 ```sh
-scripts/run-qemu.sh                 # window, PS/2 keyboard, debug log -> build/uefi/debugcon.log
-scripts/run-qemu.sh --debug         # also: gdb stub on :1234, CPU paused until debugger attaches
-scripts/smoke-test.sh               # headless; boots, waits, writes build/uefi/smoke.png + log, non-zero exit on failure
+scripts/run-qemu.sh                 # window, serial on stdio, debug log -> build/uefi/debugcon.log
+scripts/run-qemu.sh --debug         # also: gdb stub on :1234; the game waits in efi_main for the debugger
+scripts/smoke-test.sh               # headless; waits for "boot ok" in the log, writes build/uefi/smoke.png
 ```
+
+All three wrap `tools/qemu.py` (`run`, `debug`, `smoke`); extra options: `--build build/uefi-clang` to run another preset's image, `--headless` for run/debug, `--expect TEXT`, `--timeout S`, `--screenshot PATH` for smoke. The smoke test takes the screenshot on failure too, so a hang shows where it is stuck.
+
+**Hybrid Intel CPUs:** with KVM, OVMF intermittently hangs at the TianoCore logo when QEMU's vCPU thread migrates between P- and E-cores (seen on an i5-1334U, kernel 7.0, QEMU 10.2). `tools/qemu.py` therefore pins itself to the E-cores when `/sys/devices/cpu_atom/cpus` exists. Without KVM it falls back to TCG (slower, never hung).
 
 QEMU basics used: `-machine q35`, OVMF firmware (`/usr/share/OVMF/OVMF_CODE_4M.fd` + a copy of `OVMF_VARS_4M.fd` in `build/`), `-drive format=raw,file=build/uefi/scroller.img`, `-debugcon file:...` on port 0xE9, `-serial stdio`. Extra devices are added as milestones need them (`-device sb16`, `-device qemu-xhci -device usb-kbd`, `-device nvme`, ...).
 
 ## Debug
 
-1. `scripts/run-qemu.sh --debug` (VS Code task *QEMU (debug)* does this).
-2. In debug builds `efi_main` logs its image base to the debug log and spins on a `volatile` flag until a debugger clears it.
-3. The gdb helper (`tools/gdb/`) reads the image base from the log, runs `add-symbol-file build/uefi/scroller.elf -o <base>` (the ELF is linked at 0, so the offset is the image base), clears the flag, and continues.
-4. VS Code launch config *Debug in QEMU* does steps 1 to 3; breakpoints in source then work as usual.
+1. `scripts/run-qemu.sh --debug` sets the QEMU debugcon readback value to 0xDB. `efi_main` reads port 0xE9, sees it, logs its image base and `waiting for debugger`, and spins on `scroller_debugger_wait` (real hardware reads 0xFF and never waits).
+2. gdb connects to `:1234`; the `scroller-attach` command (`tools/gdb/scroller.py`) reads the image base from `debugcon.log`, runs `add-symbol-file build/uefi/scroller.elf -o <base>` (the ELF is linked at 0, so the offset is the image base) and clears the flag.
+3. Breakpoints in source then work as usual.
+
+VS Code: launch config *Debug in QEMU* (F5) does all of this. Command line, from the repository root:
+
+```sh
+scripts/run-qemu.sh --debug &          # wait for "qemu: waiting for gdb"
+gdb -x tools/gdb/gdbinit               # connects, loads symbols, releases efi_main; then e.g. `break DrawTestPattern`, `continue`
+```
 
 ## Write to a USB stick / disk
 
