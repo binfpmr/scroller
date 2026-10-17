@@ -19,11 +19,26 @@ struct Registrar {
   Registrar(const char* name, TestFunction function) { Register(name, function); }
 };
 
+// Prints a value if it is streamable; lib::Fixed prints as raw/256.
+template <typename T>
+void Print(std::ostream& os, const T& value) {
+  if constexpr (requires { os << value; }) {
+    os << value;
+  } else if constexpr (requires { value.raw(); }) {
+    os << value.raw() << "/256";
+  } else {
+    os << "(value not printable)";
+  }
+}
+
 template <typename A, typename B>
 void ExpectEq(const A& actual, const B& expected, const char* expr, const char* file, int line) {
   if (!(actual == expected)) {
-    std::cerr << file << ":" << line << ": expected " << expr << "\n  actual:   " << actual
-              << "\n  expected: " << expected << "\n";
+    std::cerr << file << ":" << line << ": expected " << expr << "\n  actual:   ";
+    Print(std::cerr, actual);
+    std::cerr << "\n  expected: ";
+    Print(std::cerr, expected);
+    std::cerr << "\n";
     Fail(file, line, nullptr);
   }
 }
