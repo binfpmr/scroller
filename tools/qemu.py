@@ -3,7 +3,16 @@
 
   qemu.py run      interactive window, serial on stdio
   qemu.py debug    like run, plus gdb stub on :1234; the game waits in efi_main until gdb releases it
-  qemu.py smoke    headless: boot, wait for a line in the debug log, take a screenshot, quit (exit 1 on failure)
+  qemu.py smoke    headless: boot, wait for a line in the debug log, optionally play a key script, take a
+                   screenshot, quit (exit 1 on failure)
+
+Key script (--keys), space-separated actions run after the boot line appeared:
+  KEY            tap a key (QEMU qcode: left, right, up, down, spc, z, esc, ...)
+  KEY:SECONDS    hold a key
+  wait:SECONDS   pause
+  shot:NAME      screenshot to <build dir>/smoke-NAME.png
+  expect:TEXT    wait (up to --timeout) until TEXT appears in the debug log after the previous expect's match
+                 (or after the start of the script)
 
 The debug log (QEMU debugcon, port 0xE9) always goes to <build dir>/debugcon.log.
 """
@@ -116,6 +125,41 @@ class Qmp:
         return reply.get("return", {})
 
 
+def send_key(qmp: Qmp, key: str, down: bool) -> None:
+    event = {"type": "key", "data": {"down": down, "key": {"type": "qcode", "data": key}}}
+    qmp.execute("input-send-event", events=[event])
+
+
+def read_log(log: Path) -> str:
+    return log.read_text(errors="replace") if log.exists() else ""
+
+
+def play_keys(qmp: Qmp, script: str, build: Path, log: Path, timeout: float, proc: subprocess.Popen) -> bool:
+    mark = len(read_log(log))
+    for action in script.split():
+        name, _, value = action.partition(":")
+        if name == "wait":
+            time.sleep(float(value))
+        elif name == "shot":
+            path = build / f"smoke-{value}.png"
+            qmp.execute("screendump", filename=str(path), format="png")
+            print(f"screenshot: {path}")
+        elif name == "expect":
+            deadline = time.monotonic() + timeout
+            while (found := read_log(log).find(value, mark)) < 0:
+                if time.monotonic() > deadline or proc.poll() is not None:
+                    print(f"key script: '{value}' did not appear", file=sys.stderr)
+                    return False
+                time.sleep(0.1)
+            mark = found + len(value)
+        else:
+            send_key(qmp, name, True)
+            time.sleep(float(value) if value else 0.1)
+            send_key(qmp, name, False)
+            time.sleep(0.05)
+    return True
+
+
 def cmd_run(args) -> int:
     os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=args.headless, qmp=None))
 
@@ -141,11 +185,14 @@ def cmd_smoke(args) -> int:
 
     proc = subprocess.Popen(qemu_command(args.build, debug=False, headless=True, qmp=qmp_path))
     try:
-        ok = wait_for_log(log, args.expect, args.timeout, proc)
+        booted = wait_for_log(log, args.expect, args.timeout, proc)
+        ok = booted
         if proc.poll() is None:
+            qmp = Qmp(qmp_path)
+            if ok and args.keys:
+                ok = play_keys(qmp, args.keys, args.build, log, args.timeout, proc)
             if ok:
                 time.sleep(args.settle)
-            qmp = Qmp(qmp_path)
             qmp.execute("screendump", filename=str(screenshot), format="png")  # also on failure, to see why
             qmp.execute("quit")
     finally:
@@ -159,9 +206,12 @@ def cmd_smoke(args) -> int:
     print(serial.read_text(errors="replace") if serial.exists() else "(no log)")
     print(f"--- {log} ---")
     print(log.read_text(errors="replace") if log.exists() else "(no log)")
-    if not ok:
+    if not booted:
         print(f"smoke test FAILED: '{args.expect}' not seen within {args.timeout}s; screenshot: {screenshot}",
               file=sys.stderr)
+        return 1
+    if not ok:
+        print(f"smoke test FAILED in the key script; screenshot: {screenshot}", file=sys.stderr)
         return 1
     print(f"smoke test passed, screenshot: {screenshot}")
     return 0
@@ -184,6 +234,7 @@ def main() -> int:
     smoke.add_argument("--timeout", type=float, default=30)
     smoke.add_argument("--settle", type=float, default=0.5, help="seconds to wait before the screenshot")
     smoke.add_argument("--screenshot", type=Path)
+    smoke.add_argument("--keys", default="", help="key script, see above")
     smoke.set_defaults(func=cmd_smoke)
     args = parser.parse_args()
     args.build = args.build.resolve()
