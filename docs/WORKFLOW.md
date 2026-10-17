@@ -17,6 +17,7 @@ CMake presets, all using Ninja, output under `build/<preset>/`:
 | Preset | What | Output |
 |---|---|---|
 | `uefi` | Freestanding target build with GCC | `build/uefi/scroller.elf` (with symbols), `scroller.efi` (PE), `scroller.img` (GPT disk), `esp.img` (FAT ESP only) |
+| `uefi-input` | Like `uefi`, but stays in boot services and uses UEFI keyboard input (USB-only machines) | `build/uefi-input/...` |
 | `uefi-clang` | Same with clang (`x86_64-unknown-none-elf`), GNU ld/objcopy | `build/uefi-clang/...` |
 | `host` | Game/gfx/lib code + unit tests for Linux | `build/host/tests/...` |
 
@@ -37,6 +38,14 @@ scripts/smoke-test.sh               # headless; waits for "boot ok" in the log, 
 ```
 
 All three wrap `tools/qemu.py` (`run`, `debug`, `smoke`); extra options: `--build build/uefi-clang` to run another preset's image, `--headless` for run/debug, `--expect TEXT`, `--timeout S`, `--screenshot PATH` for smoke. The smoke test takes the screenshot on failure too, so a hang shows where it is stuck.
+
+Smoke tests can drive the game with a key script (`tools/qemu.py smoke --help`):
+
+```sh
+scripts/smoke-test.sh --keys "shot:start right:2 down:1 shot:moved esc expect:reboot expect:efi_main"
+```
+
+Taps/holds use QEMU key names (`left`, `right`, `up`, `down`, `spc`, `z`, `esc`), `shot:NAME` writes `build/uefi/smoke-NAME.png`, `expect:TEXT` waits for TEXT in the debug log after the previous match. The game logs timing and the camera position every 5 s, which makes scripted checks easy.
 
 **Hybrid Intel CPUs:** with KVM, OVMF intermittently hangs at the TianoCore logo when QEMU's vCPU thread migrates between P- and E-cores (seen on an i5-1334U, kernel 7.0, QEMU 10.2). `tools/qemu.py` therefore pins itself to the E-cores when `/sys/devices/cpu_atom/cpus` exists. Without KVM it falls back to TCG (slower, never hung).
 

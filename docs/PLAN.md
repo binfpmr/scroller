@@ -17,14 +17,14 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## M1: own the machine
 
-- [ ] GOP mode selection (integer scale preference), pixel format handling
-- [ ] 320x240 `Surface` + scaled `present()`
-- [ ] TSC calibration, `ExitBootServices`, `BootInfo` hand-off
-- [ ] PS/2 keyboard polling -> `InputState` (held / pressed / released per key)
-- [ ] 60 Hz fixed-step loop; test pattern that scrolls with arrow keys
-- [ ] `SCROLLER_UEFI_INPUT` fallback build for real-HW trials
-- [ ] Esc reboots (`ResetSystem`, with fallbacks)
-- [ ] First real hardware test from a USB stick
+- [x] GOP mode selection (integer scale preference), pixel format handling
+- [x] 320x240 `Surface` + scaled `present()`
+- [x] TSC calibration, `ExitBootServices`, `BootInfo` hand-off
+- [x] PS/2 keyboard polling -> `InputState` (held / pressed / released per key)
+- [x] 60 Hz fixed-step loop; test pattern that scrolls with arrow keys
+- [x] `SCROLLER_UEFI_INPUT` fallback build for real-HW trials (preset `uefi-input`)
+- [x] Esc reboots (`ResetSystem`, with fallbacks)
+- [ ] First real hardware test from a USB stick (needs a human; both `uefi` and `uefi-input` images)
 
 ## M2: platformer core
 

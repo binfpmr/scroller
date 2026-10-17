@@ -11,7 +11,7 @@ cmake --preset uefi && cmake --build --preset uefi      # target build -> build/
 cmake --preset host && cmake --build --preset host       # host build of game/gfx/lib + tests
 ctest --preset host                                      # all host unit tests
 ctest --preset host -R <regex>                           # single test
-scripts/smoke-test.sh                                    # headless QEMU boot; check build/uefi/debugcon.log and smoke.png
+scripts/smoke-test.sh [--keys "right:2 shot:x esc ..."]     # headless QEMU boot + key script; read debugcon.log and the PNGs
 scripts/run-qemu.sh [--debug]                            # interactive run (user's display), gdb stub with --debug
 clang-format -i <files>                                  # Google style, 120 columns (.clang-format)
 ```
