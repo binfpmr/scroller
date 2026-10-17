@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "cmake --preset uefi && cmake --build --preset uefi",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "test (host)",
+      "type": "shell",
+      "command": "cmake --preset host && cmake --build --preset host && ctest --preset host --output-on-failure",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "QEMU",
+      "type": "shell",
+      "command": "scripts/run-qemu.sh",
+      "dependsOn": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "QEMU (debug)",
+      "type": "shell",
+      "command": "scripts/run-qemu.sh --debug",
+      "dependsOn": "build",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "qemu",
+        "pattern": { "regexp": "^__never_matches__$" },
+        "background": { "activesBegin": "^qemu: starting", "endsPattern": "^qemu: waiting for gdb" }
+      }
+    },
+    {
+      "label": "stop QEMU",
+      "type": "shell",
+      "command": "pkill -f 'qemu-system-x86_64.*scroller' || true",
+      "problemMatcher": []
+    },
+    {
+      "label": "smoke test",
+      "type": "shell",
+      "command": "scripts/smoke-test.sh",
+      "dependsOn": "build",
+      "problemMatcher": []
+    }
+  ]
+}
