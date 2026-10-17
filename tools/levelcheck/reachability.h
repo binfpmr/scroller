@@ -13,6 +13,12 @@ namespace levelcheck {
 
 struct Reachability {
   std::vector<game::Player> rest_positions;  // every distinct resting position found (pixel precision)
+  std::vector<std::vector<int>> moves_to;    // for each position, the positions one move leads to
+
+  // Per position: can the goal still be reached from it? (All true if the level has no goal.)
+  std::vector<bool> CanReachGoal(const game::Level& level) const;
+  // True if the player can rest at a spot from which the goal is no longer reachable.
+  bool HasDeadEnd(const game::Level& level) const;
 
   // True if some resting position has its feet on top of tile row `ty` with the hitbox overlapping column `tx`.
   bool StandsOn(int tx, int ty) const;
@@ -24,7 +30,8 @@ struct Reachability {
 
 Reachability Explore(const game::Level& level, size_t max_states = 200000);
 
-// The level as text with 'o' in every empty tile the player can stand in; reachable goals are shown as 'g'.
+// The level as text with 'o' in every empty tile the player can stand in, 'x' where they can stand but never reach the
+// goal from (dead end), and 'g' for reachable goals.
 std::string RenderMap(const game::Level& level, const Reachability& reach);
 
 }  // namespace levelcheck

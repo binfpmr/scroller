@@ -45,6 +45,6 @@
     { "name": "host", "configurePreset": "host" }
   ],
   "testPresets": [
-    { "name": "host", "configurePreset": "host", "output": { "outputOnFailure": true } }
+    { "name": "host", "configurePreset": "host", "output": { "outputOnFailure": true }, "execution": { "jobs": 8 } }
   ]
 }

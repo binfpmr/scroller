@@ -35,9 +35,11 @@ int main(int argc, char** argv) {
     has_goal = has_goal || level.tiles[i] == game::Tile::kGoal;
   }
   if (has_goal) {
-    const bool ok = reach.ReachesGoal(level);
-    std::cout << "goal " << (ok ? "reachable" : "NOT reachable") << "\n";
-    return ok ? 0 : 1;
+    const bool reachable = reach.ReachesGoal(level);
+    const bool dead_end = reach.HasDeadEnd(level);
+    std::cout << "goal " << (reachable ? "reachable" : "NOT reachable") << ", "
+              << (dead_end ? "DEAD ENDS (x) present" : "no dead ends") << "\n";
+    return reachable && !dead_end ? 0 : 1;
   }
   return 0;
 }

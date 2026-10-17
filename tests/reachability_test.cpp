@@ -1,5 +1,7 @@
 #include "reachability.h"
 
+#include <string>
+
 #include "game_test_util.h"
 
 TEST(TestLevelIsFullyClimbable) {
@@ -12,20 +14,21 @@ TEST(TestLevelIsFullyClimbable) {
 }
 
 TEST(UnreachableLedgeIsReported) {
-  // Ledge in the middle, 7 tiles above the floor: higher than a duck-jump, too far from the walls to wall-jump to.
+  // Ledge 7 tiles up in the middle of a wide room: above a duck-jump, and too far from the walls for a duck-jump plus
+  // wall-jump to drift onto it.
   test::TestLevel t(
-      "#............#\n"
-      "#....####....#\n"
-      "#............#\n"
-      "#............#\n"
-      "#............#\n"
-      "#............#\n"
-      "#............#\n"
-      "#P...........#\n"
-      "##############\n");
+      "#....................#\n"
+      "#........####........#\n"
+      "#....................#\n"
+      "#....................#\n"
+      "#....................#\n"
+      "#....................#\n"
+      "#....................#\n"
+      "#P...................#\n"
+      "######################\n");
   const levelcheck::Reachability reach = levelcheck::Explore(t.level);
-  EXPECT_TRUE(reach.StandsOn(12, 8));
-  EXPECT_TRUE(!reach.StandsOn(6, 1));
+  EXPECT_TRUE(reach.StandsOn(20, 8));
+  EXPECT_TRUE(!reach.StandsOn(10, 1));
 }
 
 TEST(DuckJumpReachesFourTilesUp) {
@@ -55,4 +58,23 @@ TEST(WallJumpClimbsAShaft) {
       "#########\n");
   const levelcheck::Reachability reach = levelcheck::Explore(t.level);
   EXPECT_TRUE(reach.StandsOn(1, 1));
+}
+
+TEST(DeadEndPitIsReported) {
+  // A pit 12 tiles deep and 6 wide: a duck-jump plus a wall-jump reaches ~8.5 tiles, and the walls are too far apart
+  // to chain wall-jumps. Falling in is possible, getting out is not.
+  std::string text = "#................#\n#................#\n#P.............G.#\n";
+  for (int i = 0; i < 12; ++i) {
+    text += "#####......#######\n";
+  }
+  text += "##################\n";
+  test::TestLevel trap(text.c_str());
+  const levelcheck::Reachability reach = levelcheck::Explore(trap.level);
+  EXPECT_TRUE(reach.ReachesGoal(trap.level));
+  EXPECT_TRUE(reach.HasDeadEnd(trap.level));
+  test::TestLevel open(
+      "#................#\n"
+      "#P.............G.#\n"
+      "##################\n");
+  EXPECT_TRUE(!levelcheck::Explore(open.level).HasDeadEnd(open.level));
 }

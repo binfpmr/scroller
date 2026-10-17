@@ -1,7 +1,7 @@
 #include "reachability.h"
 
 #include <deque>
-#include <unordered_set>
+#include <unordered_map>
 
 namespace levelcheck {
 namespace {
@@ -51,6 +51,7 @@ struct Move {
   bool duck = false;       // Down held when jumping: duck-jump
   int wall_jump_at = 0;    // if > 0: press jump again this many ticks after the first jump (a wall-jump at a wall)
   int after_wall_dir = 0;  // direction held after the second jump
+  int chain_every = 0;     // if > 0: press jump every this many ticks, steering toward the next wall (wall-jump climb)
 };
 
 std::vector<Move> AllMoves() {
@@ -75,6 +76,16 @@ std::vector<Move> AllMoves() {
       }
     }
   }
+  // Climb between two walls: keep pressing jump, steering the way the last wall-jump pushed.
+  for (int dir : {-1, 1}) {
+    for (int run : {0, 10}) {
+      for (bool duck : {false, true}) {
+        for (int every : {6, 10, 14, 18}) {
+          moves.push_back({dir, run, true, 60, dir, duck, 0, 0, every});
+        }
+      }
+    }
+  }
   // Jump at a wall, then wall-jump off it after various delays.
   for (int dir : {-1, 1}) {
     for (int run : {0, 14}) {
@@ -96,8 +107,14 @@ bool Apply(Player& p, const game::Level& level, const Move& m) {
   }
   if (m.jump) {
     game::UpdatePlayer(p, Input(m.air_dir, true, true, m.duck), level);
+    int steer = m.air_dir;
     for (int i = 1; i < kSettleTicks && !p.on_ground; ++i) {
-      if (m.wall_jump_at > 0 && i >= m.wall_jump_at) {
+      if (m.chain_every > 0) {
+        if (p.wall_jump_away_dir != 0) {
+          steer = p.wall_jump_away_dir;  // after the push ends, keep heading for the opposite wall
+        }
+        game::UpdatePlayer(p, Input(steer, true, i % m.chain_every == 0), level);
+      } else if (m.wall_jump_at > 0 && i >= m.wall_jump_at) {
         game::UpdatePlayer(p, Input(m.after_wall_dir, true, i == m.wall_jump_at), level);
       } else {
         game::UpdatePlayer(p, Input(m.air_dir, i < m.hold, false), level);
@@ -152,23 +169,96 @@ Reachability Explore(const game::Level& level, size_t max_states) {
     return result;
   }
   const std::vector<Move> moves = AllMoves();
-  std::unordered_set<long long> seen{Key2(start)};
-  std::deque<Player> queue{start};
-  while (!queue.empty() && result.rest_positions.size() < max_states) {
-    const Player p = queue.front();
-    queue.pop_front();
-    result.rest_positions.push_back(p);
+  std::unordered_map<long long, int> index{{Key2(start), 0}};
+  result.rest_positions.push_back(start);
+  result.moves_to.emplace_back();
+  for (size_t i = 0; i < result.rest_positions.size() && i < max_states; ++i) {
+    const Player p = result.rest_positions[i];
     for (const Move& m : moves) {
       Player next = p;
-      if (Apply(next, level, m) && seen.insert(Key2(next)).second) {
-        queue.push_back(next);
+      if (!Apply(next, level, m)) {
+        continue;
+      }
+      auto [it, inserted] = index.try_emplace(Key2(next), static_cast<int>(result.rest_positions.size()));
+      if (inserted) {
+        result.rest_positions.push_back(next);
+        result.moves_to.emplace_back();
+      }
+      if (it->second != static_cast<int>(i)) {
+        result.moves_to[i].push_back(it->second);
       }
     }
   }
   return result;
 }
 
+std::vector<bool> Reachability::CanReachGoal(const game::Level& level) const {
+  const size_t n = rest_positions.size();
+  bool has_goal = false;
+  for (int i = 0; i < level.width * level.height; ++i) {
+    has_goal = has_goal || level.tiles[i] == game::Tile::kGoal;
+  }
+  std::vector<bool> can(n, !has_goal);
+  if (!has_goal) {
+    return can;
+  }
+  // Reverse search from every position touching a goal tile.
+  std::vector<std::vector<int>> moves_from(n);
+  for (size_t i = 0; i < n && i < moves_to.size(); ++i) {
+    for (int j : moves_to[i]) {
+      moves_from[j].push_back(static_cast<int>(i));
+    }
+  }
+  std::deque<int> queue;
+  for (size_t i = 0; i < n; ++i) {
+    const Player& p = rest_positions[i];
+    for (int ty = p.pixel_y() >> game::kTileShift; ty <= (p.pixel_y() + Player::kHeight - 1) >> game::kTileShift;
+         ++ty) {
+      for (int tx = p.pixel_x() >> game::kTileShift; tx <= (p.pixel_x() + Player::kWidth - 1) >> game::kTileShift;
+           ++tx) {
+        if (!can[i] && level.At(tx, ty) == game::Tile::kGoal) {
+          can[i] = true;
+          queue.push_back(static_cast<int>(i));
+        }
+      }
+    }
+  }
+  while (!queue.empty()) {
+    const int i = queue.front();
+    queue.pop_front();
+    for (int j : moves_from[i]) {
+      if (!can[j]) {
+        can[j] = true;
+        queue.push_back(j);
+      }
+    }
+  }
+  return can;
+}
+
+bool Reachability::HasDeadEnd(const game::Level& level) const {
+  for (bool ok : CanReachGoal(level)) {
+    if (!ok) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::string RenderMap(const game::Level& level, const Reachability& reach) {
+  const std::vector<bool> can_reach_goal = reach.CanReachGoal(level);
+  auto dead_end_at = [&](int tx, int ty) {
+    for (size_t i = 0; i < reach.rest_positions.size(); ++i) {
+      const Player& p = reach.rest_positions[i];
+      const bool feet_on_row = p.pixel_y() + Player::kHeight == (ty + 1) * game::kTileSize;
+      const bool over_column =
+          p.pixel_x() < (tx + 1) * game::kTileSize && p.pixel_x() + Player::kWidth > tx * game::kTileSize;
+      if (feet_on_row && over_column && !can_reach_goal[i]) {
+        return true;
+      }
+    }
+    return false;
+  };
   std::string map;
   for (int ty = 0; ty < level.height; ++ty) {
     for (int tx = 0; tx < level.width; ++tx) {
@@ -182,7 +272,7 @@ std::string RenderMap(const game::Level& level, const Reachability& reach) {
       } else if (tx == level.start_x && ty == level.start_y) {
         map += 'P';
       } else {
-        map += reach.StandsOn(tx, ty + 1) ? 'o' : '.';
+        map += dead_end_at(tx, ty) ? 'x' : reach.StandsOn(tx, ty + 1) ? 'o' : '.';
       }
     }
     map += '\n';
