@@ -9,6 +9,7 @@
 Key script (--keys), space-separated actions run after the boot line appeared:
   KEY            tap a key (QEMU qcode: left, right, up, down, spc, z, esc, ...)
   KEY:SECONDS    hold a key
+  +KEY / -KEY    press / release a key (to act or take screenshots while it is held)
   wait:SECONDS   pause
   shot:NAME      screenshot to <build dir>/smoke-NAME.png
   expect:TEXT    wait (up to --timeout) until TEXT appears in the debug log after the previous expect's match
@@ -155,6 +156,9 @@ def play_keys(qmp: Qmp, script: str, build: Path, log: Path, timeout: float, pro
                     return False
                 time.sleep(0.1)
             mark = found + len(value)
+        elif name[0] in "+-":
+            send_key(qmp, name[1:], name[0] == "+")
+            time.sleep(0.05)
         else:
             send_key(qmp, name, True)
             time.sleep(float(value) if value else 0.1)
