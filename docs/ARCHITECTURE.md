@@ -56,7 +56,7 @@ src/
   gfx/           Surface (320x240 XRGB), blits, sprites, tilemap renderer, scaler to GOP
   game/          pure game logic: level, tile collision, player physics, camera
   lib/           freestanding runtime: mem*/str* functions, fmt/log formatting, arena allocator, fixed-point math
-tools/           host Python: asset conversion, gdb helper
+tools/           host tools: qemu.py runner, embed_text.py, gdb helper, levelcheck (C++), later asset conversion
 assets/          text-art sprites, palette, text levels
 scripts/         build-image / run-qemu / smoke-test shell scripts
 tests/           host unit tests for game/, gfx/, lib/
@@ -67,10 +67,11 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 ## Game core
 
 - Fixed timestep, 60 updates/s. Render once per update (no interpolation in v1).
-- Positions/velocities in fixed point (e.g. 16.16 or 24.8 sub-pixels) so physics is deterministic and identical on host and target.
-- World = tilemap of 16x16 tiles, larger than the screen in both axes. Camera follows the player with a dead zone and is clamped to level bounds, so scrolling works in all 4 directions.
-- Player: AABB collision against solid tiles, resolved one axis at a time. Run with acceleration/friction, jump with variable height (release early = lower jump), gravity with terminal velocity, coyote time and jump buffering are cheap extras.
-- Rendering: draw only visible tiles (screen is 20x15 tiles, +1 for partial tiles), then sprites, into the 320x240 surface.
+- Positions/velocities in 24.8 fixed point (`lib::Fixed`, 1/256 px) so physics is deterministic and identical on host and target.
+- World = tilemap of 16x16 tiles (`game::Level`), larger than the screen in both axes; outside the map counts as walls and floor, open above. Camera (`game::Camera`) keeps the player in a ±24 px dead zone around the screen centre and is clamped to level bounds, so scrolling works in all 4 directions.
+- Player (`game/player.*`): 12x14 hitbox, AABB collision against solid tiles resolved one axis at a time. Speeds stay below one tile per tick, so checking the leading edge's tile row/column after a move is enough (no tunnelling). Run with acceleration/friction, jump with buffering, coyote time and variable height (release early = lower jump), gravity with terminal velocity. All tuning constants are in `PlayerTuning`; changing them changes which platforms are reachable, so re-run `levelcheck` and the tests.
+- Rendering: draw only visible tiles, then sprites, into the 320x240 surface. Until M3 the graphics are procedural placeholders (`game/render.cpp`).
+- Level design check: `levelcheck` (host tool, `tools/levelcheck/`) searches all resting positions reachable from the start with the real physics and prints the level with reachable spots marked.
 
 ## Freestanding C++ rules
 

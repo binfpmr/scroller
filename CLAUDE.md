@@ -13,6 +13,7 @@ ctest --preset host                                      # all host unit tests
 ctest --preset host -R <regex>                           # single test
 scripts/smoke-test.sh [--keys "right:2 shot:x esc ..."]     # headless QEMU boot + key script; read debugcon.log and the PNGs
 scripts/run-qemu.sh [--debug]                            # interactive run (user's display), gdb stub with --debug
+build/host/levelcheck <level.txt>                        # which spots of a level the player can reach (after host build)
 clang-format -i <files>                                  # Google style, 120 columns (.clang-format)
 ```
 
@@ -33,7 +34,7 @@ The debug log (`build/uefi/debugcon.log`) is the main diagnostic; `Log()` writes
 - Freestanding C++23 / C23: no exceptions, RTTI, STL, libc, heap `new`, or global objects with non-trivial constructors. Memory comes from the arena allocated before `ExitBootServices`.
 - Nothing after `ExitBootServices` may call UEFI boot services; everything needed later goes into `BootInfo`.
 - `game/` and `gfx/` must not include anything from `boot/`, `uefi/`, `arch/`, `drivers/`, so they keep building for the host tests.
-- Game physics uses fixed point, not floats.
+- Game physics uses fixed point (`lib::Fixed`, 24.8), not floats. After changing `PlayerTuning` or a level, run the host tests (they include `levelcheck` reachability).
 - Assets are plain text (levels: one char per tile; sprites: text art); converters live in `tools/` and run at build time.
 
 ## Working loop

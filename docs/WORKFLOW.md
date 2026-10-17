@@ -24,7 +24,8 @@ CMake presets, all using Ninja, output under `build/<preset>/`:
 ```sh
 cmake --preset uefi && cmake --build --preset uefi
 cmake --preset host && cmake --build --preset host && ctest --preset host
-ctest --preset host -R collision      # single test by name regex
+ctest --preset host -R player         # single test by name regex
+build/host/levelcheck assets/levels/test.txt   # level with all reachable standing spots marked 'o'
 ```
 
 `compile_commands.json` is exported by the `uefi` preset; clangd reads it from `build/uefi/`.

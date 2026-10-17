@@ -14,4 +14,4 @@ cmake --preset uefi && cmake --build --preset uefi
 scripts/run-qemu.sh
 ```
 
-Status: M0 done (boots in QEMU, draws a test pattern); M1 next.
+Status: M2 done (playable test level with placeholder graphics); M3 (assets) next.

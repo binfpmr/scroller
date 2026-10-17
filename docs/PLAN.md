@@ -28,10 +28,11 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## M2: platformer core
 
-- [ ] Fixed-point math, AABB, tilemap with solid tiles (hard-coded test level, bigger than the screen both ways)
-- [ ] Player: run, jump (variable height), gravity, tile collision
-- [ ] Camera with dead zone, clamped to level, 4-direction scrolling
-- [ ] Host unit tests for collision and physics
+- [x] Fixed-point math, AABB, tilemap with solid tiles (test level `assets/levels/test.txt`, embedded at build time)
+- [x] Player: run, jump (variable height, coyote time, buffering), gravity, tile collision
+- [x] Camera with dead zone, clamped to level, 4-direction scrolling
+- [x] Host unit tests for collision and physics; random-play invariant test; `levelcheck` reachability tool
+- [ ] Feel check by a human: run/jump tuning in `PlayerTuning`
 
 ## M3: assets
 
