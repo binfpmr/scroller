@@ -1,0 +1,59 @@
+#include "drivers/ps2_decoder.h"
+
+namespace ps2 {
+
+bool Decoder::Feed(uint8_t byte, ScanEvent* event) {
+  if (skip_ > 0) {
+    --skip_;
+    return false;
+  }
+  if (byte == 0xe0) {
+    extended_ = true;
+    return false;
+  }
+  if (byte == 0xe1) {
+    skip_ = 2;
+    return false;
+  }
+  if (byte == 0x00 || byte == 0xfa || byte == 0xfe || byte == 0xff) {
+    extended_ = false;  // error, ACK, resend, overrun: not key data
+    return false;
+  }
+  event->code = static_cast<uint16_t>((extended_ ? 0xe000 : 0) | (byte & 0x7f));
+  event->down = (byte & 0x80) == 0;
+  extended_ = false;
+  return true;
+}
+
+bool MapKey(uint16_t code, platform::Key* key) {
+  using platform::Key;
+  switch (code) {
+    case 0xe04b:  // left arrow
+    case 0x004b:  // keypad 4
+      *key = Key::kLeft;
+      return true;
+    case 0xe04d:
+    case 0x004d:
+      *key = Key::kRight;
+      return true;
+    case 0xe048:
+    case 0x0048:
+      *key = Key::kUp;
+      return true;
+    case 0xe050:
+    case 0x0050:
+      *key = Key::kDown;
+      return true;
+    case 0x0039:  // space
+    case 0x002c:  // Z
+      *key = Key::kJump;
+      return true;
+    case 0x0001:
+      *key = Key::kEscape;
+      return true;
+    default:
+      return false;
+  }
+}
+
+}  // namespace ps2
