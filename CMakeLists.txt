@@ -12,10 +12,26 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 set(SCROLLER_TARGET "uefi" CACHE STRING "What to build: uefi (bootable image) or host (unit tests)")
 set_property(CACHE SCROLLER_TARGET PROPERTY STRINGS uefi host)
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+# Text assets embedded into the binary (until assets are loaded from the boot volume).
+set(SCROLLER_GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
+set(SCROLLER_TEST_LEVEL_H ${SCROLLER_GENERATED_DIR}/assets/test_level.h)
+add_custom_command(
+  OUTPUT ${SCROLLER_TEST_LEVEL_H}
+  COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tools/embed_text.py
+          ${CMAKE_SOURCE_DIR}/assets/levels/test.txt ${SCROLLER_TEST_LEVEL_H} kTestLevel
+  DEPENDS ${CMAKE_SOURCE_DIR}/tools/embed_text.py ${CMAKE_SOURCE_DIR}/assets/levels/test.txt
+  COMMENT "Embedding assets/levels/test.txt"
+)
+include_directories(${SCROLLER_GENERATED_DIR})
+
 # Platform-independent code, built both for the target and for the host tests.
 set(SCROLLER_CORE_SOURCES
+  ${SCROLLER_TEST_LEVEL_H}
   src/drivers/ps2_decoder.cpp
   src/game/scroll_demo.cpp
+  src/game/level.cpp
   src/gfx/present.cpp
   src/gfx/viewport.cpp
   src/lib/format.cpp
