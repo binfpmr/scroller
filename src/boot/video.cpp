@@ -74,6 +74,7 @@ bool SetUpVideo(EFI_BOOT_SERVICES* bs, gfx::Framebuffer* framebuffer) {
   framebuffer->width = info.HorizontalResolution;
   framebuffer->height = info.VerticalResolution;
   framebuffer->stride = info.PixelsPerScanLine;
+  framebuffer->size = gop->Mode->FrameBufferSize;
   framebuffer->order =
       info.PixelFormat == PixelRedGreenBlueReserved8BitPerColor ? gfx::PixelOrder::kRgbx : gfx::PixelOrder::kBgrx;
   Log("video: mode %u of %d (was %d): %ux%u %s stride %u fb %p\n", gop->Mode->Mode, count, current, framebuffer->width,

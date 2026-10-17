@@ -23,6 +23,12 @@ bool MapKey(const EFI_INPUT_KEY& key, platform::Key* out) {
     case SCAN_ESC:
       *out = Key::kEscape;
       return true;
+    case SCAN_F1:
+      *out = Key::kToggleStats;
+      return true;
+    case SCAN_F2:
+      *out = Key::kToggleWriteCombining;
+      return true;
     default:
       break;
   }

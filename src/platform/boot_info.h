@@ -24,6 +24,9 @@ struct BootInfo {
   size_t memory_descriptor_size = 0;
 
   EFI_RUNTIME_SERVICES* runtime_services = nullptr;
+
+  // True after ExitBootServices: the game owns the machine (page tables, devices). False in the uefi-input build.
+  bool owns_machine = false;
 };
 
 }  // namespace platform

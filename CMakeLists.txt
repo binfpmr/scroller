@@ -36,6 +36,7 @@ set(SCROLLER_CORE_SOURCES
   src/game/player.cpp
   src/game/render.cpp
   src/gfx/draw.cpp
+  src/gfx/font.cpp
   src/gfx/present.cpp
   src/gfx/viewport.cpp
   src/lib/format.cpp

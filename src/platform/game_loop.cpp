@@ -2,12 +2,14 @@
 
 #include "arch/x86_64/cpu.h"
 #include "arch/x86_64/io.h"
+#include "arch/x86_64/write_combining.h"
 #include "assets/test_level.h"
 #include "drivers/debug_log.h"
 #include "game/game.h"
 #include "gfx/present.h"
 #include "lib/arena.h"
 #include "platform/reset.h"
+#include "platform/stats_overlay.h"
 
 namespace platform {
 namespace {
@@ -35,6 +37,11 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   }
 
   const gfx::Framebuffer& fb = boot.framebuffer;
+  x86::WriteCombining write_combining;
+  if (boot.owns_machine) {
+    const uint64_t fb_size = fb.size != 0 ? fb.size : static_cast<uint64_t>(fb.stride) * fb.height * 4;
+    write_combining.Init(arena, reinterpret_cast<uint64_t>(fb.base), fb_size);
+  }
   const gfx::Viewport viewport = gfx::ComputeViewport(fb.width, fb.height);
   gfx::ClearFramebuffer(fb, gfx::Rgb(0, 0, 0));
   Log("viewport: scale %d at %d,%d\n", viewport.scale, viewport.x, viewport.y);
@@ -48,6 +55,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       game.level().start_y);
 
   InputTracker tracker;
+  StatsOverlay stats(boot.tsc_hz);
   const uint64_t tick_cycles = boot.tsc_hz / kTicksPerSecond;
   uint64_t next_tick = x86::Rdtsc();
   uint64_t ticks = 0;
@@ -68,6 +76,13 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       if (input.Pressed(Key::kEscape)) {
         Reboot(boot.runtime_services);
       }
+      if (input.Pressed(Key::kToggleStats)) {
+        stats.visible = !stats.visible;
+      }
+      if (input.Pressed(Key::kToggleWriteCombining) && write_combining.available()) {
+        write_combining.Enable(!write_combining.enabled());
+        Log("wc: %s\n", write_combining.enabled() ? "on" : "off");
+      }
       game.Update(input);
       next_tick += tick_cycles;
       ++ticks;
@@ -84,11 +99,16 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       next_tick = now + tick_cycles;  // fell too far behind
     }
 
+    const uint64_t render_start = x86::Rdtsc();
     game.Render(screen);
+    stats.Draw(screen);
     const uint64_t present_start = x86::Rdtsc();
     gfx::Present(screen, fb, viewport);
-    present_cycles += x86::Rdtsc() - present_start;
+    const uint64_t present_end = x86::Rdtsc();
+    present_cycles += present_end - present_start;
     ++frames;
+    stats.AddFrame(present_start - render_start, present_end - present_start);
+    stats.Update(present_end, !write_combining.available() ? "N/A" : write_combining.enabled() ? "ON" : "OFF");
   }
 }
 

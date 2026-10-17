@@ -40,6 +40,7 @@ add_compile_options(
 option(SCROLLER_UEFI_INPUT "Stay in boot services and read the keyboard through UEFI (for USB-only machines)" OFF)
 
 add_executable(scroller
+  src/arch/x86_64/write_combining.cpp
   src/boot/crt0.S
   src/boot/efi_main.cpp
   src/boot/uefi_keyboard.cpp
@@ -50,6 +51,7 @@ add_executable(scroller
   src/lib/mem.c
   src/platform/game_loop.cpp
   src/platform/reset.cpp
+  src/platform/stats_overlay.cpp
   ${SCROLLER_CORE_SOURCES}
 )
 target_compile_definitions(scroller PRIVATE SCROLLER_UEFI_INPUT=$<BOOL:${SCROLLER_UEFI_INPUT}>)

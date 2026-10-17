@@ -13,7 +13,7 @@ struct Fixture {
   gfx::Framebuffer fb;
 
   Fixture(uint32_t width, uint32_t height, uint32_t stride, gfx::PixelOrder order) : fb_pixels(stride * height) {
-    fb = {fb_pixels.data(), width, height, stride, order};
+    fb = {.base = fb_pixels.data(), .width = width, .height = height, .stride = stride, .order = order};
   }
   uint32_t At(uint32_t x, uint32_t y) const { return fb_pixels[y * fb.stride + x]; }
 };

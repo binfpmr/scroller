@@ -12,6 +12,8 @@ enum class Key : uint8_t {
   kDown,
   kJump,  // Space or Up
   kEscape,
+  kToggleStats,           // F1: performance overlay
+  kToggleWriteCombining,  // F2: framebuffer write-combining on/off (to compare)
   kCount,
 };
 

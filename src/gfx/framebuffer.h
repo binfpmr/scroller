@@ -16,6 +16,7 @@ struct Framebuffer {
   uint32_t width = 0;
   uint32_t height = 0;
   uint32_t stride = 0;  // pixels per scan line
+  uint64_t size = 0;    // bytes of framebuffer memory (may exceed stride * height * 4)
   PixelOrder order = PixelOrder::kBgrx;
 };
 

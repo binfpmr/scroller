@@ -138,6 +138,7 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
   }
   // From here on the machine is ours. Nothing needs interrupts yet: input and timing are polled.
   x86::DisableInterrupts();
+  boot.owns_machine = true;
   Log("exited boot services, memory map: %llu entries\n",
       static_cast<unsigned long long>(boot.memory_map_size / boot.memory_descriptor_size));
 
