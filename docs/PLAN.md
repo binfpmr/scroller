@@ -24,7 +24,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] 60 Hz fixed-step loop; test pattern that scrolls with arrow keys
 - [x] `SCROLLER_UEFI_INPUT` fallback build for real-HW trials (preset `uefi-input`)
 - [x] Esc reboots (`ResetSystem`, with fallbacks)
-- [ ] First real hardware test from a USB stick (needs a human; both `uefi` and `uefi-input` images)
+- [x] First real hardware test from a USB stick: HP Pavilion laptop, `uefi` image (built-in keyboard works over PS/2)
 
 ## M2: platformer core
 

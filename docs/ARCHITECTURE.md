@@ -86,7 +86,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 ## Known risks
 
 - **USB-only keyboards** need an xHCI + HID driver after `ExitBootServices` (milestone M6). Until then: PS/2 or the `SCROLLER_UEFI_INPUT` fallback.
-- **Framebuffer speed on real hardware**: the GOP framebuffer is typically mapped uncached; writing ~2.8 MB/frame at x3 gave only a few FPS on an HP Pavilion. `x86::WriteCombining` reprograms PAT entry 7 to WC and points the framebuffer's page table entries at it (splitting large pages), after ExitBootServices only. F1 shows a performance overlay, F2 toggles WC for comparison.
+- **Framebuffer speed on real hardware**: the GOP framebuffer is typically mapped uncached; writing ~2.8 MB/frame at x3 gave only a few FPS on an HP Pavilion (present 167 ms/frame uncached, 0.40 ms with WC; render 0.05 ms; CPU at 3.9 GHz). `x86::WriteCombining` reprograms PAT entry 7 to WC and points the framebuffer's page table entries at it (splitting large pages), after ExitBootServices only. F1 shows a performance overlay, F2 toggles WC for comparison.
 - **GOP pixel formats**: handle BGRX and RGBX; bitmask formats only if we meet one. `BltOnly` modes (no framebuffer) are not supported.
 - **No vsync** under GOP: expect some tearing; acceptable.
 - **Sound on real hardware**: Sound Blaster 16 exists only in QEMU/emulators; real PCs need Intel HDA.
