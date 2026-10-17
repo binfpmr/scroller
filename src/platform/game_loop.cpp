@@ -118,13 +118,14 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     const uint64_t render_start = x86::Rdtsc();
     game.Render(screen);
     stats.Draw(screen);
+    const uint64_t render_end = x86::Rdtsc();
     vsync.WaitForFrameStart();
     const uint64_t present_start = x86::Rdtsc();
     gfx::Present(screen, fb, viewport);
     const uint64_t present_end = x86::Rdtsc();
     present_cycles += present_end - present_start;
     ++frames;
-    stats.AddFrame(present_start - render_start, present_end - present_start);
+    stats.AddFrame(render_end - render_start, present_start - render_end, present_end - present_start);
     stats.Update(present_end, write_combining ? "ON" : "OFF");
   }
 }

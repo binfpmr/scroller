@@ -13,7 +13,8 @@ class StatsOverlay {
  public:
   explicit StatsOverlay(uint64_t tsc_hz);
 
-  void AddFrame(uint64_t render_cycles, uint64_t present_cycles);
+  // Per frame: drawing into the 320x240 surface, waiting for vsync, copying to the framebuffer.
+  void AddFrame(uint64_t render_cycles, uint64_t wait_cycles, uint64_t present_cycles);
   // Recomputes the text once per second; `wc` is "ON" or "OFF" (framebuffer write-combining).
   void Update(uint64_t now, const char* wc);
   void Draw(gfx::Surface& screen) const;
@@ -27,6 +28,7 @@ class StatsOverlay {
   uint64_t period_start_;
   uint64_t frames_ = 0;
   uint64_t render_cycles_ = 0;
+  uint64_t wait_cycles_ = 0;
   uint64_t present_cycles_ = 0;
   bool has_aperf_mperf_;
   uint64_t last_aperf_ = 0;

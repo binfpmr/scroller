@@ -28,9 +28,10 @@ StatsOverlay::StatsOverlay(uint64_t tsc_hz)
   }
 }
 
-void StatsOverlay::AddFrame(uint64_t render_cycles, uint64_t present_cycles) {
+void StatsOverlay::AddFrame(uint64_t render_cycles, uint64_t wait_cycles, uint64_t present_cycles) {
   ++frames_;
   render_cycles_ += render_cycles;
+  wait_cycles_ += wait_cycles;
   present_cycles_ += present_cycles;
 }
 
@@ -41,6 +42,7 @@ void StatsOverlay::Update(uint64_t now, const char* wc) {
   const uint64_t elapsed = now - period_start_;
   const uint64_t fps10 = frames_ * tsc_hz_ * 10 / elapsed;
   const uint64_t render = CentiMillis(render_cycles_, frames_, tsc_hz_);
+  const uint64_t wait = CentiMillis(wait_cycles_, frames_, tsc_hz_);
   const uint64_t present = CentiMillis(present_cycles_, frames_, tsc_hz_);
   const uint64_t tsc_mhz = tsc_hz_ / 1000000;
   uint64_t cpu_mhz = 0;
@@ -59,10 +61,11 @@ void StatsOverlay::Update(uint64_t now, const char* wc) {
     lib::Format(cpu, sizeof(cpu), "%llu", static_cast<unsigned long long>(cpu_mhz));
   }
   lib::Format(text_, sizeof(text_),
-              "FPS %llu.%llu  RENDER %llu.%02llu MS  PRESENT %llu.%02llu MS\n"
+              "FPS %llu.%llu  RENDER %llu.%02llu  WAIT %llu.%02llu  PRESENT %llu.%02llu MS\n"
               "CPU %s MHZ  TSC %llu MHZ  WC %s  VER %s",
               static_cast<unsigned long long>(fps10 / 10), static_cast<unsigned long long>(fps10 % 10),
               static_cast<unsigned long long>(render / 100), static_cast<unsigned long long>(render % 100),
+              static_cast<unsigned long long>(wait / 100), static_cast<unsigned long long>(wait % 100),
               static_cast<unsigned long long>(present / 100), static_cast<unsigned long long>(present % 100), cpu,
               static_cast<unsigned long long>(tsc_mhz), wc, kScrollerVersion);
   if (updates_++ % 5 == 0) {
@@ -72,6 +75,7 @@ void StatsOverlay::Update(uint64_t now, const char* wc) {
   period_start_ = now;
   frames_ = 0;
   render_cycles_ = 0;
+  wait_cycles_ = 0;
   present_cycles_ = 0;
 }
 
