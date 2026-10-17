@@ -66,7 +66,7 @@ TEST(Ps2MapsGameKeys) {
   Key k;
   EXPECT_TRUE(ps2::MapKey(0xe04b, &k) && k == Key::kLeft);
   EXPECT_TRUE(ps2::MapKey(0xe048, &k) && k == Key::kJump);  // up arrow
-  EXPECT_TRUE(!ps2::MapKey(0x2c, &k));                       // Z: unused
+  EXPECT_TRUE(!ps2::MapKey(0x2c, &k));                      // Z: unused
   EXPECT_TRUE(ps2::MapKey(0x39, &k) && k == Key::kJump);
   EXPECT_TRUE(ps2::MapKey(0x01, &k) && k == Key::kEscape);
   EXPECT_TRUE(!ps2::MapKey(0x1e, &k));  // A
