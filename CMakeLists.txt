@@ -30,10 +30,12 @@ include_directories(${SCROLLER_GENERATED_DIR})
 set(SCROLLER_CORE_SOURCES
   ${SCROLLER_TEST_LEVEL_H}
   src/drivers/ps2_decoder.cpp
-  src/game/scroll_demo.cpp
   src/game/camera.cpp
+  src/game/game.cpp
   src/game/level.cpp
   src/game/player.cpp
+  src/game/render.cpp
+  src/gfx/draw.cpp
   src/gfx/present.cpp
   src/gfx/viewport.cpp
   src/lib/format.cpp

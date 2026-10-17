@@ -2,8 +2,9 @@
 
 #include "arch/x86_64/cpu.h"
 #include "arch/x86_64/io.h"
+#include "assets/test_level.h"
 #include "drivers/debug_log.h"
-#include "game/scroll_demo.h"
+#include "game/game.h"
 #include "gfx/present.h"
 #include "lib/arena.h"
 #include "platform/reset.h"
@@ -38,7 +39,14 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   gfx::ClearFramebuffer(fb, gfx::Rgb(0, 0, 0));
   Log("viewport: scale %d at %d,%d\n", viewport.scale, viewport.x, viewport.y);
 
-  game::ScrollDemo demo;
+  game::Game game;
+  const char* error = nullptr;
+  if (!game.Init(arena, kTestLevel, sizeof(kTestLevel) - 1, &error)) {
+    Fatal(error);
+  }
+  Log("level: %dx%d tiles, start %d,%d\n", game.level().width, game.level().height, game.level().start_x,
+      game.level().start_y);
+
   InputTracker tracker;
   const uint64_t tick_cycles = boot.tsc_hz / kTicksPerSecond;
   uint64_t next_tick = x86::Rdtsc();
@@ -60,14 +68,14 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       if (input.Pressed(Key::kEscape)) {
         Reboot(boot.runtime_services);
       }
-      demo.Update(input);
+      game.Update(input);
       next_tick += tick_cycles;
       ++ticks;
       if (ticks % kStatsIntervalTicks == 0) {
-        Log("tick %llu: %llu frames, present %llu us avg, camera %d,%d\n", static_cast<unsigned long long>(ticks),
-            static_cast<unsigned long long>(frames),
+        Log("tick %llu: %llu frames, present %llu us avg, player %d,%d, camera %d,%d\n",
+            static_cast<unsigned long long>(ticks), static_cast<unsigned long long>(frames),
             static_cast<unsigned long long>(present_cycles * 1000000 / boot.tsc_hz / (frames ? frames : 1)),
-            demo.camera_x(), demo.camera_y());
+            game.player().pixel_x(), game.player().pixel_y(), game.camera().x, game.camera().y);
         frames = 0;
         present_cycles = 0;
       }
@@ -76,7 +84,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       next_tick = now + tick_cycles;  // fell too far behind
     }
 
-    demo.Render(screen);
+    game.Render(screen);
     const uint64_t present_start = x86::Rdtsc();
     gfx::Present(screen, fb, viewport);
     present_cycles += x86::Rdtsc() - present_start;
