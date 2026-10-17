@@ -14,7 +14,7 @@ constexpr uint32_t kPipeDsl = 0x70000;   // display scan line, bits 12:0
 constexpr uint32_t kPipeConf = 0x70008;  // bit 31: pipe enabled
 constexpr uint32_t kPipeStride = 0x1000;
 constexpr uint32_t kDslMask = 0x1fff;
-constexpr uint32_t kPipeEnable = 1u << 31;
+constexpr uint32_t kTransConfEdp = 0x7f008;  // eDP transcoder configuration (Gen7.5+), diagnostics only
 
 }  // namespace
 
@@ -48,45 +48,55 @@ bool Scanline::Init(const pci::Device& gpu, uint64_t tsc_hz, lib::Arena* arena) 
   }
   mmio_ = reinterpret_cast<volatile const uint32_t*>(bar);
 
-  uint32_t conf[3];
-  pipe_ = -1;
+  // Which pipe drives the panel: PIPECONF is not reliable for that (on Gen9 an eDP panel runs through the eDP
+  // transcoder, TRANSCONF_EDP, and PIPECONF A reads 0 although pipe A scans out). So take the first pipe whose
+  // scanline counter actually wraps at a plausible refresh rate.
   for (int pipe = 0; pipe < 3; ++pipe) {
-    conf[pipe] = Read(kPipeConf + pipe * kPipeStride);
-    if (pipe_ < 0 && (conf[pipe] & kPipeEnable) != 0) {
-      pipe_ = pipe;
+    pipe_ = pipe;
+    max_line_ = 0;
+    const uint64_t period = MeasurePeriod(tsc_hz);
+    const uint64_t hz10 = period == 0 ? 0 : tsc_hz * 10 / period;
+    if (hz10 >= 300 && hz10 <= 1250) {
+      period_cycles_ = period;
+      lib::Format(status_, sizeof(status_), "BAR0 %llx%s PIPE %c\n%u LINES %llu.%llu HZ  EDP CONF %x",
+                  static_cast<unsigned long long>(bar), mapped_by_us ? " (MAPPED)" : "", pipe_name(), max_line_ + 1,
+                  static_cast<unsigned long long>(hz10 / 10), static_cast<unsigned long long>(hz10 % 10),
+                  Read(kTransConfEdp));
+      Log("intel: %s\n", status_);
+      return true;
     }
   }
-  const int sample_pipe = pipe_ < 0 ? 0 : pipe_;
+  lib::Format(status_, sizeof(status_), "BAR0 %llx%s\nNO PIPE SCANNING  CONF %x/%x/%x EDP %x",
+              static_cast<unsigned long long>(bar), mapped_by_us ? " (MAPPED)" : "", Read(kPipeConf),
+              Read(kPipeConf + kPipeStride), Read(kPipeConf + 2 * kPipeStride), Read(kTransConfEdp));
+  Log("intel: %s\n", status_);
+  return false;
+}
 
-  // Time a few wraps of the scanline counter.
+uint64_t Scanline::MeasurePeriod(uint64_t tsc_hz) {
+  // A counter that does not move within ~1 ms belongs to an idle pipe.
+  const uint32_t first = Line();
+  const uint64_t quick = x86::Rdtsc() + tsc_hz / 1000;
+  while (Line() == first) {
+    if (x86::Rdtsc() > quick) {
+      return 0;
+    }
+  }
+  // Time a few wraps.
   constexpr int kWraps = 4;
   uint64_t wraps[kWraps];
   int count = 0;
   const uint64_t deadline = x86::Rdtsc() + tsc_hz / 8;
-  const int saved_pipe = pipe_;
-  pipe_ = sample_pipe;
   uint32_t last = Line();
-  uint32_t max_line = 0;
   while (count < kWraps && x86::Rdtsc() < deadline) {
     const uint32_t line = Line();
     if (line < last) {
       wraps[count++] = x86::Rdtsc();
     }
-    max_line = line > max_line ? line : max_line;
+    max_line_ = line > max_line_ ? line : max_line_;
     last = line;
   }
-  pipe_ = saved_pipe;
-  const uint64_t period = count >= 2 ? (wraps[count - 1] - wraps[0]) / (count - 1) : 0;
-  const uint64_t hz10 = period == 0 ? 0 : tsc_hz * 10 / period;
-  lib::Format(status_, sizeof(status_), "BAR0 %llx%s\nPIPECONF %x/%x/%x MAXLINE %u %llu.%llu HZ",
-              static_cast<unsigned long long>(bar), mapped_by_us ? " (MAPPED)" : "", conf[0], conf[1], conf[2],
-              max_line, static_cast<unsigned long long>(hz10 / 10), static_cast<unsigned long long>(hz10 % 10));
-  Log("intel: %s\n", status_);
-  if (pipe_ < 0 || count < 3 || hz10 < 300 || hz10 > 1250) {
-    return false;
-  }
-  period_cycles_ = period;
-  return true;
+  return count >= 3 ? (wraps[count - 1] - wraps[0]) / (count - 1) : 0;
 }
 
 void Scanline::WaitForFrameStart(uint64_t timeout_cycles) const {

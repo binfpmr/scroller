@@ -11,8 +11,8 @@ namespace intel_display {
 
 class Scanline {
  public:
-  // Finds BAR0 (mapping it uncached if the firmware did not and `arena` is given, i.e. we own the page tables), the
-  // enabled pipe, and checks that its scanline counter wraps at a plausible refresh rate. On failure status() says why.
+  // Finds BAR0 (mapping it uncached if the firmware did not and `arena` is given, i.e. we own the page tables) and the
+  // first pipe whose scanline counter wraps at a plausible refresh rate. On failure status() says why.
   bool Init(const pci::Device& gpu, uint64_t tsc_hz, lib::Arena* arena);
 
   // Waits until the counter wraps (a new frame starts at the top), at most `timeout_cycles`.
@@ -20,16 +20,19 @@ class Scanline {
 
   char pipe_name() const { return static_cast<char>('A' + pipe_); }
   uint64_t period_cycles() const { return period_cycles_; }
-  // What Init found, for the overlay (two lines), e.g. "BAR0 A0000000\nPIPECONF C0000000/0/0 MAXLINE 1124 60.0 HZ".
+  // What Init found, for the overlay (two lines), e.g. "BAR0 B2000000 PIPE A\n1140 LINES 60.0 HZ  EDP CONF C0000000".
   const char* status() const { return status_; }
 
  private:
   uint32_t Line() const;
+  // Refresh period of pipe_ in TSC cycles from a few counter wraps (also updates max_line_); 0 if not scanning.
+  uint64_t MeasurePeriod(uint64_t tsc_hz);
   uint32_t Read(uint32_t offset) const { return mmio_[offset / 4]; }
 
   volatile const uint32_t* mmio_ = nullptr;
   int pipe_ = 0;
   uint64_t period_cycles_ = 0;
+  uint32_t max_line_ = 0;
   char status_[96] = "";
 };
 
