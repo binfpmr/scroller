@@ -7,7 +7,7 @@
 ```sh
 sudo apt install gcc g++ binutils cmake ninja-build mtools qemu-system-x86 ovmf gdb \
                  python3 gdisk dosfstools clang-format clangd
-sudo apt install clang lld        # optional, for the uefi-clang preset
+sudo apt install clang            # optional, for the uefi-clang preset
 ```
 
 VS Code extensions (recommended in `.vscode/extensions.json`): clangd, CMake Tools, C/C++ (only for the gdb debugger front end; its IntelliSense is disabled in favour of clangd), x86 assembly syntax (GAS).
