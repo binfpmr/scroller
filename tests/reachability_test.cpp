@@ -1,10 +1,9 @@
 #include "reachability.h"
 
-#include "assets/test_level.h"
 #include "game_test_util.h"
 
 TEST(TestLevelIsFullyClimbable) {
-  test::TestLevel t(kTestLevel);
+  test::TestLevel t(test::ReadAsset("levels/test.txt").c_str());
   const levelcheck::Reachability reach = levelcheck::Explore(t.level);
   EXPECT_TRUE(reach.StandsOn(40, 6));   // top walkway
   EXPECT_TRUE(reach.StandsOn(53, 7));   // top of the right-hand climb

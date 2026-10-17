@@ -243,6 +243,34 @@ struct EFI_LOADED_IMAGE_PROTOCOL {
   void* Unload;
 };
 
+// --- Simple File System and File Protocol (spec 13.4, 13.5) ---
+
+inline constexpr EFI_GUID EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID = {
+    0x964e5b22, 0x6459, 0x11d2, {0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}};
+
+inline constexpr UINT64 EFI_FILE_MODE_READ = 0x1;
+
+struct EFI_FILE_PROTOCOL {
+  UINT64 Revision;
+  EFI_STATUS(EFIAPI* Open)(EFI_FILE_PROTOCOL* This, EFI_FILE_PROTOCOL** NewHandle, const CHAR16* FileName,
+                           UINT64 OpenMode, UINT64 Attributes);
+  EFI_STATUS(EFIAPI* Close)(EFI_FILE_PROTOCOL* This);
+  void* Delete;
+  EFI_STATUS(EFIAPI* Read)(EFI_FILE_PROTOCOL* This, UINTN* BufferSize, void* Buffer);
+  void* Write;
+  EFI_STATUS(EFIAPI* GetPosition)(EFI_FILE_PROTOCOL* This, UINT64* Position);
+  EFI_STATUS(EFIAPI* SetPosition)(EFI_FILE_PROTOCOL* This, UINT64 Position);  // ~0: end of file
+  void* GetInfo;
+  void* SetInfo;
+  void* Flush;
+  // Revision 2: OpenEx, ReadEx, WriteEx, FlushEx (not used).
+};
+
+struct EFI_SIMPLE_FILE_SYSTEM_PROTOCOL {
+  UINT64 Revision;
+  EFI_STATUS(EFIAPI* OpenVolume)(EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* This, EFI_FILE_PROTOCOL** Root);
+};
+
 // --- Graphics Output Protocol (spec 12.9) ---
 
 inline constexpr EFI_GUID EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID = {

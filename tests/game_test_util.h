@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <fstream>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #include "game/level.h"
@@ -11,6 +14,17 @@
 #include "test.h"
 
 namespace test {
+
+// Contents of a file under assets/, e.g. ReadAsset("levels/test.txt"). Fails the test if missing.
+inline std::string ReadAsset(const char* name) {
+  std::ifstream file(std::string(SCROLLER_ASSETS_DIR) + "/" + name, std::ios::binary);
+  std::stringstream text;
+  text << file.rdbuf();
+  if (!file) {
+    Fail(__FILE__, __LINE__, "cannot read asset");
+  }
+  return text.str();
+}
 
 // Parses `text` into a level backed by a per-call buffer (kept alive by the returned object).
 struct TestLevel {

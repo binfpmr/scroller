@@ -3,13 +3,15 @@
 #include "arch/x86_64/cpu.h"
 #include "arch/x86_64/io.h"
 #include "arch/x86_64/write_combining.h"
-#include "assets/test_level.h"
 #include "drivers/debug_log.h"
 #include "drivers/pci.h"
 #include "game/game.h"
+#include "gfx/draw.h"
+#include "gfx/font.h"
 #include "gfx/present.h"
 #include "lib/arena.h"
 #include "lib/format.h"
+#include "lib/pack.h"
 #include "platform/reset.h"
 #include "platform/stats_overlay.h"
 #include "platform/vsync.h"
@@ -21,10 +23,31 @@ constexpr int kTicksPerSecond = 60;
 constexpr int kMaxCatchUpTicks = 5;  // after a stall, skip time rather than run many updates at once
 constexpr int kStatsIntervalTicks = 5 * kTicksPerSecond;
 
-[[noreturn]] void Fatal(const char* message) {
+constexpr const char* kStartLevel = "levels/test.txt";
+
+[[noreturn]] void Halt(const char* message) {
   Log("fatal: %s\n", message);
   for (;;) {
     x86::Halt();
+  }
+}
+
+// Shows an error on screen (there is no other output on real hardware) and waits for Esc to reboot.
+[[noreturn]] void Fatal(const char* message, gfx::Surface& screen, const gfx::Framebuffer& fb,
+                        const gfx::Viewport& viewport, KeyboardSource& keyboard, const BootInfo& boot) {
+  Log("fatal: %s\n", message);
+  gfx::FillRect(screen, 0, 0, screen.width, screen.height, gfx::Rgb(90, 0, 0));
+  gfx::DrawText(screen, 8, 8, "SCROLLER CANNOT START:", gfx::Rgb(255, 255, 255));
+  gfx::DrawText(screen, 8, 8 + 2 * gfx::kLineHeight, message, gfx::Rgb(255, 220, 120));
+  gfx::DrawText(screen, 8, 8 + 4 * gfx::kLineHeight, "ESC: REBOOT", gfx::Rgb(255, 255, 255));
+  gfx::Present(screen, fb, viewport);
+  InputTracker tracker;
+  for (;;) {
+    keyboard.Poll(tracker);
+    if (tracker.NextTick().Pressed(Key::kEscape)) {
+      Reboot(boot.runtime_services);
+    }
+    x86::Pause();
   }
 }
 
@@ -36,7 +59,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
                       .width = gfx::kScreenWidth,
                       .height = gfx::kScreenHeight};
   if (screen.pixels == nullptr) {
-    Fatal("out of memory for the screen surface");
+    Halt("out of memory for the screen surface");
   }
 
   const gfx::Framebuffer& fb = boot.framebuffer;
@@ -51,10 +74,22 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   gfx::ClearFramebuffer(fb, gfx::Rgb(0, 0, 0));
   Log("viewport: scale %d at %d,%d\n", viewport.scale, viewport.x, viewport.y);
 
-  game::Game game;
   const char* error = nullptr;
-  if (!game.Init(arena, kTestLevel, sizeof(kTestLevel) - 1, &error)) {
-    Fatal(error);
+  if (boot.assets == nullptr) {
+    Fatal("/SCROLLER/ASSETS.PAK NOT FOUND ON THE BOOT VOLUME", screen, fb, viewport, keyboard, boot);
+  }
+  lib::Pack pack;
+  if (!pack.Open(boot.assets, boot.assets_size, &error)) {
+    Fatal(error, screen, fb, viewport, keyboard, boot);
+  }
+  Log("assets: %d files, %llu bytes\n", pack.count(), static_cast<unsigned long long>(boot.assets_size));
+  lib::Blob level_text;
+  if (!pack.Find(kStartLevel, &level_text)) {
+    Fatal("level not found in the asset pack", screen, fb, viewport, keyboard, boot);
+  }
+  game::Game game;
+  if (!game.Init(arena, level_text.data, level_text.size, &error)) {
+    Fatal(error, screen, fb, viewport, keyboard, boot);
   }
   Log("level: %dx%d tiles, start %d,%d\n", game.level().width, game.level().height, game.level().start_x,
       game.level().start_y);

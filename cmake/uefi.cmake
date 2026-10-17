@@ -53,6 +53,7 @@ add_executable(scroller
   src/arch/x86_64/write_combining.cpp
   src/boot/crt0.S
   src/boot/efi_main.cpp
+  src/boot/file.cpp
   src/boot/uefi_keyboard.cpp
   src/boot/video.cpp
   src/drivers/debug_log.cpp
@@ -97,10 +98,20 @@ add_custom_command(
   COMMENT "Converting scroller.elf to scroller.efi"
 )
 
+# All files under assets/ go into one pack, \\scroller\\assets.pak on the ESP (see src/lib/pack.h).
+file(GLOB_RECURSE SCROLLER_ASSET_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/assets/*)
+set(SCROLLER_PAK ${CMAKE_BINARY_DIR}/assets.pak)
+add_custom_command(
+  OUTPUT ${SCROLLER_PAK}
+  COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tools/pack_assets.py ${CMAKE_SOURCE_DIR}/assets ${SCROLLER_PAK}
+  DEPENDS ${CMAKE_SOURCE_DIR}/tools/pack_assets.py ${SCROLLER_ASSET_FILES}
+  COMMENT "Packing assets"
+)
+
 add_custom_command(
   OUTPUT ${CMAKE_BINARY_DIR}/scroller.img ${CMAKE_BINARY_DIR}/esp.img
-  COMMAND ${CMAKE_SOURCE_DIR}/scripts/build-image.sh ${SCROLLER_EFI} ${CMAKE_BINARY_DIR}
-  DEPENDS ${SCROLLER_EFI} ${CMAKE_SOURCE_DIR}/scripts/build-image.sh
+  COMMAND ${CMAKE_SOURCE_DIR}/scripts/build-image.sh ${SCROLLER_EFI} ${CMAKE_BINARY_DIR} ${SCROLLER_PAK}
+  DEPENDS ${SCROLLER_EFI} ${SCROLLER_PAK} ${CMAKE_SOURCE_DIR}/scripts/build-image.sh
   COMMENT "Building disk images"
 )
 add_custom_target(image ALL DEPENDS ${CMAKE_BINARY_DIR}/scroller.img)

@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Builds the bootable images from scroller.efi, without root:
-#   esp.img      FAT32 EFI system partition with /EFI/BOOT/BOOTX64.EFI (can be dd'ed into an existing partition)
+#   esp.img      FAT32 EFI system partition with /EFI/BOOT/BOOTX64.EFI and /scroller/assets.pak (can be dd'ed into an
+#                existing partition)
 #   scroller.img GPT disk with esp.img as its only partition (can be dd'ed to a whole USB stick or disk)
 # Both files are sparse: they take ~1 MiB on the build machine although their nominal size is ~33 MiB.
-# Usage: build-image.sh <scroller.efi> <output dir>
+# Usage: build-image.sh <scroller.efi> <output dir> <assets.pak>
 set -euo pipefail
 efi=$1
 out=$2
+pak=$3
 
 # Smallest valid FAT32 volume with 512-byte sectors and 1 sector per cluster: FAT32 needs at least 65525 clusters
 # (fewer clusters make it FAT16 by definition, whatever the boot sector says). 66592 is the smallest size for which
@@ -29,8 +31,9 @@ if grep -qi 'less than' <<<"$mkfs_output"; then
   echo "$mkfs_output" >&2
   exit 1
 fi
-mmd -i "$tmp_esp" ::/EFI ::/EFI/BOOT
+mmd -i "$tmp_esp" ::/EFI ::/EFI/BOOT ::/scroller
 mcopy -i "$tmp_esp" "$efi" ::/EFI/BOOT/BOOTX64.EFI
+mcopy -i "$tmp_esp" "$pak" ::/scroller/assets.pak
 fallocate --dig-holes "$tmp_esp"  # mkfs.fat writes its zeroed FATs explicitly
 
 truncate -s $((disk_sectors * 512)) "$tmp_disk"

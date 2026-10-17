@@ -25,6 +25,10 @@ struct BootInfo {
 
   EFI_RUNTIME_SERVICES* runtime_services = nullptr;
 
+  // Asset pack (lib/pack.h) read from \\scroller\\assets.pak on the boot volume; null if it could not be loaded.
+  const void* assets = nullptr;
+  size_t assets_size = 0;
+
   // True after ExitBootServices: the game owns the machine (page tables, devices). False in the uefi-input build.
   bool owns_machine = false;
 };

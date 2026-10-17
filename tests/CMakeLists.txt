@@ -2,6 +2,7 @@
 function(scroller_add_test name)
   add_executable(${name} ${ARGN} test_main.cpp)
   target_link_libraries(${name} PRIVATE scroller_core)
+  target_compile_definitions(${name} PRIVATE SCROLLER_ASSETS_DIR="${CMAKE_SOURCE_DIR}/assets")
   # Test helpers forward format strings that are not literals.
   target_compile_options(${name} PRIVATE -Wno-format-security -Wno-format-nonliteral)
   add_test(NAME ${name} COMMAND ${name})
@@ -20,3 +21,5 @@ scroller_add_test(game_test game_test.cpp)
 scroller_add_test(reachability_test reachability_test.cpp)
 target_link_libraries(reachability_test PRIVATE levelcheck_lib)
 scroller_add_test(font_test font_test.cpp)
+scroller_add_test(pack_test pack_test.cpp)
+target_compile_definitions(pack_test PRIVATE SCROLLER_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

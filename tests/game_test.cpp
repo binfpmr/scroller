@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include "assets/test_level.h"
 #include "game_test_util.h"
 
 using platform::Key;
@@ -13,7 +12,8 @@ TEST(RandomPlayKeepsInvariants) {
   lib::Arena arena(storage.data(), storage.size());
   game::Game g;
   const char* error = nullptr;
-  EXPECT_TRUE(g.Init(arena, kTestLevel, sizeof(kTestLevel) - 1, &error));
+  const std::string level = test::ReadAsset("levels/test.txt");
+  EXPECT_TRUE(g.Init(arena, level.data(), level.size(), &error));
 
   std::vector<uint32_t> screen_pixels(gfx::kScreenWidth * gfx::kScreenHeight);
   gfx::Surface screen{screen_pixels.data(), gfx::kScreenWidth, gfx::kScreenHeight};

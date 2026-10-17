@@ -2,6 +2,7 @@
 
 #include "arch/x86_64/cpu.h"
 #include "arch/x86_64/io.h"
+#include "boot/file.h"
 #include "boot/uefi_keyboard.h"
 #include "boot/video.h"
 #include "drivers/debug_log.h"
@@ -124,6 +125,11 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
     return EFI_UNSUPPORTED;
   }
   boot.tsc_hz = CalibrateTsc(bs);
+  void* assets = nullptr;
+  if (boot::LoadFile(bs, image, u"\\scroller\\assets.pak", &assets, &boot.assets_size)) {
+    boot.assets = assets;
+    Log("assets: loaded %llu bytes\n", static_cast<unsigned long long>(boot.assets_size));
+  }  // otherwise the game shows the error on screen
   if (!AllocateGameMemory(bs, &boot)) {
     return EFI_LOAD_ERROR;
   }
