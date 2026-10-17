@@ -15,7 +15,7 @@ bool MapKey(const EFI_INPUT_KEY& key, platform::Key* out) {
       *out = Key::kRight;
       return true;
     case SCAN_UP:
-      *out = Key::kUp;
+      *out = Key::kJump;
       return true;
     case SCAN_DOWN:
       *out = Key::kDown;
@@ -26,7 +26,7 @@ bool MapKey(const EFI_INPUT_KEY& key, platform::Key* out) {
     default:
       break;
   }
-  if (key.UnicodeChar == u' ' || key.UnicodeChar == u'z' || key.UnicodeChar == u'Z') {
+  if (key.UnicodeChar == u' ') {
     *out = Key::kJump;
     return true;
   }

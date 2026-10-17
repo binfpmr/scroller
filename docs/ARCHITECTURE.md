@@ -9,7 +9,7 @@ A small 2D platformer that boots directly on x86_64 hardware via UEFI. No OS, no
 | Boot | UEFI x86_64 application (`BOOTX64.EFI`) | Boots on modern PCs and QEMU/OVMF; firmware gives us long mode, paging, a framebuffer and file access for free. Legacy BIOS/Mode X is not planned. |
 | Firmware use | UEFI as a *loader*, then `ExitBootServices` | UEFI input has no key-release events and would fight us over IRQs/DMA (sound). After exit we own the machine. |
 | Video | Game renders into a 320x240 XRGB8888 buffer in RAM; `present()` integer-scales it into the GOP framebuffer | No real Mode X under UEFI. 32-bit colour, no palette emulation. |
-| Video mode | Highest integer scale (capped at x4), then an exact fit (1280x960, 960x720, 640x480), then the firmware's current mode; centered with black borders when not exact (`gfx::ChooseVideoMode`) | Pixel-perfect scaling with whatever modes the firmware offers. Preferring the current mode on ties keeps a laptop on its native panel mode rather than a stretched low resolution. The cap bounds framebuffer bandwidth. |
+| Video mode | Highest integer scale (capped at x3, `gfx::kMaxScale`), then an exact fit (960x720, 640x480), then the firmware's current mode; centered with black borders when not exact (`gfx::ChooseVideoMode`) | Pixel-perfect scaling with whatever modes the firmware offers. Preferring the current mode on ties keeps a laptop on its native panel mode rather than a stretched low resolution. The cap bounds framebuffer bandwidth. |
 | Toolchain | GCC (`gcc`, `g++`) + GNU binutils (`as`, `ld`, `objcopy`) as a freestanding ELF toolchain, no OS target assumed; clang (`--target=x86_64-unknown-none-elf`) as an optional second compiler | No EDK2, no gnu-efi. A real `x86_64-elf` cross compiler can be plugged in via a toolchain prefix if wanted; the host GCC with freestanding flags produces equivalent code. |
 | Executable format | Link a static PIE ELF at base 0 (`scroller.elf`, keeps DWARF for gdb), convert to PE with `objcopy --target=efi-app-x86_64` (`scroller.efi`); `crt0.S` applies the ELF `R_X86_64_RELATIVE` relocations itself before any C++ runs | UEFI loads PE images at an arbitrary address. ELF section addresses equal the PE RVAs, so debugging uses the ELF at a known offset. |
 | Calling convention | Our code uses the System V ABI; UEFI functions and `efi_main`'s firmware entry use the Microsoft x64 ABI (`EFIAPI` = `__attribute__((ms_abi))`; `crt0.S` bridges the entry) | Standard approach for GCC on ELF. |
@@ -19,7 +19,7 @@ A small 2D platformer that boots directly on x86_64 hardware via UEFI. No OS, no
 | Input (v1) | Poll the i8042 PS/2 controller (scan code set 1/2 make/break codes) | QEMU's default keyboard; most laptop built-in keyboards are also PS/2 behind the EC. USB (xHCI + HID boot keyboard) is a later milestone. |
 | Input fallback | Build option `SCROLLER_UEFI_INPUT` (preset `uefi-input`): stay in boot services, read `ConIn`, treat a key as held for 550 ms after its first event and 150 ms after each typematic repeat | Lets us try real USB-only hardware before the xHCI driver exists. Input feel is worse; debug aid only. |
 | Assets | Plain-text sources: levels as one character per tile, placeholder sprites as text art (one character per palette colour). Converted at build time by host Python tools into simple binary blobs, copied onto the ESP, loaded into RAM before `ExitBootServices` | Diff-friendly, editable in any editor, no level editor needed yet. No disk driver needed for v1. |
-| Controls | Arrows move, Space or Z jump, Esc reboots | |
+| Controls | Left/Right move, Up or Space jump, Esc reboots | |
 | Exit | Esc -> `ResetSystem(EfiResetCold)` (UEFI runtime services stay callable after `ExitBootServices`); fallback: 8042 reset pulse, then triple fault | Works on real hardware and QEMU. |
 | Tests | Game logic, graphics and lib code also build for the host and have unit tests (CTest) | Fast feedback without booting. |
 
@@ -86,7 +86,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 ## Known risks
 
 - **USB-only keyboards** need an xHCI + HID driver after `ExitBootServices` (milestone M6). Until then: PS/2 or the `SCROLLER_UEFI_INPUT` fallback.
-- **Framebuffer speed on real hardware**: the GOP framebuffer may be mapped uncached; writing ~5 MB/frame at x4 can be slow. Fix by marking it write-combining via PAT (M8).
+- **Framebuffer speed on real hardware**: the GOP framebuffer may be mapped uncached; writing ~2.8 MB/frame at x3 can be slow. Fix by marking it write-combining via PAT (M8).
 - **GOP pixel formats**: handle BGRX and RGBX; bitmask formats only if we meet one. `BltOnly` modes (no framebuffer) are not supported.
 - **No vsync** under GOP: expect some tearing; acceptable.
 - **Sound on real hardware**: Sound Blaster 16 exists only in QEMU/emulators; real PCs need Intel HDA.

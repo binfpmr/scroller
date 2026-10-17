@@ -36,16 +36,13 @@ bool MapKey(uint16_t code, platform::Key* key) {
     case 0x004d:
       *key = Key::kRight;
       return true;
-    case 0xe048:
-    case 0x0048:
-      *key = Key::kUp;
-      return true;
     case 0xe050:
     case 0x0050:
       *key = Key::kDown;
       return true;
     case 0x0039:  // space
-    case 0x002c:  // Z
+    case 0xe048:  // up arrow
+    case 0x0048:  // keypad 8
       *key = Key::kJump;
       return true;
     case 0x0001:

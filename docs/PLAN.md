@@ -73,7 +73,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## Settled
 
-- Controls: arrows move, Space or Z jump, Esc reboots.
+- Controls: Left/Right move, Up or Space jump, Esc reboots.
 - Art: placeholder sprites drawn as text art in the repo.
 - Levels: plain text, one character per tile; no level editor for now.
 - Toolchain: host GCC with freestanding flags (no cross GCC for now) + GNU as/binutils, clang optional; no NASM. AT&T syntax.

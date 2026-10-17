@@ -9,9 +9,8 @@ namespace platform {
 enum class Key : uint8_t {
   kLeft,
   kRight,
-  kUp,
   kDown,
-  kJump,  // Space or Z
+  kJump,  // Space or Up
   kEscape,
   kCount,
 };
@@ -27,7 +26,7 @@ struct InputState {
   bool Released(Key key) const { return (released & Bit(key)) != 0; }
 };
 
-// Two physical keys mapped to the same Key (Space and Z) share one state: releasing either releases the Key.
+// Two physical keys mapped to the same Key (Space and Up) share one state: releasing either releases the Key.
 class InputTracker {
  public:
   void OnKey(Key key, bool down);
