@@ -40,12 +40,14 @@ add_compile_options(
 option(SCROLLER_UEFI_INPUT "Stay in boot services and read the keyboard through UEFI (for USB-only machines)" OFF)
 
 add_executable(scroller
+  src/arch/x86_64/paging.cpp
   src/arch/x86_64/write_combining.cpp
   src/boot/crt0.S
   src/boot/efi_main.cpp
   src/boot/uefi_keyboard.cpp
   src/boot/video.cpp
   src/drivers/debug_log.cpp
+  src/drivers/intel_display.cpp
   src/drivers/pci.cpp
   src/drivers/ps2_keyboard.cpp
   src/drivers/vga_retrace.cpp
@@ -54,6 +56,7 @@ add_executable(scroller
   src/platform/game_loop.cpp
   src/platform/reset.cpp
   src/platform/stats_overlay.cpp
+  src/platform/vsync.cpp
   ${SCROLLER_CORE_SOURCES}
 )
 target_compile_definitions(scroller PRIVATE SCROLLER_UEFI_INPUT=$<BOOL:${SCROLLER_UEFI_INPUT}>)

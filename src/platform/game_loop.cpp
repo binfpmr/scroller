@@ -6,13 +6,13 @@
 #include "assets/test_level.h"
 #include "drivers/debug_log.h"
 #include "drivers/pci.h"
-#include "drivers/vga_retrace.h"
 #include "game/game.h"
 #include "gfx/present.h"
 #include "lib/arena.h"
 #include "lib/format.h"
 #include "platform/reset.h"
 #include "platform/stats_overlay.h"
+#include "platform/vsync.h"
 
 namespace platform {
 namespace {
@@ -59,23 +59,19 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   Log("level: %dx%d tiles, start %d,%d\n", game.level().width, game.level().height, game.level().start_x,
       game.level().start_y);
 
-  // Vertical sync: no GOP support, so try the legacy VGA retrace bit (see drivers/vga_retrace.h).
-  uint64_t refresh_cycles = 0;
-  const bool vsync = vga::ProbeRetrace(boot.tsc_hz, &refresh_cycles);
+  pci::Device gpu;
+  const bool has_gpu = pci::FindByClass(0x03, &gpu);
+  Vsync vsync;
+  vsync.Init(has_gpu ? &gpu : nullptr, boot.tsc_hz);
 
   InputTracker tracker;
   StatsOverlay stats(boot.tsc_hz);
   {
     char cpu[49];
     x86::CpuBrand(cpu);
-    pci::Device gpu;
-    const bool has_gpu = pci::FindByClass(0x03, &gpu);
     char info[160];
-    lib::Format(info, sizeof(info), "%s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s %llu.%llu HZ", cpu,
-                has_gpu ? gpu.vendor_id : 0, has_gpu ? gpu.device_id : 0, gpu.bus, gpu.device, gpu.function,
-                vsync ? "3DA" : "NONE",
-                static_cast<unsigned long long>(vsync ? boot.tsc_hz * 10 / refresh_cycles / 10 : 0),
-                static_cast<unsigned long long>(vsync ? boot.tsc_hz * 10 / refresh_cycles % 10 : 0));
+    lib::Format(info, sizeof(info), "%s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s", cpu, has_gpu ? gpu.vendor_id : 0,
+                has_gpu ? gpu.device_id : 0, gpu.bus, gpu.device, gpu.function, vsync.description());
     Log("hw: %s\n", info);
     stats.SetInfo(info);
   }
@@ -121,9 +117,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     const uint64_t render_start = x86::Rdtsc();
     game.Render(screen);
     stats.Draw(screen);
-    if (vsync) {
-      vga::WaitForRetraceStart(2 * refresh_cycles);
-    }
+    vsync.WaitForFrameStart();
     const uint64_t present_start = x86::Rdtsc();
     gfx::Present(screen, fb, viewport);
     const uint64_t present_end = x86::Rdtsc();
