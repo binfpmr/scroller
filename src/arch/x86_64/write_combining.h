@@ -12,27 +12,8 @@
 
 namespace x86 {
 
-class WriteCombining {
- public:
-  // Prepares the page table entries (splitting large pages with tables from `arena`) and switches the range to WC.
-  // Returns false (and changes nothing) if the CPU or the page tables are not what we expect.
-  bool Init(lib::Arena& arena, uint64_t base, uint64_t size);
-
-  // Switches between WC and the firmware's original memory type, e.g. to compare speed.
-  void Enable(bool on);
-  bool enabled() const { return enabled_; }
-  bool available() const { return count_ > 0; }
-
- private:
-  struct Entry {
-    uint64_t* entry;
-    uint64_t original;
-    uint64_t write_combining;
-  };
-
-  Entry* entries_ = nullptr;
-  int count_ = 0;
-  bool enabled_ = false;
-};
+// Prepares the page table entries (splitting large pages with tables from `arena`) and switches the range to WC.
+// Returns false (and changes nothing) if the CPU or the page tables are not what we expect.
+bool EnableWriteCombining(lib::Arena& arena, uint64_t base, uint64_t size);
 
 }  // namespace x86

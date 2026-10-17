@@ -62,7 +62,6 @@ inline constexpr UINT16 SCAN_DOWN = 0x02;
 inline constexpr UINT16 SCAN_RIGHT = 0x03;
 inline constexpr UINT16 SCAN_LEFT = 0x04;
 inline constexpr UINT16 SCAN_F1 = 0x0b;
-inline constexpr UINT16 SCAN_F2 = 0x0c;
 inline constexpr UINT16 SCAN_ESC = 0x17;
 
 struct EFI_SIMPLE_TEXT_INPUT_PROTOCOL {

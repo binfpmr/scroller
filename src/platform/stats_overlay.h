@@ -1,5 +1,6 @@
-// Performance numbers drawn over the game (F1 toggles): frames per second, render and present time, actual CPU clock
-// (APERF/MPERF), TSC clock and the framebuffer write-combining state. Meant for real hardware, where there is no log.
+// Performance numbers drawn over the game (hidden until F1): frames per second, render and present time, actual CPU
+// clock (APERF/MPERF), TSC clock and the framebuffer write-combining state. Meant for real hardware, where there is no
+// log; the same text goes to the debug log every 5 seconds.
 #pragma once
 
 #include <stdint.h>
@@ -13,11 +14,11 @@ class StatsOverlay {
   explicit StatsOverlay(uint64_t tsc_hz);
 
   void AddFrame(uint64_t render_cycles, uint64_t present_cycles);
-  // Recomputes the text once per second; `wc` is "ON", "OFF" or "N/A".
+  // Recomputes the text once per second; `wc` is "ON" or "OFF" (framebuffer write-combining).
   void Update(uint64_t now, const char* wc);
   void Draw(gfx::Surface& screen) const;
 
-  bool visible = true;
+  bool visible = false;  // F1
 
  private:
   uint64_t tsc_hz_;

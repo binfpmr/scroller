@@ -53,9 +53,14 @@ bool Split(uint64_t* entry, uint64_t page_size, lib::Arena& arena) {
   return true;
 }
 
+struct PendingEntry {
+  uint64_t* entry;
+  uint64_t write_combining;
+};
+
 }  // namespace
 
-bool WriteCombining::Init(lib::Arena& arena, uint64_t base, uint64_t size) {
+bool EnableWriteCombining(lib::Arena& arena, uint64_t base, uint64_t size) {
   if ((Cpuid(1).edx & (1u << 16)) == 0) {
     Log("wc: no PAT support\n");
     return false;
@@ -69,8 +74,9 @@ bool WriteCombining::Init(lib::Arena& arena, uint64_t base, uint64_t size) {
       static_cast<unsigned long long>(Rdmsr(kMsrMtrrDefType)));
 
   constexpr int kMaxEntries = 4096;
-  entries_ = arena.AllocateArray<Entry>(kMaxEntries);
-  if (entries_ == nullptr) {
+  PendingEntry* entries = arena.AllocateArray<PendingEntry>(kMaxEntries);
+  int count = 0;
+  if (entries == nullptr) {
     return false;
   }
 
@@ -123,46 +129,34 @@ bool WriteCombining::Init(lib::Arena& arena, uint64_t base, uint64_t size) {
         large = false;
       }
     }
-    if (count_ == kMaxEntries) {
+    if (count == kMaxEntries) {
       ok = false;
       break;
     }
     const uint64_t cleared = *leaf & ~(kPwt | kPcd | (large ? kPatLarge : kPat4K));
-    entries_[count_++] = {leaf, *leaf, WithWc(cleared, large)};
+    entries[count++] = {leaf, WithWc(cleared, large)};
     addr += leaf_size;
   }
   WriteCr0(cr0);
   if (!ok) {
     Log("wc: unexpected page tables, leaving the framebuffer as it is\n");
-    count_ = 0;  // splits keep the original attributes, so nothing changed
-    FlushTlb();
+    FlushTlb();  // splits keep the original attributes, so nothing changed
     return false;
   }
 
-  // PAT entry 7 -> WC (with caches flushed around the change, as the SDM asks).
-  Wbinvd();
-  Wrmsr(kMsrPat, (pat & ~(0xffull << (8 * kWcPatIndex))) | (kPatTypeWc << (8 * kWcPatIndex)));
-  Wbinvd();
-  Log("wc: %d page table entries for %llu KiB at %llx\n", count_, static_cast<unsigned long long>(size >> 10),
-      static_cast<unsigned long long>(base));
-  Enable(true);
-  return true;
-}
-
-void WriteCombining::Enable(bool on) {
-  if (count_ == 0) {
-    return;
-  }
-  const uint64_t cr0 = ReadCr0();
+  // PAT entry 7 -> WC, then point the entries at it; caches flushed around memory type changes, as the SDM asks.
   WriteCr0(cr0 & ~kCr0WriteProtect);
   Wbinvd();
-  for (int i = 0; i < count_; ++i) {
-    *entries_[i].entry = on ? entries_[i].write_combining : entries_[i].original;
+  Wrmsr(kMsrPat, (pat & ~(0xffull << (8 * kWcPatIndex))) | (kPatTypeWc << (8 * kWcPatIndex)));
+  for (int i = 0; i < count; ++i) {
+    *entries[i].entry = entries[i].write_combining;
   }
   FlushTlb();
   Wbinvd();
   WriteCr0(cr0);
-  enabled_ = on;
+  Log("wc: %d page table entries for %llu KiB at %llx\n", count, static_cast<unsigned long long>(size >> 10),
+      static_cast<unsigned long long>(base));
+  return true;
 }
 
 }  // namespace x86

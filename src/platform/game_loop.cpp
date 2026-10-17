@@ -37,10 +37,12 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   }
 
   const gfx::Framebuffer& fb = boot.framebuffer;
-  x86::WriteCombining write_combining;
+  // Write-combining makes presenting ~400x faster on real hardware (uncached framebuffer: 167 ms per frame on an HP
+  // Pavilion). Our page table edit is only safe once the firmware is gone.
+  bool write_combining = false;
   if (boot.owns_machine) {
     const uint64_t fb_size = fb.size != 0 ? fb.size : static_cast<uint64_t>(fb.stride) * fb.height * 4;
-    write_combining.Init(arena, reinterpret_cast<uint64_t>(fb.base), fb_size);
+    write_combining = x86::EnableWriteCombining(arena, reinterpret_cast<uint64_t>(fb.base), fb_size);
   }
   const gfx::Viewport viewport = gfx::ComputeViewport(fb.width, fb.height);
   gfx::ClearFramebuffer(fb, gfx::Rgb(0, 0, 0));
@@ -79,10 +81,6 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       if (input.Pressed(Key::kToggleStats)) {
         stats.visible = !stats.visible;
       }
-      if (input.Pressed(Key::kToggleWriteCombining) && write_combining.available()) {
-        write_combining.Enable(!write_combining.enabled());
-        Log("wc: %s\n", write_combining.enabled() ? "on" : "off");
-      }
       game.Update(input);
       next_tick += tick_cycles;
       ++ticks;
@@ -108,7 +106,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     present_cycles += present_end - present_start;
     ++frames;
     stats.AddFrame(present_start - render_start, present_end - present_start);
-    stats.Update(present_end, !write_combining.available() ? "N/A" : write_combining.enabled() ? "ON" : "OFF");
+    stats.Update(present_end, write_combining ? "ON" : "OFF");
   }
 }
 

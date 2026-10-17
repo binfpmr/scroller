@@ -19,7 +19,7 @@ A small 2D platformer that boots directly on x86_64 hardware via UEFI. No OS, no
 | Input (v1) | Poll the i8042 PS/2 controller (scan code set 1/2 make/break codes) | QEMU's default keyboard; most laptop built-in keyboards are also PS/2 behind the EC. USB (xHCI + HID boot keyboard) is a later milestone. |
 | Input fallback | Build option `SCROLLER_UEFI_INPUT` (preset `uefi-input`): stay in boot services, read `ConIn`, treat a key as held for 550 ms after its first event and 150 ms after each typematic repeat | Lets us try real USB-only hardware before the xHCI driver exists. Input feel is worse; debug aid only. |
 | Assets | Plain-text sources: levels as one character per tile, placeholder sprites as text art (one character per palette colour). Converted at build time by host Python tools into simple binary blobs, copied onto the ESP, loaded into RAM before `ExitBootServices` | Diff-friendly, editable in any editor, no level editor needed yet. No disk driver needed for v1. |
-| Controls | Left/Right move, Up or Space jump, Down ducks, Esc reboots; F1 performance overlay, F2 framebuffer write-combining on/off | |
+| Controls | Left/Right move, Up or Space jump, Down ducks, Esc reboots; F1 shows/hides the performance overlay | |
 | Exit | Esc -> `ResetSystem(EfiResetCold)` (UEFI runtime services stay callable after `ExitBootServices`); fallback: 8042 reset pulse, then triple fault | Works on real hardware and QEMU. |
 | Tests | Game logic, graphics and lib code also build for the host and have unit tests (CTest) | Fast feedback without booting. |
 
@@ -86,7 +86,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 ## Known risks
 
 - **USB-only keyboards** need an xHCI + HID driver after `ExitBootServices` (milestone M6). Until then: PS/2 or the `SCROLLER_UEFI_INPUT` fallback.
-- **Framebuffer speed on real hardware**: the GOP framebuffer is typically mapped uncached; writing ~2.8 MB/frame at x3 gave only a few FPS on an HP Pavilion (present 167 ms/frame uncached, 0.40 ms with WC; render 0.05 ms; CPU at 3.9 GHz). `x86::WriteCombining` reprograms PAT entry 7 to WC and points the framebuffer's page table entries at it (splitting large pages), after ExitBootServices only. F1 shows a performance overlay, F2 toggles WC for comparison.
+- **Framebuffer speed on real hardware**: the GOP framebuffer is typically mapped uncached; writing ~2.8 MB/frame at x3 gave only a few FPS on an HP Pavilion (present 167 ms/frame uncached, 0.40 ms with WC; render 0.05 ms; CPU at 3.9 GHz). `x86::EnableWriteCombining` reprograms PAT entry 7 to WC and points the framebuffer's page table entries at it (splitting large pages), after ExitBootServices only. F1 shows a performance overlay.
 - **GOP pixel formats**: handle BGRX and RGBX; bitmask formats only if we meet one. `BltOnly` modes (no framebuffer) are not supported.
 - **No vsync** under GOP: expect some tearing; acceptable.
 - **Sound on real hardware**: Sound Blaster 16 exists only in QEMU/emulators; real PCs need Intel HDA.

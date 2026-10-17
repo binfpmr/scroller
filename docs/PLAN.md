@@ -70,7 +70,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 ## M8: polish
 
 - [x] Write-combining framebuffer via PAT (pulled forward: real hardware ran at a few FPS)
-- [x] On-screen performance overlay (F1), WC toggle (F2), 5x7 bitmap font
+- [x] On-screen performance overlay (F1, hidden by default), 5x7 bitmap font
 - [ ] Parallax background, more enemies/levels, title screen
 
 ## Settled

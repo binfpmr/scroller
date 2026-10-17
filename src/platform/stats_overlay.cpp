@@ -59,7 +59,7 @@ void StatsOverlay::Update(uint64_t now, const char* wc) {
   }
   lib::Format(text_, sizeof(text_),
               "FPS %llu.%llu  RENDER %llu.%02llu MS  PRESENT %llu.%02llu MS\n"
-              "CPU %s MHZ  TSC %llu MHZ  WC %s (F2)  F1: HIDE",
+              "CPU %s MHZ  TSC %llu MHZ  WC %s  F1: HIDE",
               static_cast<unsigned long long>(fps10 / 10), static_cast<unsigned long long>(fps10 % 10),
               static_cast<unsigned long long>(render / 100), static_cast<unsigned long long>(render % 100),
               static_cast<unsigned long long>(present / 100), static_cast<unsigned long long>(present % 100), cpu,
