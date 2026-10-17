@@ -39,6 +39,15 @@ add_compile_options(
 
 option(SCROLLER_UEFI_INPUT "Stay in boot services and read the keyboard through UEFI (for USB-only machines)" OFF)
 
+# Git version of the sources, shown at boot and in the F1 overlay (to tell images apart on real hardware).
+# Regenerated on every build; the file only changes when the version does.
+add_custom_target(scroller_version
+  COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tools/version_header.py ${CMAKE_SOURCE_DIR}
+          ${SCROLLER_GENERATED_DIR}/scroller_version.h
+  BYPRODUCTS ${SCROLLER_GENERATED_DIR}/scroller_version.h
+  COMMENT "Checking the git version"
+)
+
 add_executable(scroller
   src/arch/x86_64/paging.cpp
   src/arch/x86_64/write_combining.cpp
@@ -60,6 +69,7 @@ add_executable(scroller
   ${SCROLLER_CORE_SOURCES}
 )
 target_compile_definitions(scroller PRIVATE SCROLLER_UEFI_INPUT=$<BOOL:${SCROLLER_UEFI_INPUT}>)
+add_dependencies(scroller scroller_version)
 set_target_properties(scroller PROPERTIES SUFFIX ".elf" LINK_DEPENDS ${SCROLLER_LINKER_SCRIPT})
 target_include_directories(scroller PRIVATE src)
 target_link_options(scroller PRIVATE

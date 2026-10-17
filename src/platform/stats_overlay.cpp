@@ -6,6 +6,7 @@
 #include "gfx/draw.h"
 #include "gfx/font.h"
 #include "lib/format.h"
+#include "scroller_version.h"
 
 namespace platform {
 namespace {
@@ -59,11 +60,11 @@ void StatsOverlay::Update(uint64_t now, const char* wc) {
   }
   lib::Format(text_, sizeof(text_),
               "FPS %llu.%llu  RENDER %llu.%02llu MS  PRESENT %llu.%02llu MS\n"
-              "CPU %s MHZ  TSC %llu MHZ  WC %s  F1: HIDE",
+              "CPU %s MHZ  TSC %llu MHZ  WC %s  VER %s",
               static_cast<unsigned long long>(fps10 / 10), static_cast<unsigned long long>(fps10 % 10),
               static_cast<unsigned long long>(render / 100), static_cast<unsigned long long>(render % 100),
               static_cast<unsigned long long>(present / 100), static_cast<unsigned long long>(present % 100), cpu,
-              static_cast<unsigned long long>(tsc_mhz), wc);
+              static_cast<unsigned long long>(tsc_mhz), wc, kScrollerVersion);
   if (updates_++ % 5 == 0) {
     Log("stats: %s\n", text_);
   }

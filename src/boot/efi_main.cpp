@@ -8,6 +8,7 @@
 #include "drivers/ps2_keyboard.h"
 #include "platform/boot_info.h"
 #include "platform/game_loop.h"
+#include "scroller_version.h"
 #include "uefi/uefi.h"
 
 #ifndef SCROLLER_UEFI_INPUT
@@ -105,7 +106,7 @@ bool ExitBootServices(EFI_HANDLE image, EFI_BOOT_SERVICES* bs, platform::BootInf
 
 extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
   debug_log::Init();
-  Log("scroller: efi_main\n");
+  Log("scroller %s: efi_main\n", kScrollerVersion);
 
   EFI_BOOT_SERVICES* bs = st->BootServices;
   EFI_LOADED_IMAGE_PROTOCOL* loaded_image = nullptr;
