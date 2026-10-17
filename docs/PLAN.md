@@ -71,6 +71,8 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 - [x] Write-combining framebuffer via PAT (pulled forward: real hardware ran at a few FPS)
 - [x] On-screen performance overlay (F1, hidden by default), 5x7 bitmap font
+- [x] Vsync: Intel display pipe scanline counter (verified on HP Pavilion), VGA retrace bit fallback
+- [x] Git version shown at boot and in the overlay; local `scripts/flash-usb.sh` (not in git)
 - [ ] Parallax background, more enemies/levels, title screen
 
 ## Settled

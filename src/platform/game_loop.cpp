@@ -72,7 +72,8 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     char info[240];
     lib::Format(info, sizeof(info), "%s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu, has_gpu ? gpu.vendor_id : 0,
                 has_gpu ? gpu.device_id : 0, gpu.bus, gpu.device, gpu.function, vsync.description(),
-                vsync.intel_status()[0] != '\0' ? "\nINTEL " : "", vsync.intel_status());
+                !vsync.active() && vsync.intel_status()[0] != '\0' ? "\nINTEL " : "",
+                vsync.active() ? "" : vsync.intel_status());
     Log("hw: %s\n", info);
     stats.SetInfo(info);
   }
