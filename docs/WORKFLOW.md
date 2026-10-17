@@ -38,7 +38,7 @@ scripts/run-qemu.sh --debug         # also: gdb stub on :1234; the game waits in
 scripts/smoke-test.sh               # headless; waits for "boot ok" in the log, writes build/uefi/smoke.png
 ```
 
-All three wrap `tools/qemu.py` (`run`, `debug`, `smoke`); extra options: `--build build/uefi-clang` to run another preset's image, `--headless` for run/debug, `--expect TEXT`, `--timeout S`, `--screenshot PATH` for smoke. The smoke test takes the screenshot on failure too, so a hang shows where it is stuck.
+All three wrap `tools/qemu.py` (`run`, `debug`, `smoke`); extra options: `--build build/uefi-clang` to run another preset's image, `--resolution WxH` for the display's preferred mode (default 960x720; OVMF starts in it, like a native panel, e.g. try `1920x1080` to see the laptop case), `--headless` for run/debug, `--expect TEXT`, `--timeout S`, `--screenshot PATH` for smoke. The smoke test takes the screenshot on failure too, so a hang shows where it is stuck.
 
 Smoke tests can drive the game with a key script (`tools/qemu.py smoke --help`):
 
@@ -46,7 +46,7 @@ Smoke tests can drive the game with a key script (`tools/qemu.py smoke --help`):
 scripts/smoke-test.sh --keys "shot:start right:2 down:1 shot:moved esc expect:reboot expect:efi_main"
 ```
 
-Taps/holds use QEMU key names (`left`, `right`, `up`, `down`, `spc`, `z`, `esc`), `shot:NAME` writes `build/uefi/smoke-NAME.png`, `expect:TEXT` waits for TEXT in the debug log after the previous match. The game logs timing and the camera position every 5 s, which makes scripted checks easy.
+Taps/holds use QEMU key names (`left`, `right`, `up`, `down`, `spc`, `esc`), `shot:NAME` writes `build/uefi/smoke-NAME.png`, `expect:TEXT` waits for TEXT in the debug log after the previous match. The game logs timing and the camera position every 5 s, which makes scripted checks easy.
 
 **Hybrid Intel CPUs:** with KVM, OVMF intermittently hangs at the TianoCore logo when QEMU's vCPU thread migrates between P- and E-cores (seen on an i5-1334U, kernel 7.0, QEMU 10.2). `tools/qemu.py` therefore pins itself to the E-cores when `/sys/devices/cpu_atom/cpus` exists. Without KVM it falls back to TCG (slower, never hung).
 

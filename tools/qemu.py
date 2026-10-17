@@ -52,7 +52,7 @@ def pin_to_one_core_type() -> None:
         os.sched_setaffinity(0, parse_cpu_list(atom.read_text()))
 
 
-def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None) -> list[str]:
+def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, resolution: str) -> list[str]:
     vars_copy = build / "OVMF_VARS.fd"
     shutil.copyfile(OVMF_VARS, vars_copy)  # fresh NVRAM every run: no stale boot entries
 
@@ -71,6 +71,9 @@ def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None) 
         "-chardev", f"file,id=debugcon,path={build / 'debugcon.log'}",
         "-device", f"isa-debugcon,iobase=0xe9,chardev=debugcon,readback={readback}",
         "-nic", "none",
+        # The preferred (EDID) resolution becomes OVMF's default mode, like a native panel of that size.
+        "-vga", "none",
+        "-device", "VGA,xres={},yres={},edid=on".format(*resolution.split("x")),
     ]
     if headless:
         cmd += ["-display", "none", "-serial", f"file:{build / 'serial.log'}"]
@@ -161,14 +164,14 @@ def play_keys(qmp: Qmp, script: str, build: Path, log: Path, timeout: float, pro
 
 
 def cmd_run(args) -> int:
-    os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=args.headless, qmp=None))
+    os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=args.headless, qmp=None, resolution=args.resolution))
 
 
 def cmd_debug(args) -> int:
     log = args.build / "debugcon.log"
     log.unlink(missing_ok=True)
     print("qemu: starting", flush=True)
-    proc = subprocess.Popen(qemu_command(args.build, debug=True, headless=args.headless, qmp=None))
+    proc = subprocess.Popen(qemu_command(args.build, debug=True, headless=args.headless, qmp=None, resolution=args.resolution))
     if wait_for_log(log, "waiting for debugger", args.timeout, proc):
         print("qemu: waiting for gdb on :1234", flush=True)
     else:
@@ -183,7 +186,7 @@ def cmd_smoke(args) -> int:
     log.unlink(missing_ok=True)
     qmp_path.unlink(missing_ok=True)
 
-    proc = subprocess.Popen(qemu_command(args.build, debug=False, headless=True, qmp=qmp_path))
+    proc = subprocess.Popen(qemu_command(args.build, debug=False, headless=True, qmp=qmp_path, resolution=args.resolution))
     try:
         booted = wait_for_log(log, args.expect, args.timeout, proc)
         ok = booted
@@ -221,6 +224,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--build", type=Path, default=ROOT / "build" / "uefi", help="build directory with scroller.img")
+    common.add_argument("--resolution", default="960x720",
+                        help="display's preferred resolution WxH (default: 960x720, the 320x240 screen at x3)")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", parents=[common])
     run.add_argument("--headless", action="store_true", help="no window; serial goes to serial.log")
