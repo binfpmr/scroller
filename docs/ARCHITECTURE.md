@@ -10,19 +10,24 @@ A small 2D platformer that boots directly on x86_64 hardware via UEFI. No OS, no
 | Firmware use | UEFI as a *loader*, then `ExitBootServices` | UEFI input has no key-release events and would fight us over IRQs/DMA (sound). After exit we own the machine. |
 | Video | Game renders into a 320x240 XRGB8888 buffer in RAM; `present()` integer-scales it into the GOP framebuffer | No real Mode X under UEFI. 32-bit colour, no palette emulation. |
 | Video mode | Prefer exact multiples (1280x960 x4, 960x720 x3, 640x480 x2); otherwise the largest integer scale that fits, centered with black borders | Pixel-perfect scaling, works with whatever modes the firmware offers (laptops often expose only the native panel mode). |
-| Toolchain | clang + lld targeting `x86_64-unknown-windows` (PE/COFF), NASM (`-f win64`) for assembly | Produces `.efi` directly; no gnu-efi/EDK2. UEFI uses the Microsoft x64 ABI, which is the native ABI of this target, so no `EFIAPI` annotations are needed. |
-| Languages | C++20 (freestanding subset) for almost everything, NASM where asm is required (ISR stubs, descriptor loads), C allowed for self-contained low-level pieces | One main language keeps it simple. |
+| Toolchain | GCC (`gcc`, `g++`) + GNU binutils (`as`, `ld`, `objcopy`) as a freestanding ELF toolchain, no OS target assumed; clang (`--target=x86_64-unknown-none-elf`) as an optional second compiler | No EDK2, no gnu-efi. A real `x86_64-elf` cross compiler can be plugged in via a toolchain prefix if wanted; the host GCC with freestanding flags produces equivalent code. |
+| Executable format | Link a static PIE ELF at base 0 (`scroller.elf`, keeps DWARF for gdb), convert to PE with `objcopy --target=efi-app-x86_64` (`scroller.efi`); `crt0.S` applies the ELF `R_X86_64_RELATIVE` relocations itself before any C++ runs | UEFI loads PE images at an arbitrary address. ELF section addresses equal the PE RVAs, so debugging uses the ELF at a known offset. |
+| Calling convention | Our code uses the System V ABI; UEFI functions and `efi_main`'s firmware entry use the Microsoft x64 ABI (`EFIAPI` = `__attribute__((ms_abi))`; `crt0.S` bridges the entry) | Standard approach for GCC on ELF. |
+| Languages | Freestanding C++23 for almost everything, C23 where it fits (self-contained low-level pieces), GNU `as` for what needs assembly (entry/relocation, ISR stubs, descriptor loads). Intel syntax everywhere (`.intel_syntax noprefix`, `-masm=intel` for inline asm) | One main language keeps it simple. |
 | UEFI headers | Our own minimal definitions (`src/uefi/`), only what we use | A few hundred lines; no external dependency. |
 | Timing | Fixed 60 Hz game step; TSC calibrated against UEFI `Stall()` before exit; no interrupts needed in v1 | Simplest thing that works; interrupts come with sound. |
 | Input (v1) | Poll the i8042 PS/2 controller (scan code set 1/2 make/break codes) | QEMU's default keyboard; most laptop built-in keyboards are also PS/2 behind the EC. USB (xHCI + HID boot keyboard) is a later milestone. |
 | Input fallback | Build option `SCROLLER_UEFI_INPUT`: stay in boot services, use `SimpleTextInputEx`, treat a key as held for ~N ms after its last (repeat) event | Lets us try real USB-only hardware before the xHCI driver exists. Input feel is worse; debug aid only. |
-| Assets | Converted at build time by host Python tools (PIL) into simple binary blobs, copied onto the ESP, loaded into RAM before `ExitBootServices` | No disk driver needed for v1. |
+| Assets | Plain-text sources: levels as one character per tile, placeholder sprites as text art (one character per palette colour). Converted at build time by host Python tools into simple binary blobs, copied onto the ESP, loaded into RAM before `ExitBootServices` | Diff-friendly, editable in any editor, no level editor needed yet. No disk driver needed for v1. |
+| Controls | Arrows move, Space or Z jump, Esc reboots | |
+| Exit | Esc -> `ResetSystem(EfiResetCold)` (UEFI runtime services stay callable after `ExitBootServices`); fallback: 8042 reset pulse, then triple fault | Works on real hardware and QEMU. |
 | Tests | Game logic, graphics and lib code also build for the host and have unit tests (CTest) | Fast feedback without booting. |
 
 ## Boot / runtime phases
 
 ```
 OVMF / firmware
+  -> _start                             [boot/crt0.S]  MS ABI entry: apply relocations, clear .bss, call efi_main
   -> efi_main()                         [boot/]  boot services available
        - init debug log (QEMU debugcon port 0xE9 + serial COM1)
        - GOP: pick video mode, remember framebuffer + pixel format
@@ -35,7 +40,7 @@ OVMF / firmware
        - main loop: poll input -> game.update() at fixed 60 Hz -> game.render() -> present()
 ```
 
-`BootInfo` is the only thing passed across the boundary: framebuffer description, loaded asset blobs, arena, TSC frequency. Nothing after `ExitBootServices` may call into UEFI (except runtime services, which we don't plan to use).
+`BootInfo` is the only thing passed across the boundary: framebuffer description, loaded asset blobs, arena, TSC frequency, runtime services pointer. Nothing after `ExitBootServices` may call into UEFI boot services; the only runtime service we use is `ResetSystem`.
 
 After exit we keep the firmware's identity-mapped page tables and GDT until we need our own (exceptions/interrupts milestone).
 
@@ -43,16 +48,16 @@ After exit we keep the firmware's identity-mapped page tables and GDT until we n
 
 ```
 src/
-  boot/          UEFI entry, loader phase, BootInfo
+  boot/          crt0.S (entry, self-relocation), linker script, UEFI loader phase, BootInfo
   uefi/          minimal UEFI type and protocol definitions
-  arch/x86_64/   port I/O, cpu helpers (rdtsc, cli/sti, hlt), later GDT/IDT + NASM stubs
+  arch/x86_64/   port I/O, cpu helpers (rdtsc, cli/sti, hlt), later GDT/IDT + GNU as stubs
   drivers/       debug log (debugcon/serial), ps2 keyboard; later: hpet/apic timer, sb16, hda, xhci, usb_hid, ahci, nvme
   platform/      the interface the game sees (input state, time, present, assets) + its bare-metal implementation
   gfx/           Surface (320x240 XRGB), blits, sprites, tilemap renderer, scaler to GOP
   game/          pure game logic: level, tile collision, player physics, camera
   lib/           freestanding runtime: mem*/str* functions, fmt/log formatting, arena allocator, fixed-point math
 tools/           host Python: asset conversion, gdb helper
-assets/          source art and levels
+assets/          text-art sprites, palette, text levels
 scripts/         build-image / run-qemu / smoke-test shell scripts
 tests/           host unit tests for game/, gfx/, lib/
 ```
@@ -69,9 +74,11 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 
 ## Freestanding C++ rules
 
-- Compile flags (roughly): `--target=x86_64-unknown-windows -ffreestanding -nostdlib -fno-exceptions -fno-rtti -fno-stack-protector -mno-stack-arg-probe -mno-red-zone -fshort-wchar`; link with `-fuse-ld=lld -Wl,/subsystem:efi_application -Wl,/entry:efi_main`.
+- Compile flags (roughly): `-std=c++23` / `-std=c23`, `-ffreestanding -fpie -fvisibility=hidden -fno-plt -fno-exceptions -fno-rtti -fno-stack-protector -fno-stack-check -fcf-protection=none -fno-asynchronous-unwind-tables -mno-red-zone -masm=intel`.
+- Link (roughly): `-nostdlib -static-pie -Wl,--no-dynamic-linker -Wl,-z,norelro -T src/boot/efi.ld`, then `objcopy --target=efi-app-x86_64 --subsystem=10`.
+- UEFI strings are `char16_t` (`u"..."` literals), so no `-fshort-wchar`.
 - No exceptions, no RTTI, no heap `new`/`delete` (allocate from the arena), no global objects with non-trivial constructors (nothing runs them).
-- Only compiler-provided freestanding headers (`<stdint.h>`, `<stddef.h>`, `<stdarg.h>`, ...). No STL containers.
+- Headers: compiler freestanding headers (`<stdint.h>`, `<stddef.h>`, `<stdarg.h>`, ...) and libstdc++'s freestanding subset (`<cstdint>`, `<type_traits>`, `<utility>`, `<bit>`, `<array>`, `<span>`, `<concepts>`, ...), as long as it compiles under `-ffreestanding` and needs no runtime library. No allocating containers.
 - The compiler may emit calls to `memset`/`memcpy`/`memmove`/`memcmp`; `lib/` provides them.
 - SSE is enabled by UEFI and may be used; floats are allowed, but game physics uses fixed point.
 

@@ -5,19 +5,21 @@
 ## Prerequisites (Ubuntu)
 
 ```sh
-sudo apt install clang lld clang-format clangd cmake ninja-build mtools nasm \
-                 qemu-system-x86 ovmf gdb python3-pil gdisk dosfstools
+sudo apt install gcc g++ binutils cmake ninja-build mtools qemu-system-x86 ovmf gdb \
+                 python3 gdisk dosfstools clang-format clangd
+sudo apt install clang lld        # optional, for the uefi-clang preset
 ```
 
-VS Code extensions (recommended in `.vscode/extensions.json`): clangd, CMake Tools, C/C++ (only for the gdb debugger front end; its IntelliSense is disabled in favour of clangd), x86 assembly syntax.
+VS Code extensions (recommended in `.vscode/extensions.json`): clangd, CMake Tools, C/C++ (only for the gdb debugger front end; its IntelliSense is disabled in favour of clangd), x86 assembly syntax (GAS).
 
 ## Build
 
-Two CMake presets, both using Ninja, output under `build/<preset>/`:
+CMake presets, all using Ninja, output under `build/<preset>/`:
 
 | Preset | What | Output |
 |---|---|---|
-| `uefi` | Cross build for the target | `build/uefi/scroller.efi`, `build/uefi/scroller.img` (GPT disk), `build/uefi/esp.img` (FAT ESP only) |
+| `uefi` | Freestanding target build with GCC | `build/uefi/scroller.elf` (with symbols), `scroller.efi` (PE), `scroller.img` (GPT disk), `esp.img` (FAT ESP only) |
+| `uefi-clang` | Same with clang (`x86_64-unknown-none-elf`), GNU ld/objcopy | `build/uefi-clang/...` |
 | `host` | Game/gfx/lib code + unit tests for Linux | `build/host/tests/...` |
 
 ```sh
@@ -42,7 +44,7 @@ QEMU basics used: `-machine q35`, OVMF firmware (`/usr/share/OVMF/OVMF_CODE_4M.f
 
 1. `scripts/run-qemu.sh --debug` (VS Code task *QEMU (debug)* does this).
 2. In debug builds `efi_main` logs its image base to the debug log and spins on a `volatile` flag until a debugger clears it.
-3. The gdb helper (`tools/gdb/`) reads the image base from the log, loads symbols from `scroller.efi` (DWARF inside the PE) at the right offset, clears the flag, and continues.
+3. The gdb helper (`tools/gdb/`) reads the image base from the log, runs `add-symbol-file build/uefi/scroller.elf -o <base>` (the ELF is linked at 0, so the offset is the image base), clears the flag, and continues.
 4. VS Code launch config *Debug in QEMU* does steps 1 to 3; breakpoints in source then work as usual.
 
 ## Write to a USB stick / disk

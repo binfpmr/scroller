@@ -20,11 +20,14 @@ clang-format -i <files>                                  # Google style, 120 col
 
 ## Rules that are easy to get wrong
 
-- Target is `x86_64-unknown-windows` PE/COFF with the Microsoft x64 ABI (same as UEFI). NASM files use `-f win64` and must follow that ABI.
-- Freestanding: no exceptions, RTTI, STL, libc, heap `new`, or global objects with non-trivial constructors. Memory comes from the arena allocated before `ExitBootServices`.
+- Toolchain is GCC + GNU binutils (clang optional, no NASM). Output is a static-PIE ELF linked at 0, converted to PE by `objcopy`; `src/boot/crt0.S` self-relocates. Any absolute address in data needs a `R_X86_64_RELATIVE` reloc, which crt0 handles; other dynamic reloc types are a link error to fix, not to ignore.
+- Our code is System V ABI; anything UEFI calls or that calls UEFI is `EFIAPI` (`__attribute__((ms_abi))`).
+- Assembly is GNU `as` in Intel syntax (`.intel_syntax noprefix`); inline asm is Intel too (`-masm=intel`).
+- Freestanding C++23 / C23: no exceptions, RTTI, STL, libc, heap `new`, or global objects with non-trivial constructors. Memory comes from the arena allocated before `ExitBootServices`.
 - Nothing after `ExitBootServices` may call UEFI boot services; everything needed later goes into `BootInfo`.
 - `game/` and `gfx/` must not include anything from `boot/`, `uefi/`, `arch/`, `drivers/`, so they keep building for the host tests.
 - Game physics uses fixed point, not floats.
+- Assets are plain text (levels: one char per tile; sprites: text art); converters live in `tools/` and run at build time.
 
 ## Working loop
 

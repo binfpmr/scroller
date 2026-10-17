@@ -8,7 +8,7 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 2
 
-[*.asm]
+[*.S]
 indent_size = 8
 
 [{CMakeLists.txt,*.cmake}]

@@ -1,5 +1,5 @@
 {
-  // Attaches gdb to QEMU's gdb stub. tools/gdb/scroller.py relocates the symbols of scroller.efi to the
+  // Attaches gdb to QEMU's gdb stub. tools/gdb/scroller.py loads scroller.elf's symbols at the
   // image base that efi_main logs, then releases the wait-for-debugger loop. Finalized in milestone M0.
   "version": "0.2.0",
   "configurations": [
@@ -7,7 +7,7 @@
       "name": "Debug in QEMU",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/uefi/scroller.efi",
+      "program": "${workspaceFolder}/build/uefi/scroller.elf",
       "cwd": "${workspaceFolder}",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",

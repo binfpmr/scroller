@@ -5,7 +5,8 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 ## M0: toolchain and "hello pixels"
 
 - [ ] Install missing tools (see `docs/WORKFLOW.md`)
-- [ ] CMake project with `uefi` and `host` presets, cross toolchain file
+- [ ] CMake project with `uefi` (GCC), `uefi-clang` and `host` presets, freestanding toolchain file
+- [ ] `crt0.S` + linker script + `objcopy` to PE; verify relocations are applied and OVMF loads the image
 - [ ] Minimal UEFI headers + `efi_main` that logs to debugcon/serial and fills the screen with a colour
 - [ ] `scripts/build-image.sh`: GPT disk image with a FAT32 ESP (`/EFI/BOOT/BOOTX64.EFI`), plus a bare ESP image for copying onto an existing partition
 - [ ] `scripts/run-qemu.sh` (interactive, `--debug` for gdb stub)
@@ -21,6 +22,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [ ] PS/2 keyboard polling -> `InputState` (held / pressed / released per key)
 - [ ] 60 Hz fixed-step loop; test pattern that scrolls with arrow keys
 - [ ] `SCROLLER_UEFI_INPUT` fallback build for real-HW trials
+- [ ] Esc reboots (`ResetSystem`, with fallbacks)
 - [ ] First real hardware test from a USB stick
 
 ## M2: platformer core
@@ -32,14 +34,15 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## M3: assets
 
-- [ ] Asset converter (PNG -> sprite/tileset blob, text/PNG level -> tilemap blob)
+- [ ] Asset converter: text-art sprites + palette -> sprite/tileset blob, text level -> tilemap blob
+- [ ] Placeholder art: player (idle/run/jump), a handful of tiles
 - [ ] Load assets from the ESP at boot
 - [ ] Sprite drawing with transparency and horizontal flip, simple animations (idle/run/jump)
 - [ ] A small real level
 
 ## M4: interrupts and diagnostics
 
-- [ ] Own GDT and IDT, NASM ISR stubs
+- [ ] Own GDT and IDT, GNU as ISR stubs
 - [ ] Exception handler that dumps registers to the log and screen
 - [ ] Interrupt controller (APIC/IOAPIC via ACPI MADT) and a timer (HPET or LAPIC)
 
@@ -66,9 +69,13 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [ ] Write-combining framebuffer via PAT
 - [ ] Parallax background, more enemies/levels, title screen
 
+## Settled
+
+- Controls: arrows move, Space or Z jump, Esc reboots.
+- Art: placeholder sprites drawn as text art in the repo.
+- Levels: plain text, one character per tile; no level editor for now.
+- Toolchain: GCC + GNU as/binutils, clang optional; no NASM.
+
 ## Open questions
 
-- Controls: arrows + Z/X? Or arrows + Space? (default: arrows to move, Space/Z jump, Esc reboots)
-- Art: draw our own placeholder sprites, or use a CC0 pack (e.g. Kenney, 16x16)?
-- Level format: plain text (one char per tile, easy to edit by hand) vs. Tiled `.tmx` export?
-- Exit behaviour: Esc -> reboot (via keyboard controller/ACPI reset) or halt?
+- Do we want a real `x86_64-elf` cross GCC (built by a script into e.g. `~/opt/cross`) instead of the host GCC with freestanding flags?
