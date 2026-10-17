@@ -12,8 +12,11 @@ using platform::Key;
 
 constexpr int kSettleTicks = 600;
 
-InputState Input(int dir, bool jump_held, bool jump_pressed) {
+InputState Input(int dir, bool jump_held, bool jump_pressed, bool down = false) {
   InputState s;
+  if (down) {
+    s.held |= InputState::Bit(Key::kDown);
+  }
   if (dir < 0) {
     s.held |= InputState::Bit(Key::kLeft);
   } else if (dir > 0) {
@@ -43,8 +46,11 @@ struct Move {
   int dir;     // run-up direction
   int run_up;  // ticks of running before the jump (or the whole move for a walk)
   bool jump;
-  int hold;     // ticks the jump button stays held
-  int air_dir;  // direction held while airborne
+  int hold;                // ticks the jump button stays held
+  int air_dir;             // direction held while airborne
+  bool duck = false;       // Down held when jumping: duck-jump
+  int wall_jump_at = 0;    // if > 0: press jump again this many ticks after the first jump (a wall-jump at a wall)
+  int after_wall_dir = 0;  // direction held after the second jump
 };
 
 std::vector<Move> AllMoves() {
@@ -64,6 +70,21 @@ std::vector<Move> AllMoves() {
           moves.push_back({dir, run, true, hold, air_dir});
         }
       }
+      for (int air_dir : {-1, 0, 1}) {
+        moves.push_back({dir, run, true, 60, air_dir, true});
+      }
+    }
+  }
+  // Jump at a wall, then wall-jump off it after various delays.
+  for (int dir : {-1, 1}) {
+    for (int run : {0, 14}) {
+      for (bool duck : {false, true}) {
+        for (int at : {6, 12, 18, 26, 34}) {
+          for (int after : {-1, 0, 1}) {
+            moves.push_back({dir, run, true, 60, dir, duck, at, after});
+          }
+        }
+      }
     }
   }
   return moves;
@@ -74,12 +95,13 @@ bool Apply(Player& p, const game::Level& level, const Move& m) {
     game::UpdatePlayer(p, Input(m.dir, false, false), level);
   }
   if (m.jump) {
-    game::UpdatePlayer(p, Input(m.air_dir, true, true), level);
-    for (int i = 1; i < m.hold; ++i) {
-      game::UpdatePlayer(p, Input(m.air_dir, true, false), level);
-    }
-    for (int i = 0; i < kSettleTicks && !p.on_ground; ++i) {
-      game::UpdatePlayer(p, Input(m.air_dir, false, false), level);
+    game::UpdatePlayer(p, Input(m.air_dir, true, true, m.duck), level);
+    for (int i = 1; i < kSettleTicks && !p.on_ground; ++i) {
+      if (m.wall_jump_at > 0 && i >= m.wall_jump_at) {
+        game::UpdatePlayer(p, Input(m.after_wall_dir, true, i == m.wall_jump_at), level);
+      } else {
+        game::UpdatePlayer(p, Input(m.air_dir, i < m.hold, false), level);
+      }
     }
   }
   return Settle(p, level);
