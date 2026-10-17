@@ -111,6 +111,27 @@ long long Key2(const Player& p) { return (static_cast<long long>(p.pixel_x()) <<
 
 }  // namespace
 
+bool Reachability::Touches(int tx, int ty) const {
+  for (const Player& p : rest_positions) {
+    if (p.pixel_x() < (tx + 1) * game::kTileSize && p.pixel_x() + Player::kWidth > tx * game::kTileSize &&
+        p.pixel_y() < (ty + 1) * game::kTileSize && p.pixel_y() + Player::kHeight > ty * game::kTileSize) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Reachability::ReachesGoal(const game::Level& level) const {
+  for (int ty = 0; ty < level.height; ++ty) {
+    for (int tx = 0; tx < level.width; ++tx) {
+      if (level.At(tx, ty) == game::Tile::kGoal && Touches(tx, ty)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool Reachability::StandsOn(int tx, int ty) const {
   for (const Player& p : rest_positions) {
     const bool feet_on_row = p.pixel_y() + Player::kHeight == ty * game::kTileSize;
@@ -151,8 +172,13 @@ std::string RenderMap(const game::Level& level, const Reachability& reach) {
   std::string map;
   for (int ty = 0; ty < level.height; ++ty) {
     for (int tx = 0; tx < level.width; ++tx) {
-      if (level.IsSolid(tx, ty)) {
+      const game::Tile tile = level.At(tx, ty);
+      if (tile == game::Tile::kGround) {
         map += '#';
+      } else if (tile == game::Tile::kStone) {
+        map += 'X';
+      } else if (tile == game::Tile::kGoal) {
+        map += reach.Touches(tx, ty) ? 'g' : 'G';
       } else if (tx == level.start_x && ty == level.start_y) {
         map += 'P';
       } else {

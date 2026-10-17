@@ -13,7 +13,8 @@ TEST(RandomPlayKeepsInvariants) {
   game::Game g;
   const char* error = nullptr;
   const std::string level = test::ReadAsset("levels/test.txt");
-  EXPECT_TRUE(g.Init(arena, level.data(), level.size(), &error));
+  const test::TestAssets assets;
+  EXPECT_TRUE(g.Init(arena, level.data(), level.size(), assets.assets(), &error));
 
   std::vector<uint32_t> screen_pixels(gfx::kScreenWidth * gfx::kScreenHeight);
   gfx::Surface screen{screen_pixels.data(), gfx::kScreenWidth, gfx::kScreenHeight};

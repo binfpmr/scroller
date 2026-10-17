@@ -18,7 +18,7 @@ bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level
     if (c == '\r') {
       continue;
     }
-    if (c != '#' && c != '.' && c != ' ' && c != 'P') {
+    if (c != '#' && c != 'X' && c != 'G' && c != '.' && c != ' ' && c != 'P') {
       *error = "unknown tile character";
       return false;
     }
@@ -61,7 +61,11 @@ bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level
       continue;
     }
     if (c == '#') {
-      tiles[y * width + x] = Tile::kSolid;
+      tiles[y * width + x] = Tile::kGround;
+    } else if (c == 'X') {
+      tiles[y * width + x] = Tile::kStone;
+    } else if (c == 'G') {
+      tiles[y * width + x] = Tile::kGoal;
     } else if (c == 'P') {
       level->start_x = x;
       level->start_y = y;

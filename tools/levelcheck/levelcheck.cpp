@@ -30,5 +30,14 @@ int main(int argc, char** argv) {
   }
   const levelcheck::Reachability reach = levelcheck::Explore(level);
   std::cout << levelcheck::RenderMap(level, reach) << reach.rest_positions.size() << " resting positions reachable\n";
+  bool has_goal = false;
+  for (int i = 0; i < level.width * level.height; ++i) {
+    has_goal = has_goal || level.tiles[i] == game::Tile::kGoal;
+  }
+  if (has_goal) {
+    const bool ok = reach.ReachesGoal(level);
+    std::cout << "goal " << (ok ? "reachable" : "NOT reachable") << "\n";
+    return ok ? 0 : 1;
+  }
   return 0;
 }

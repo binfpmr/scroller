@@ -1,12 +1,18 @@
 #include "game/render.h"
 
 #include "gfx/draw.h"
+#include "gfx/font.h"
+#include "gfx/sprite.h"
 
 namespace game {
 namespace {
 
 using gfx::Color;
 using gfx::Rgb;
+
+constexpr int kRunFrameTicks = 6;
+constexpr uint32_t kBlinkPeriodTicks = 200;
+constexpr uint32_t kBlinkTicks = 8;
 
 void DrawSky(gfx::Surface& screen, const Camera& camera, const Level& level) {
   // Gradient over the whole level height, so vertical scrolling is visible against the sky too.
@@ -22,65 +28,67 @@ void DrawSky(gfx::Surface& screen, const Camera& camera, const Level& level) {
   }
 }
 
-// 16x16 brick tile; a grass top when the tile above is open.
-Color TilePixel(int x, int y, bool grass) {
-  if (grass && y < 4) {
-    return y == 3 ? Rgb(40, 110, 30) : Rgb(80, 180, 60);
-  }
-  const bool mortar = (y % 8) == 7 || ((x + ((y / 8) % 2) * 8) % 16) == 15;
-  if (mortar) {
-    return Rgb(90, 60, 50);
-  }
-  return (x + y) % 5 == 0 ? Rgb(170, 90, 60) : Rgb(185, 100, 65);
-}
-
-void DrawTiles(gfx::Surface& screen, const Level& level, const Camera& camera) {
+void DrawTiles(gfx::Surface& screen, const Level& level, const Camera& camera, const Frames& frames) {
   const int first_tx = camera.x >> kTileShift;
   const int first_ty = camera.y >> kTileShift;
   const int last_tx = (camera.x + screen.width - 1) >> kTileShift;
   const int last_ty = (camera.y + screen.height - 1) >> kTileShift;
   for (int ty = first_ty; ty <= last_ty; ++ty) {
     for (int tx = first_tx; tx <= last_tx; ++tx) {
-      if (!level.IsSolid(tx, ty)) {
-        continue;
+      const gfx::Sprite* sprite = nullptr;
+      switch (level.At(tx, ty)) {
+        case Tile::kGround:
+          sprite = level.IsSolid(tx, ty - 1) ? frames.ground : frames.ground_top;
+          break;
+        case Tile::kStone:
+          sprite = frames.stone;
+          break;
+        case Tile::kGoal:
+          sprite = frames.flag;
+          break;
+        case Tile::kEmpty:
+          break;
       }
-      const bool grass = !level.IsSolid(tx, ty - 1);
-      const int sx = tx * kTileSize - camera.x;
-      const int sy = ty * kTileSize - camera.y;
-      const gfx::Rect r = gfx::ClipRect(screen, sx, sy, kTileSize, kTileSize);
-      for (int y = r.y; y < r.y + r.height; ++y) {
-        Color* row = screen.Row(y);
-        for (int x = r.x; x < r.x + r.width; ++x) {
-          row[x] = TilePixel(x - sx, y - sy, grass);
-        }
+      if (sprite != nullptr) {
+        gfx::DrawSprite(screen, *sprite, tx * kTileSize - camera.x, ty * kTileSize - camera.y);
       }
     }
   }
 }
 
-void DrawPlayer(gfx::Surface& screen, const Player& player, const Camera& camera) {
-  // Ducking squashes the body (feet stay on the ground) and shuts the eye; the hitbox does not change.
-  constexpr int kDuckHeight = 10;
-  const int height = player.ducking ? kDuckHeight : Player::kHeight;
-  const int sx = player.pixel_x() - camera.x;
-  const int sy = player.pixel_y() - camera.y + (Player::kHeight - height);
-  gfx::FillRect(screen, sx, sy, Player::kWidth, height, Rgb(40, 30, 60));
-  gfx::FillRect(screen, sx + 1, sy + 1, Player::kWidth - 2, height - 2, Rgb(240, 150, 40));
-  const int eye_x = player.facing_left ? sx + 2 : sx + Player::kWidth - 5;
-  if (player.ducking) {
-    gfx::FillRect(screen, eye_x, sy + 4, 3, 1, Rgb(20, 20, 20));
-  } else {
-    gfx::FillRect(screen, eye_x, sy + 3, 3, 3, Rgb(255, 255, 255));
-    gfx::FillRect(screen, player.facing_left ? eye_x : eye_x + 1, sy + 4, 2, 2, Rgb(20, 20, 20));
-  }
-}
-
 }  // namespace
 
-void RenderWorld(gfx::Surface& screen, const Level& level, const Camera& camera, const Player& player) {
+const gfx::Sprite* PlayerFrame(const Player& player, const Frames& frames, uint32_t ticks) {
+  if (player.ducking) {
+    return frames.duck;
+  }
+  if (!player.on_ground) {
+    return player.vy < lib::Fixed() ? frames.jump : frames.fall;
+  }
+  if (player.vx != lib::Fixed()) {
+    return frames.run[(ticks / kRunFrameTicks) % 4];
+  }
+  return ticks % kBlinkPeriodTicks < kBlinkTicks ? frames.blink : frames.idle;
+}
+
+void RenderWorld(gfx::Surface& screen, const Level& level, const Camera& camera, const Player& player,
+                 const Frames& frames, uint32_t ticks) {
   DrawSky(screen, camera, level);
-  DrawTiles(screen, level, camera);
-  DrawPlayer(screen, player, camera);
+  DrawTiles(screen, level, camera, frames);
+  // The 16x16 frame is centred horizontally on the 12x14 hitbox, feet on its bottom edge.
+  const gfx::Sprite& sprite = *PlayerFrame(player, frames, ticks);
+  const int x = player.pixel_x() + (Player::kWidth - sprite.width) / 2 - camera.x;
+  const int y = player.pixel_y() + Player::kHeight - sprite.height - camera.y;
+  gfx::DrawSprite(screen, sprite, x, y, player.facing_left);
+}
+
+void DrawBanner(gfx::Surface& screen, const char* text) {
+  const int w = gfx::TextWidth(text) + 16;
+  const int h = gfx::kGlyphHeight + 12;
+  const int x = (screen.width - w) / 2;
+  const int y = (screen.height - h) / 2;
+  gfx::FillRect(screen, x, y, w, h, Rgb(20, 20, 40));
+  gfx::DrawText(screen, x + 8, y + 6, text, Rgb(255, 230, 120));
 }
 
 }  // namespace game

@@ -13,7 +13,9 @@ inline constexpr int kTileShift = 4;
 
 enum class Tile : uint8_t {
   kEmpty,
-  kSolid,
+  kGround,  // '#': dirt, drawn with grass when open above
+  kStone,   // 'X'
+  kGoal,    // 'G': flag, not solid; touching it finishes the level
 };
 
 struct Level {
@@ -26,20 +28,23 @@ struct Level {
   // Outside the map: solid to the left, right and below (walls and floor), empty above.
   Tile At(int tx, int ty) const {
     if (tx < 0 || tx >= width || ty >= height) {
-      return Tile::kSolid;
+      return Tile::kStone;
     }
     if (ty < 0) {
       return Tile::kEmpty;
     }
     return tiles[ty * width + tx];
   }
-  bool IsSolid(int tx, int ty) const { return At(tx, ty) == Tile::kSolid; }
+  bool IsSolid(int tx, int ty) const {
+    const Tile t = At(tx, ty);
+    return t == Tile::kGround || t == Tile::kStone;
+  }
   int pixel_width() const { return width * kTileSize; }
   int pixel_height() const { return height * kTileSize; }
 };
 
 // Text format, one line per tile row ('\n' or "\r\n"); shorter lines are padded with empty tiles:
-//   '#' solid   '.' or ' ' empty   'P' player start (exactly one, an empty tile)
+//   '#' ground (solid)   'X' stone (solid)   'G' goal flag   '.' or ' ' empty   'P' player start (exactly one)
 // On error returns false and points *error at a static message.
 bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level, const char** error);
 

@@ -9,7 +9,9 @@
 #include <string>
 #include <vector>
 
+#include "game/game.h"
 #include "game/level.h"
+#include "gfx/sprite.h"
 #include "platform/input.h"
 #include "test.h"
 
@@ -35,6 +37,30 @@ struct TestLevel {
     lib::Arena arena(storage.data(), storage.size());
     const char* error = nullptr;
     if (!game::ParseLevel(text, std::strlen(text), arena, &level, &error)) {
+      Fail(__FILE__, __LINE__, error);
+    }
+  }
+};
+
+// The game's sprite sheets parsed from assets/sprites/.
+struct TestAssets {
+  std::vector<uint8_t> storage = std::vector<uint8_t>(1 << 20);
+  gfx::SpriteSheet player;
+  gfx::SpriteSheet tiles;
+
+  TestAssets() {
+    lib::Arena arena(storage.data(), storage.size());
+    Parse("sprites/player.txt", player, arena);
+    Parse("sprites/tiles.txt", tiles, arena);
+  }
+  game::GameAssets assets() const { return {.player = &player, .tiles = &tiles}; }
+
+ private:
+  static void Parse(const char* name, gfx::SpriteSheet& sheet, lib::Arena& arena) {
+    const std::string text = ReadAsset(name);
+    const char* error = nullptr;
+    int line = 0;
+    if (!sheet.Parse(text.data(), text.size(), arena, &error, &line)) {
       Fail(__FILE__, __LINE__, error);
     }
   }

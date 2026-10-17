@@ -9,6 +9,7 @@
 #include "gfx/draw.h"
 #include "gfx/font.h"
 #include "gfx/present.h"
+#include "gfx/sprite.h"
 #include "lib/arena.h"
 #include "lib/format.h"
 #include "lib/pack.h"
@@ -24,6 +25,23 @@ constexpr int kMaxCatchUpTicks = 5;  // after a stall, skip time rather than run
 constexpr int kStatsIntervalTicks = 5 * kTicksPerSecond;
 
 constexpr const char* kStartLevel = "levels/test.txt";
+
+// Parses one sprite sheet from the pack; on failure formats "name line N: problem" into `message`.
+bool LoadSheet(const lib::Pack& pack, const char* name, lib::Arena& arena, gfx::SpriteSheet* sheet, char* message,
+               size_t message_size) {
+  lib::Blob blob;
+  if (!pack.Find(name, &blob)) {
+    lib::Format(message, message_size, "%s not in the asset pack", name);
+    return false;
+  }
+  const char* error = nullptr;
+  int line = 0;
+  if (!sheet->Parse(blob.data, blob.size, arena, &error, &line)) {
+    lib::Format(message, message_size, "%s line %d:\n%s", name, line, error);
+    return false;
+  }
+  return true;
+}
 
 [[noreturn]] void Halt(const char* message) {
   Log("fatal: %s\n", message);
@@ -87,8 +105,15 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   if (!pack.Find(kStartLevel, &level_text)) {
     Fatal("level not found in the asset pack", screen, fb, viewport, keyboard, boot);
   }
+  static gfx::SpriteSheet player_sheet;
+  static gfx::SpriteSheet tile_sheet;
+  char message[160];
+  if (!LoadSheet(pack, "sprites/player.txt", arena, &player_sheet, message, sizeof(message)) ||
+      !LoadSheet(pack, "sprites/tiles.txt", arena, &tile_sheet, message, sizeof(message))) {
+    Fatal(message, screen, fb, viewport, keyboard, boot);
+  }
   game::Game game;
-  if (!game.Init(arena, level_text.data, level_text.size, &error)) {
+  if (!game.Init(arena, level_text.data, level_text.size, {.player = &player_sheet, .tiles = &tile_sheet}, &error)) {
     Fatal(error, screen, fb, viewport, keyboard, boot);
   }
   Log("level: %dx%d tiles, start %d,%d\n", game.level().width, game.level().height, game.level().start_x,
