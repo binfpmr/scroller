@@ -59,13 +59,20 @@ void DrawTiles(gfx::Surface& screen, const Level& level, const Camera& camera) {
 }
 
 void DrawPlayer(gfx::Surface& screen, const Player& player, const Camera& camera) {
+  // Ducking squashes the body (feet stay on the ground) and shuts the eye; the hitbox does not change.
+  constexpr int kDuckHeight = 10;
+  const int height = player.ducking ? kDuckHeight : Player::kHeight;
   const int sx = player.pixel_x() - camera.x;
-  const int sy = player.pixel_y() - camera.y;
-  gfx::FillRect(screen, sx, sy, Player::kWidth, Player::kHeight, Rgb(40, 30, 60));
-  gfx::FillRect(screen, sx + 1, sy + 1, Player::kWidth - 2, Player::kHeight - 2, Rgb(240, 150, 40));
+  const int sy = player.pixel_y() - camera.y + (Player::kHeight - height);
+  gfx::FillRect(screen, sx, sy, Player::kWidth, height, Rgb(40, 30, 60));
+  gfx::FillRect(screen, sx + 1, sy + 1, Player::kWidth - 2, height - 2, Rgb(240, 150, 40));
   const int eye_x = player.facing_left ? sx + 2 : sx + Player::kWidth - 5;
-  gfx::FillRect(screen, eye_x, sy + 3, 3, 3, Rgb(255, 255, 255));
-  gfx::FillRect(screen, player.facing_left ? eye_x : eye_x + 1, sy + 4, 2, 2, Rgb(20, 20, 20));
+  if (player.ducking) {
+    gfx::FillRect(screen, eye_x, sy + 4, 3, 1, Rgb(20, 20, 20));
+  } else {
+    gfx::FillRect(screen, eye_x, sy + 3, 3, 3, Rgb(255, 255, 255));
+    gfx::FillRect(screen, player.facing_left ? eye_x : eye_x + 1, sy + 4, 2, 2, Rgb(20, 20, 20));
+  }
 }
 
 }  // namespace

@@ -185,3 +185,135 @@ TEST(StaysGroundedEveryTick) {
     EXPECT_TRUE(p.on_ground);
   }
 }
+
+namespace {
+
+// Jump height (pixels) when Down is released `release_ticks_before` ticks before the jump (-1: never ducked).
+int JumpHeightAfterDuck(const game::Level& level, int release_ticks_before) {
+  Player p = SpawnAtStart(level);
+  Run(p, level, {}, 5);
+  if (release_ticks_before >= 0) {
+    Run(p, level, test::Keys({Key::kDown}), 10);
+    Run(p, level, {}, release_ticks_before);
+  }
+  const int floor_y = p.pixel_y();
+  int top = Run(p, level, test::Keys({}, {Key::kJump}), 1);
+  top = std::min(top, Run(p, level, test::Keys({Key::kJump}), 120));
+  return floor_y - top;
+}
+
+const char* kTall =
+    "#........#\n"
+    "#........#\n"
+    "#........#\n"
+    "#........#\n"
+    "#........#\n"
+    "#........#\n"
+    "#........#\n"
+    "#...P....#\n"
+    "##########\n";
+
+}  // namespace
+
+TEST(DuckingOnlyOnTheGround) {
+  test::TestLevel t(kTall);
+  Player p = SpawnAtStart(t.level);
+  Run(p, t.level, {}, 5);
+  Run(p, t.level, test::Keys({Key::kDown}), 1);
+  EXPECT_TRUE(p.ducking);
+  Run(p, t.level, test::Keys({Key::kDown}, {Key::kJump}), 3);
+  EXPECT_TRUE(!p.ducking && !p.on_ground);
+}
+
+TEST(DuckJumpIsHalfAgainAsHigh) {
+  test::TestLevel t(kTall);
+  const double normal = JumpHeightAfterDuck(t.level, -1);
+  const double duck = JumpHeightAfterDuck(t.level, 0);
+  EXPECT_TRUE(duck / normal > 1.45 && duck / normal < 1.55);
+}
+
+TEST(DuckJumpWindowAfterReleasingDown) {
+  test::TestLevel t(kTall);
+  const int normal = JumpHeightAfterDuck(t.level, -1);
+  EXPECT_TRUE(JumpHeightAfterDuck(t.level, 9) > normal + 20);  // released 9 ticks ago: still a duck-jump
+  EXPECT_EQ(JumpHeightAfterDuck(t.level, 12), normal);         // too late
+}
+
+namespace {
+
+// Jumps from the start toward the right wall (holding right) and returns the player at its first airborne tick
+// touching that wall.
+Player JumpAgainstRightWall(const game::Level& level) {
+  Player p = SpawnAtStart(level);
+  Run(p, level, {}, 5);
+  Run(p, level, test::Keys({Key::kRight}, {Key::kJump}), 1);
+  for (int i = 0; i < 120 && p.ticks_since_wall != 0; ++i) {
+    UpdatePlayer(p, test::Keys({Key::kRight, Key::kJump}), level);
+  }
+  return p;
+}
+
+const char* kWall =
+    "#........#\n"
+    "#........#\n"
+    "#........#\n"
+    "#........#\n"
+    "#........#\n"
+    "#........#\n"
+    "#.....P..#\n"
+    "##########\n";
+
+}  // namespace
+
+TEST(WallJumpPushesAwayFromWall) {
+  test::TestLevel t(kWall);
+  Player p = JumpAgainstRightWall(t.level);
+  EXPECT_TRUE(!p.on_ground && p.ticks_since_wall == 0 && p.wall_side == 1);
+  const int wall_x = p.pixel_x();
+  // Press jump while still holding toward the wall: the wall-jump overrides that direction during the rise.
+  UpdatePlayer(p, test::Keys({Key::kRight}, {Key::kJump}), t.level);
+  EXPECT_TRUE(p.vy < lib::Fixed() && p.wall_jump_away_dir == -1 && p.facing_left);
+  int top = p.pixel_y();
+  while (p.vy < lib::Fixed()) {
+    UpdatePlayer(p, test::Keys({Key::kRight}), t.level);  // jump released: no cut during a wall-jump
+    top = std::min(top, p.pixel_y());
+  }
+  EXPECT_TRUE(p.pixel_x() < wall_x - 10);
+  EXPECT_EQ(p.wall_jump_away_dir, 0);  // control returns at the top
+}
+
+TEST(WallJumpRisesLikeAFullJump) {
+  test::TestLevel t(kWall);
+  Player p = JumpAgainstRightWall(t.level);
+  const int start_y = p.pixel_y();
+  UpdatePlayer(p, test::Keys({}, {Key::kJump}), t.level);
+  int top = p.pixel_y();
+  while (p.vy < lib::Fixed()) {
+    UpdatePlayer(p, {}, t.level);
+    top = std::min(top, p.pixel_y());
+  }
+  EXPECT_TRUE(start_y - top > 48);
+}
+
+TEST(WallJumpCoyoteWindow) {
+  test::TestLevel t(kWall);
+  for (int delay : {4, 10}) {
+    Player p = JumpAgainstRightWall(t.level);
+    Run(p, t.level, test::Keys({Key::kLeft}), 1);  // leave the wall
+    for (int i = 0; i < delay - 1; ++i) {
+      UpdatePlayer(p, {}, t.level);
+    }
+    UpdatePlayer(p, test::Keys({}, {Key::kJump}), t.level);
+    EXPECT_EQ(p.wall_jump_away_dir != 0, delay <= game::PlayerTuning::kWallCoyoteTicks);
+  }
+}
+
+TEST(NoWallJumpAwayFromWalls) {
+  test::TestLevel t(kTall);
+  Player p = SpawnAtStart(t.level);
+  Run(p, t.level, {}, 5);
+  Run(p, t.level, test::Keys({}, {Key::kJump}), 1);
+  Run(p, t.level, test::Keys({Key::kJump}), 15);  // in the air, far from walls
+  UpdatePlayer(p, test::Keys({Key::kJump}, {Key::kJump}), t.level);
+  EXPECT_EQ(p.wall_jump_away_dir, 0);
+}

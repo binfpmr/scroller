@@ -46,7 +46,7 @@ Smoke tests can drive the game with a key script (`tools/qemu.py smoke --help`):
 scripts/smoke-test.sh --keys "shot:start right:2 down:1 shot:moved esc expect:reboot expect:efi_main"
 ```
 
-Taps/holds use QEMU key names (`left`, `right`, `up`, `down`, `spc`, `esc`), `shot:NAME` writes `build/uefi/smoke-NAME.png`, `expect:TEXT` waits for TEXT in the debug log after the previous match. The game logs timing and the camera position every 5 s, which makes scripted checks easy.
+Taps/holds use QEMU key names (`left`, `right`, `up`, `down`, `spc`, `esc`), `+KEY`/`-KEY` press/release separately, `shot:NAME` writes `build/uefi/smoke-NAME.png`, `expect:TEXT` waits for TEXT in the debug log after the previous match. The game logs timing and the camera position every 5 s, which makes scripted checks easy.
 
 **Hybrid Intel CPUs:** with KVM, OVMF intermittently hangs at the TianoCore logo when QEMU's vCPU thread migrates between P- and E-cores (seen on an i5-1334U, kernel 7.0, QEMU 10.2). `tools/qemu.py` therefore pins itself to the E-cores when `/sys/devices/cpu_atom/cpus` exists. Without KVM it falls back to TCG (slower, never hung).
 

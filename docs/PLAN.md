@@ -32,7 +32,8 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] Player: run, jump (variable height, coyote time, buffering), gravity, tile collision
 - [x] Camera with dead zone, clamped to level, 4-direction scrolling
 - [x] Host unit tests for collision and physics; random-play invariant test; `levelcheck` reachability tool
-- [ ] Feel check by a human: run/jump tuning in `PlayerTuning`
+- [x] Feel check by a human: run/jump tuning in `PlayerTuning`
+- [x] Wall-jump, duck-jump (50% higher), ducking look (squashed, eye shut)
 
 ## M3: assets
 
@@ -73,7 +74,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## Settled
 
-- Controls: Left/Right move, Up or Space jump, Esc reboots.
+- Controls: Left/Right move, Up or Space jump, Down ducks, Esc reboots.
 - Art: placeholder sprites drawn as text art in the repo.
 - Levels: plain text, one character per tile; no level editor for now.
 - Toolchain: host GCC with freestanding flags (no cross GCC for now) + GNU as/binutils, clang optional; no NASM. AT&T syntax.

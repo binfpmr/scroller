@@ -9,7 +9,8 @@ namespace game {
 
 using lib::Fixed;
 
-// Movement tuning, per 60 Hz tick. Jump height is about 3.4 tiles, so platforms 3 tiles up are reachable.
+// Movement tuning, per 60 Hz tick. Jump height is about 3.4 tiles (platforms 3 tiles up are reachable), a duck-jump
+// about 5.1 tiles.
 struct PlayerTuning {
   static constexpr Fixed kMaxRunSpeed = Fixed::FromInt(2);
   static constexpr Fixed kGroundAccel = Fixed::FromRatio(1, 4);
@@ -22,6 +23,16 @@ struct PlayerTuning {
   static constexpr Fixed kJumpCutSpeed = Fixed::FromInt(3);  // upward speed left when jump is released early
   static constexpr int kCoyoteTicks = 6;                     // jump still allowed this long after leaving a ledge
   static constexpr int kJumpBufferTicks = 6;                 // jump pressed this long before landing still counts
+
+  // Duck-jump: jumping while Down is held on the ground, or within kDuckJumpWindowTicks after releasing it, starts
+  // with kJumpSpeed * sqrt(1.5): 50% more height.
+  static constexpr Fixed kDuckJumpSpeed = Fixed::FromRatio(7348, 1000);
+  static constexpr int kDuckJumpWindowTicks = 10;
+
+  // Wall-jump: jumping in the air while touching a side wall, or up to kWallCoyoteTicks after, starts a full jump
+  // from zero horizontal speed. Until the top of that jump the input is overridden as if jump and the direction away
+  // from the wall were held (no jump cut, no steering back).
+  static constexpr int kWallCoyoteTicks = 6;
 };
 
 struct Player {
@@ -34,8 +45,13 @@ struct Player {
   Fixed vy;
   bool on_ground = false;
   bool facing_left = false;
+  bool ducking = false;  // Down held on the ground (only changes the look and enables the duck-jump)
   int ticks_since_ground = PlayerTuning::kCoyoteTicks + 1;
   int ticks_since_jump_pressed = PlayerTuning::kJumpBufferTicks + 1;
+  int ticks_since_duck = PlayerTuning::kDuckJumpWindowTicks + 1;
+  int ticks_since_wall = PlayerTuning::kWallCoyoteTicks + 1;
+  int wall_side = 0;           // -1 wall on the left, +1 on the right (last wall touched in the air)
+  int wall_jump_away_dir = 0;  // non-zero while a wall-jump overrides the input
 
   int pixel_x() const { return x.Floor(); }
   int pixel_y() const { return y.Floor(); }

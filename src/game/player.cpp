@@ -94,8 +94,14 @@ void Player::Spawn(int tx, int ty) {
 }
 
 void UpdatePlayer(Player& p, const platform::InputState& input, const Level& level) {
+  const bool wall_jumping = p.wall_jump_away_dir != 0;
+
+  p.ducking = p.on_ground && input.Held(Key::kDown);
+  p.ticks_since_duck = p.ducking ? 0 : lib::Min(p.ticks_since_duck + 1, 1000);
+
   // Horizontal: accelerate toward the held direction, turn around with acceleration plus friction.
-  const int dir = (input.Held(Key::kRight) ? 1 : 0) - (input.Held(Key::kLeft) ? 1 : 0);
+  const int dir =
+      wall_jumping ? p.wall_jump_away_dir : (input.Held(Key::kRight) ? 1 : 0) - (input.Held(Key::kLeft) ? 1 : 0);
   const Fixed accel = p.on_ground ? T::kGroundAccel : T::kAirAccel;
   const Fixed friction = p.on_ground ? T::kGroundFriction : T::kAirFriction;
   if (dir != 0) {
@@ -106,21 +112,48 @@ void UpdatePlayer(Player& p, const platform::InputState& input, const Level& lev
     p.vx = Approach(p.vx, Fixed(), friction);
   }
 
+  // Wall contact (airborne only), checked one pixel to each side of the hitbox.
+  if (p.on_ground) {
+    p.ticks_since_wall = T::kWallCoyoteTicks + 1;
+  } else if (BoxHitsSolid(level, p.pixel_x() - 1, p.pixel_y(), Player::kWidth, Player::kHeight)) {
+    p.ticks_since_wall = 0;
+    p.wall_side = -1;
+  } else if (BoxHitsSolid(level, p.pixel_x() + 1, p.pixel_y(), Player::kWidth, Player::kHeight)) {
+    p.ticks_since_wall = 0;
+    p.wall_side = 1;
+  } else {
+    p.ticks_since_wall = lib::Min(p.ticks_since_wall + 1, 1000);
+  }
+
   // Jump with buffering and coyote time; releasing the button early cuts the jump short.
   p.ticks_since_jump_pressed = input.Pressed(Key::kJump) ? 0 : lib::Min(p.ticks_since_jump_pressed + 1, 1000);
   p.ticks_since_ground = p.on_ground ? 0 : lib::Min(p.ticks_since_ground + 1, 1000);
-  if (p.ticks_since_jump_pressed <= T::kJumpBufferTicks && p.ticks_since_ground <= T::kCoyoteTicks) {
-    p.vy = -T::kJumpSpeed;
+  const bool jump_requested = p.ticks_since_jump_pressed <= T::kJumpBufferTicks;
+  if (jump_requested && p.ticks_since_ground <= T::kCoyoteTicks) {
+    p.vy = p.ticks_since_duck <= T::kDuckJumpWindowTicks ? -T::kDuckJumpSpeed : -T::kJumpSpeed;
     p.ticks_since_jump_pressed = T::kJumpBufferTicks + 1;
     p.ticks_since_ground = T::kCoyoteTicks + 1;
+    p.ticks_since_duck = T::kDuckJumpWindowTicks + 1;
+    p.ducking = false;
+  } else if (jump_requested && p.ticks_since_wall <= T::kWallCoyoteTicks) {
+    p.vy = -T::kJumpSpeed;
+    p.vx = Fixed();  // as if from standstill
+    p.wall_jump_away_dir = -p.wall_side;
+    p.facing_left = p.wall_jump_away_dir < 0;
+    p.ticks_since_jump_pressed = T::kJumpBufferTicks + 1;
+    p.ticks_since_wall = T::kWallCoyoteTicks + 1;
   }
-  if (!input.Held(Key::kJump) && p.vy < -T::kJumpCutSpeed) {
+  const bool jump_held = input.Held(Key::kJump) || p.wall_jump_away_dir != 0;
+  if (!jump_held && p.vy < -T::kJumpCutSpeed) {
     p.vy = -T::kJumpCutSpeed;
   }
 
   p.vy = lib::Min(p.vy + T::kGravity, T::kMaxFallSpeed);
   MoveX(p, level);
   MoveY(p, level);
+  if (p.on_ground || p.vy >= Fixed()) {
+    p.wall_jump_away_dir = 0;  // a wall-jump controls the rise only
+  }
 }
 
 bool BoxHitsSolid(const Level& level, int x, int y, int width, int height) {

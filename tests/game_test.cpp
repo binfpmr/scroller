@@ -26,6 +26,7 @@ TEST(RandomPlayKeepsInvariants) {
       tracker.OnKey(Key::kLeft, (rng >> 8) % 4 == 0);
       tracker.OnKey(Key::kRight, (rng >> 12) % 3 != 0);
       tracker.OnKey(Key::kJump, (rng >> 16) % 2 == 0);
+      tracker.OnKey(Key::kDown, (rng >> 20) % 5 == 0);
     }
     g.Update(tracker.NextTick());
     const game::Player& p = g.player();
