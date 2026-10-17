@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OVMF_CODE = Path("/usr/share/OVMF/OVMF_CODE_4M.fd")
 OVMF_VARS = Path("/usr/share/OVMF/OVMF_VARS_4M.fd")
 DEBUGCON_READBACK_DEBUG = 0xDB  # must match kDebugconReadbackDebug in src/boot/efi_main.cpp
+DISPLAYS = {"gtk": "gtk", "gtk-gl": "gtk,gl=on", "sdl": "sdl", "sdl-gl": "sdl,gl=on"}
 
 
 def parse_cpu_list(text: str) -> set[int]:
@@ -53,7 +54,8 @@ def pin_to_one_core_type() -> None:
         os.sched_setaffinity(0, parse_cpu_list(atom.read_text()))
 
 
-def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, resolution: str) -> list[str]:
+def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, resolution: str,
+                 display: str = "gtk") -> list[str]:
     vars_copy = build / "OVMF_VARS.fd"
     shutil.copyfile(OVMF_VARS, vars_copy)  # fresh NVRAM every run: no stale boot entries
 
@@ -79,7 +81,9 @@ def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, 
     if headless:
         cmd += ["-display", "none", "-serial", f"file:{build / 'serial.log'}"]
     else:
-        cmd += ["-serial", "stdio"]
+        # gtk-gl draws (and scales) the window with the GPU; plain gtk scales in software while holding QEMU's global
+        # lock, which slows the guest down on fractionally scaled screens.
+        cmd += ["-display", DISPLAYS[display], "-serial", "stdio"]
     if debug:
         cmd += ["-s"]
     if qmp:
@@ -168,14 +172,16 @@ def play_keys(qmp: Qmp, script: str, build: Path, log: Path, timeout: float, pro
 
 
 def cmd_run(args) -> int:
-    os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=args.headless, qmp=None, resolution=args.resolution))
+    os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=args.headless, qmp=None, resolution=args.resolution,
+                                 display=args.display))
 
 
 def cmd_debug(args) -> int:
     log = args.build / "debugcon.log"
     log.unlink(missing_ok=True)
     print("qemu: starting", flush=True)
-    proc = subprocess.Popen(qemu_command(args.build, debug=True, headless=args.headless, qmp=None, resolution=args.resolution))
+    proc = subprocess.Popen(qemu_command(args.build, debug=True, headless=args.headless, qmp=None, resolution=args.resolution,
+                                         display=args.display))
     if wait_for_log(log, "waiting for debugger", args.timeout, proc):
         print("qemu: waiting for gdb on :1234", flush=True)
     else:
@@ -233,9 +239,11 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", parents=[common])
     run.add_argument("--headless", action="store_true", help="no window; serial goes to serial.log")
+    run.add_argument("--display", choices=sorted(DISPLAYS), default="gtk", help="QEMU window backend (default gtk)")
     run.set_defaults(func=cmd_run)
     debug = sub.add_parser("debug", parents=[common])
     debug.add_argument("--headless", action="store_true", help="no window; serial goes to serial.log")
+    debug.add_argument("--display", choices=sorted(DISPLAYS), default="gtk", help="QEMU window backend (default gtk)")
     debug.add_argument("--timeout", type=float, default=60)
     debug.set_defaults(func=cmd_debug)
     smoke = sub.add_parser("smoke", parents=[common])

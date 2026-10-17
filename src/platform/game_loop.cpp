@@ -138,6 +138,8 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     stats.SetInfo(info);
   }
   const uint64_t tick_cycles = boot.tsc_hz / kTicksPerSecond;
+  const uint64_t poll_cycles = boot.tsc_hz / 1000;
+  uint64_t next_poll = 0;
   uint64_t next_tick = x86::Rdtsc();
   uint64_t ticks = 0;
   uint64_t frames = 0;
@@ -145,8 +147,14 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   Log("boot ok: game running\n");
 
   for (;;) {
-    keyboard.Poll(tracker);
-    const uint64_t now = x86::Rdtsc();
+    // Poll the keyboard at most once per millisecond: each port access is a VM exit under QEMU, and a tight polling
+    // loop there competes with QEMU's display thread for its global lock (frames dropped to ~35 FPS when the window
+    // was on a fractionally scaled screen). 1 ms of extra input latency does not matter.
+    uint64_t now = x86::Rdtsc();
+    if (now >= next_poll) {
+      keyboard.Poll(tracker);
+      next_poll = now + poll_cycles;
+    }
     if (now < next_tick) {
       x86::Pause();
       continue;
