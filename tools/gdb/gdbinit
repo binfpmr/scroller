@@ -1,0 +1,7 @@
+# Command-line debugging: start `scripts/run-qemu.sh --debug` first, then from the repository root:
+#   gdb -x tools/gdb/gdbinit
+set confirm off
+set pagination off
+source tools/gdb/scroller.py
+target remote localhost:1234
+scroller-attach

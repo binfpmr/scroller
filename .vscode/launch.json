@@ -1,6 +1,6 @@
 {
-  // Attaches gdb to QEMU's gdb stub. tools/gdb/scroller.py loads scroller.elf's symbols at the
-  // image base that efi_main logs, then releases the wait-for-debugger loop. Finalized in milestone M0.
+  // Starts QEMU with the gdb stub (task "QEMU (debug)"), attaches gdb, then `scroller-attach` (tools/gdb/scroller.py)
+  // loads scroller.elf's symbols at the image base efi_main logged and releases its wait-for-debugger loop.
   "version": "0.2.0",
   "configurations": [
     {
@@ -16,8 +16,10 @@
       "preLaunchTask": "QEMU (debug)",
       "postDebugTask": "stop QEMU",
       "setupCommands": [
+        { "text": "set confirm off" },
         { "text": "source ${workspaceFolder}/tools/gdb/scroller.py" }
-      ]
+      ],
+      "postRemoteConnectCommands": [{ "text": "scroller-attach" }]
     }
   ]
 }

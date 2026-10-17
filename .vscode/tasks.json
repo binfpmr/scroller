@@ -31,13 +31,13 @@
       "problemMatcher": {
         "owner": "qemu",
         "pattern": { "regexp": "^__never_matches__$" },
-        "background": { "activesBegin": "^qemu: starting", "endsPattern": "^qemu: waiting for gdb" }
+        "background": { "beginsPattern": "^qemu: starting", "endsPattern": "^qemu: (waiting for gdb|game did not reach)" }
       }
     },
     {
       "label": "stop QEMU",
       "type": "shell",
-      "command": "pkill -f 'qemu-system-x86_64.*scroller' || true",
+      "command": "pkill -f 'qemu-system-x86_6[4].*-name scroller' || true",
       "problemMatcher": []
     },
     {

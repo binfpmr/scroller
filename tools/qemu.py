@@ -117,14 +117,14 @@ class Qmp:
 
 
 def cmd_run(args) -> int:
-    os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=False, qmp=None))
+    os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=args.headless, qmp=None))
 
 
 def cmd_debug(args) -> int:
     log = args.build / "debugcon.log"
     log.unlink(missing_ok=True)
     print("qemu: starting", flush=True)
-    proc = subprocess.Popen(qemu_command(args.build, debug=True, headless=False, qmp=None))
+    proc = subprocess.Popen(qemu_command(args.build, debug=True, headless=args.headless, qmp=None))
     if wait_for_log(log, "waiting for debugger", args.timeout, proc):
         print("qemu: waiting for gdb on :1234", flush=True)
     else:
@@ -169,13 +169,17 @@ def cmd_smoke(args) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--build", type=Path, default=ROOT / "build" / "uefi", help="build directory with scroller.img")
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--build", type=Path, default=ROOT / "build" / "uefi", help="build directory with scroller.img")
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("run").set_defaults(func=cmd_run)
-    debug = sub.add_parser("debug")
+    run = sub.add_parser("run", parents=[common])
+    run.add_argument("--headless", action="store_true", help="no window; serial goes to serial.log")
+    run.set_defaults(func=cmd_run)
+    debug = sub.add_parser("debug", parents=[common])
+    debug.add_argument("--headless", action="store_true", help="no window; serial goes to serial.log")
     debug.add_argument("--timeout", type=float, default=60)
     debug.set_defaults(func=cmd_debug)
-    smoke = sub.add_parser("smoke")
+    smoke = sub.add_parser("smoke", parents=[common])
     smoke.add_argument("--expect", default="boot ok", help="text that must appear in the debug log")
     smoke.add_argument("--timeout", type=float, default=30)
     smoke.add_argument("--settle", type=float, default=0.5, help="seconds to wait before the screenshot")
