@@ -37,13 +37,22 @@ add_compile_options(
   $<$<COMPILE_LANGUAGE:CXX>:-fno-use-cxa-atexit>
 )
 
+option(SCROLLER_UEFI_INPUT "Stay in boot services and read the keyboard through UEFI (for USB-only machines)" OFF)
+
 add_executable(scroller
   src/boot/crt0.S
   src/boot/efi_main.cpp
+  src/boot/uefi_keyboard.cpp
+  src/boot/video.cpp
   src/drivers/debug_log.cpp
+  src/drivers/ps2_keyboard.cpp
+  src/lib/cxx_support.cpp
   src/lib/mem.c
+  src/platform/game_loop.cpp
+  src/platform/reset.cpp
   ${SCROLLER_CORE_SOURCES}
 )
+target_compile_definitions(scroller PRIVATE SCROLLER_UEFI_INPUT=$<BOOL:${SCROLLER_UEFI_INPUT}>)
 set_target_properties(scroller PROPERTIES SUFFIX ".elf" LINK_DEPENDS ${SCROLLER_LINKER_SCRIPT})
 target_include_directories(scroller PRIVATE src)
 target_link_options(scroller PRIVATE
