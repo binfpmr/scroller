@@ -24,7 +24,7 @@ constexpr int kTicksPerSecond = 60;
 constexpr int kMaxCatchUpTicks = 5;  // after a stall, skip time rather than run many updates at once
 constexpr int kStatsIntervalTicks = 5 * kTicksPerSecond;
 
-constexpr const char* kStartLevel = "levels/test.txt";
+constexpr const char* kStartLevel = "levels/level1.txt";
 
 // Parses one sprite sheet from the pack; on failure formats "name line N: problem" into `message`.
 bool LoadSheet(const lib::Pack& pack, const char* name, lib::Arena& arena, gfx::SpriteSheet* sheet, char* message,

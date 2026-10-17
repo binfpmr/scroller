@@ -1,4 +1,5 @@
-// Every file under assets/ must load: sprite sheets parse, levels parse and their goals are reachable.
+// Every file under assets/ must load: sprite sheets parse, levels parse, their goals are reachable and they have no
+// dead ends (spots the player can get to but never leave toward the goal).
 #include <filesystem>
 #include <iostream>
 
@@ -45,9 +46,16 @@ TEST(AllLevelsLoadAndGoalsAreReachable) {
     for (int i = 0; i < g.level().width * g.level().height; ++i) {
       has_goal = has_goal || g.level().tiles[i] == game::Tile::kGoal;
     }
-    if (has_goal && !levelcheck::Explore(g.level()).ReachesGoal(g.level())) {
-      std::cerr << name << ": goal not reachable (run levelcheck)\n";
-      test::Fail(__FILE__, __LINE__, "goal not reachable");
+    if (has_goal) {
+      const levelcheck::Reachability reach = levelcheck::Explore(g.level());
+      if (!reach.ReachesGoal(g.level())) {
+        std::cerr << name << ": goal not reachable (run levelcheck)\n";
+        test::Fail(__FILE__, __LINE__, "goal not reachable");
+      }
+      if (reach.HasDeadEnd(g.level())) {
+        std::cerr << name << ": has dead ends, spots the goal cannot be reached from (run levelcheck)\n";
+        test::Fail(__FILE__, __LINE__, "dead end");
+      }
     }
     ++count;
   }
