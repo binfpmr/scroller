@@ -35,7 +35,7 @@ The debug log (`build/uefi/debugcon.log`) is the main diagnostic; `Log()` writes
 - Nothing after `ExitBootServices` may call UEFI boot services; everything needed later goes into `BootInfo`.
 - `game/` and `gfx/` must not include anything from `boot/`, `uefi/`, `arch/`, `drivers/`, so they keep building for the host tests.
 - Game physics uses fixed point (`lib::Fixed`, 24.8), not floats. After changing `PlayerTuning` or a level, run the host tests (they include `levelcheck` reachability).
-- Assets are plain text (levels: one char per tile; sprites: text art); converters live in `tools/` and run at build time.
+- Assets are plain text under `assets/` (formats: `docs/ASSETS.md`), packed into `assets.pak` and parsed at boot. Every level must have a reachable goal and no dead ends (host tests enforce it via `levelcheck`).
 
 ## Working loop
 

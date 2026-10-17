@@ -37,11 +37,11 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## M3: assets
 
-- [ ] Asset converter: text-art sprites + palette -> sprite/tileset blob, text level -> tilemap blob
-- [ ] Placeholder art: player (idle/run/jump), a handful of tiles
-- [ ] Load assets from the ESP at boot
-- [ ] Sprite drawing with transparency and horizontal flip, simple animations (idle/run/jump)
-- [ ] A small real level
+- [x] Asset pack (`tools/pack_assets.py`), text sprites and levels parsed at boot (formats in `docs/ASSETS.md`)
+- [x] Placeholder art: player (idle/blink/run/jump/fall/duck), ground, stone, goal flag
+- [x] Load assets from the ESP at boot; startup errors shown on screen
+- [x] Sprite drawing with transparency and horizontal flip, animations
+- [x] Level 1 with a goal; `levelcheck` verifies the goal is reachable and finds dead ends
 
 ## M4: interrupts and diagnostics
 

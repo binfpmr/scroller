@@ -18,7 +18,7 @@ A small 2D platformer that boots directly on x86_64 hardware via UEFI. No OS, no
 | Timing | Fixed 60 Hz game step; TSC calibrated against UEFI `Stall()` before exit; no interrupts needed in v1 | Simplest thing that works; interrupts come with sound. |
 | Input (v1) | Poll the i8042 PS/2 controller (scan code set 1/2 make/break codes) | QEMU's default keyboard; most laptop built-in keyboards are also PS/2 behind the EC. USB (xHCI + HID boot keyboard) is a later milestone. |
 | Input fallback | Build option `SCROLLER_UEFI_INPUT` (preset `uefi-input`): stay in boot services, read `ConIn`, treat a key as held for 550 ms after its first event and 150 ms after each typematic repeat | Lets us try real USB-only hardware before the xHCI driver exists. Input feel is worse; debug aid only. |
-| Assets | Plain-text sources: levels as one character per tile, placeholder sprites as text art (one character per palette colour). Converted at build time by host Python tools into simple binary blobs, copied onto the ESP, loaded into RAM before `ExitBootServices` | Diff-friendly, editable in any editor, no level editor needed yet. No disk driver needed for v1. |
+| Assets | Plain text (levels one character per tile, sprites as text art with a palette; `docs/ASSETS.md`), packed into one file `\\scroller\\assets.pak` on the ESP, read with the UEFI Simple File System protocol before `ExitBootServices` and parsed at boot by the same code the host tests run | Diff-friendly, editable in any editor, no binary format to keep in sync, no disk driver needed for v1. |
 | Controls | Left/Right move, Up or Space jump, Down ducks, Esc reboots; F1 shows/hides the performance overlay | |
 | Exit | Esc -> `ResetSystem(EfiResetCold)` (UEFI runtime services stay callable after `ExitBootServices`); fallback: 8042 reset pulse, then triple fault | Works on real hardware and QEMU. |
 | Tests | Game logic, graphics and lib code also build for the host and have unit tests (CTest) | Fast feedback without booting. |
@@ -56,8 +56,8 @@ src/
   gfx/           Surface (320x240 XRGB), blits, sprites, tilemap renderer, scaler to GOP
   game/          pure game logic: level, tile collision, player physics, camera
   lib/           freestanding runtime: mem*/str* functions, fmt/log formatting, arena allocator, fixed-point math
-tools/           host tools: qemu.py runner, embed_text.py, gdb helper, levelcheck (C++), later asset conversion
-assets/          text-art sprites, palette, text levels
+tools/           host tools: qemu.py runner, pack_assets.py, version_header.py, gdb helper, levelcheck (C++)
+assets/          text-art sprite sheets (sprites/), text levels (levels/), see docs/ASSETS.md
 scripts/         build-image / run-qemu / smoke-test shell scripts
 tests/           host unit tests for game/, gfx/, lib/
 ```
@@ -70,7 +70,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 - Positions/velocities in 24.8 fixed point (`lib::Fixed`, 1/256 px) so physics is deterministic and identical on host and target.
 - World = tilemap of 16x16 tiles (`game::Level`), larger than the screen in both axes; outside the map counts as walls and floor, open above. Camera (`game::Camera`) keeps the player in a ±24 px dead zone around the screen centre and is clamped to level bounds, so scrolling works in all 4 directions.
 - Player (`game/player.*`): 12x14 hitbox, AABB collision against solid tiles resolved one axis at a time. Speeds stay below one tile per tick, so checking the leading edge's tile row/column after a move is enough (no tunnelling). Run with acceleration/friction, jump with buffering, coyote time and variable height (release early = lower jump), gravity with terminal velocity. Down on the ground ducks (look only); a jump while ducking or up to 10 ticks after is a duck-jump (50% higher). Jumping in the air while touching a side wall (or up to 6 ticks after) is a wall-jump: a full jump from zero horizontal speed, with the input overridden as "jump + away from the wall held" until the top of the arc. All tuning constants are in `PlayerTuning`; changing them changes which platforms are reachable, so re-run `levelcheck` and the tests.
-- Rendering: draw only visible tiles, then sprites, into the 320x240 surface. Until M3 the graphics are procedural placeholders (`game/render.cpp`).
+- Rendering: sky gradient, then only the visible tiles, then the player sprite (frame chosen from its state, `game::PlayerFrame`), into the 320x240 surface.
 - Level design check: `levelcheck` (host tool, `tools/levelcheck/`) searches all resting positions reachable from the start with the real physics and prints the level with reachable spots marked.
 
 ## Freestanding C++ rules

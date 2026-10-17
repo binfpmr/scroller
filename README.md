@@ -5,6 +5,7 @@ A small 2D platformer that boots on bare-metal x86_64 via UEFI: 320x240 game scr
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): decisions, boot phases, source layout, freestanding rules
 - [docs/PLAN.md](docs/PLAN.md): milestones and progress
 - [docs/WORKFLOW.md](docs/WORKFLOW.md): prerequisites, build, run, debug, writing to USB, development loop
+- [docs/ASSETS.md](docs/ASSETS.md): level and sprite formats, `levelcheck`
 - [docs/REFERENCES.md](docs/REFERENCES.md): manuals and links
 
 Quick start (prerequisites in [docs/WORKFLOW.md](docs/WORKFLOW.md)):
@@ -14,4 +15,4 @@ cmake --preset uefi && cmake --build --preset uefi
 scripts/run-qemu.sh
 ```
 
-Status: M2 done (playable test level with placeholder graphics); M3 (assets) next.
+Status: M3 done (sprites, level 1 with a goal, assets loaded from the boot volume); runs on real hardware (HP Pavilion). M4 (interrupts, diagnostics) next.
