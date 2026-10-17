@@ -4,6 +4,7 @@
 #include "arch/x86_64/io.h"
 #include "arch/x86_64/paging.h"
 #include "drivers/debug_log.h"
+#include "lib/format.h"
 
 namespace intel_display {
 namespace {
@@ -19,42 +20,51 @@ constexpr uint32_t kPipeEnable = 1u << 31;
 
 uint32_t Scanline::Line() const { return mmio_[(kPipeDsl + pipe_ * kPipeStride) / 4] & kDslMask; }
 
-bool Scanline::Init(const pci::Device& gpu, uint64_t tsc_hz) {
+bool Scanline::Init(const pci::Device& gpu, uint64_t tsc_hz, lib::Arena* arena) {
   if (gpu.vendor_id != 0x8086) {
+    lib::Format(status_, sizeof(status_), "NOT AN INTEL GPU");
     return false;
   }
+  const uint32_t command = pci::Read32(gpu.bus, gpu.device, gpu.function, 0x04) & 0xffff;
   const uint32_t bar_low = pci::Read32(gpu.bus, gpu.device, gpu.function, 0x10);
-  if ((bar_low & 1) != 0) {
-    Log("intel: BAR0 is not a memory BAR\n");
-    return false;
-  }
   uint64_t bar = bar_low & ~0xfull;
   if (((bar_low >> 1) & 3) == 2) {  // 64-bit BAR
     bar |= static_cast<uint64_t>(pci::Read32(gpu.bus, gpu.device, gpu.function, 0x14)) << 32;
   }
-  if (bar == 0 || !x86::IsMapped(bar + kPipeDsl) || !x86::IsMapped(bar + kPipeDsl + 2 * kPipeStride)) {
-    Log("intel: BAR0 %llx not mapped\n", static_cast<unsigned long long>(bar));
+  if ((bar_low & 1) != 0 || bar == 0 || (command & 0x2) == 0) {
+    lib::Format(status_, sizeof(status_), "BAR0 %llx CMD %x: NO MMIO", static_cast<unsigned long long>(bar_low),
+                command);
     return false;
+  }
+  constexpr uint64_t kMmioSize = 1 << 20;  // display registers live in the first MiB of the 16 MiB BAR
+  bool mapped_by_us = false;
+  if (!x86::IsMapped(bar + kPipeDsl) || !x86::IsMapped(bar + kPipeDsl + 2 * kPipeStride)) {
+    if (arena == nullptr || !x86::MapUncached(*arena, bar, kMmioSize) || !x86::IsMapped(bar + kPipeDsl) ||
+        !x86::IsMapped(bar + kPipeDsl + 2 * kPipeStride)) {
+      lib::Format(status_, sizeof(status_), "BAR0 %llx NOT MAPPED", static_cast<unsigned long long>(bar));
+      return false;
+    }
+    mapped_by_us = true;
   }
   mmio_ = reinterpret_cast<volatile const uint32_t*>(bar);
 
+  uint32_t conf[3];
   pipe_ = -1;
   for (int pipe = 0; pipe < 3; ++pipe) {
-    if ((mmio_[(kPipeConf + pipe * kPipeStride) / 4] & kPipeEnable) != 0) {
+    conf[pipe] = Read(kPipeConf + pipe * kPipeStride);
+    if (pipe_ < 0 && (conf[pipe] & kPipeEnable) != 0) {
       pipe_ = pipe;
-      break;
     }
   }
-  if (pipe_ < 0) {
-    Log("intel: no enabled pipe\n");
-    return false;
-  }
+  const int sample_pipe = pipe_ < 0 ? 0 : pipe_;
 
   // Time a few wraps of the scanline counter.
   constexpr int kWraps = 4;
   uint64_t wraps[kWraps];
   int count = 0;
   const uint64_t deadline = x86::Rdtsc() + tsc_hz / 8;
+  const int saved_pipe = pipe_;
+  pipe_ = sample_pipe;
   uint32_t last = Line();
   uint32_t max_line = 0;
   while (count < kWraps && x86::Rdtsc() < deadline) {
@@ -65,15 +75,14 @@ bool Scanline::Init(const pci::Device& gpu, uint64_t tsc_hz) {
     max_line = line > max_line ? line : max_line;
     last = line;
   }
-  if (count < 3) {
-    Log("intel: pipe %c scanline %u does not wrap (%d wraps)\n", pipe_name(), last, count);
-    return false;
-  }
-  const uint64_t period = (wraps[count - 1] - wraps[0]) / (count - 1);
-  const uint64_t period_us = period * 1000000 / tsc_hz;
-  Log("intel: BAR0 %llx, pipe %c, %u lines, frame %llu us\n", static_cast<unsigned long long>(bar), pipe_name(),
-      max_line + 1, static_cast<unsigned long long>(period_us));
-  if (period_us < 8000 || period_us > 33000) {
+  pipe_ = saved_pipe;
+  const uint64_t period = count >= 2 ? (wraps[count - 1] - wraps[0]) / (count - 1) : 0;
+  const uint64_t hz10 = period == 0 ? 0 : tsc_hz * 10 / period;
+  lib::Format(status_, sizeof(status_), "BAR0 %llx%s\nPIPECONF %x/%x/%x MAXLINE %u %llu.%llu HZ",
+              static_cast<unsigned long long>(bar), mapped_by_us ? " (MAPPED)" : "", conf[0], conf[1], conf[2],
+              max_line, static_cast<unsigned long long>(hz10 / 10), static_cast<unsigned long long>(hz10 % 10));
+  Log("intel: %s\n", status_);
+  if (pipe_ < 0 || count < 3 || hz10 < 300 || hz10 > 1250) {
     return false;
   }
   period_cycles_ = period;

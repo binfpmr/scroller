@@ -33,7 +33,7 @@ class StatsOverlay {
   uint64_t last_mperf_ = 0;
   int updates_ = 0;
   char text_[192] = "";
-  char info_[160] = "";
+  char info_[240] = "";
 };
 
 }  // namespace platform

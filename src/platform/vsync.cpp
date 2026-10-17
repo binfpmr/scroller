@@ -5,8 +5,8 @@
 
 namespace platform {
 
-void Vsync::Init(const pci::Device* gpu, uint64_t tsc_hz) {
-  if (gpu != nullptr && intel_.Init(*gpu, tsc_hz)) {
+void Vsync::Init(const pci::Device* gpu, uint64_t tsc_hz, lib::Arena* arena) {
+  if (gpu != nullptr && gpu->vendor_id == 0x8086 && intel_.Init(*gpu, tsc_hz, arena)) {
     method_ = Method::kIntelScanline;
     period_cycles_ = intel_.period_cycles();
   } else if (vga::ProbeRetrace(tsc_hz, &period_cycles_)) {

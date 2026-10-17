@@ -81,7 +81,10 @@ void StatsOverlay::Draw(gfx::Surface& screen) const {
     return;
   }
   const int width = lib::Max(gfx::TextWidth(text_), gfx::TextWidth(info_)) + 4;
-  const int lines = 2 + (info_[0] != '\0' ? 2 : 0);
+  int lines = 2;
+  for (const char* c = info_; *c != '\0'; ++c) {
+    lines += (c == info_ || *c == '\n') ? 1 : 0;
+  }
   gfx::FillRect(screen, 0, 0, width, lines * gfx::kLineHeight + 2, gfx::Rgb(0, 0, 0));
   gfx::DrawText(screen, 2, 2, text_, gfx::Rgb(255, 255, 255));
   gfx::DrawText(screen, 2, 2 + 2 * gfx::kLineHeight, info_, gfx::Rgb(180, 220, 255));

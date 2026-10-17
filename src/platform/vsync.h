@@ -11,11 +11,14 @@ namespace platform {
 
 class Vsync {
  public:
-  // `gpu` may be null (no display controller found).
-  void Init(const pci::Device* gpu, uint64_t tsc_hz);
+  // `gpu` may be null (no display controller found). `arena` (may be null) lets the Intel path map GPU registers the
+  // firmware left unmapped; pass it only when we own the page tables.
+  void Init(const pci::Device* gpu, uint64_t tsc_hz, lib::Arena* arena);
   bool active() const { return method_ != Method::kNone; }
   // Short description for the stats overlay, e.g. "INTEL PIPE A 60.0 HZ" or "NONE".
   const char* description() const { return description_; }
+  // Diagnostics of the Intel path (empty if the GPU is not Intel).
+  const char* intel_status() const { return intel_.status(); }
   void WaitForFrameStart() const;
 
  private:
