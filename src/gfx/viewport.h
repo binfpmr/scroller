@@ -7,7 +7,7 @@ namespace gfx {
 
 // Upper bound on the integer scale factor: every scale step costs framebuffer bandwidth, and the framebuffer may be
 // uncached on real hardware.
-inline constexpr int kMaxScale = 4;
+inline constexpr int kMaxScale = 3;
 
 struct Viewport {
   int scale = 1;

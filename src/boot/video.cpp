@@ -2,6 +2,7 @@
 
 #include "drivers/debug_log.h"
 #include "gfx/viewport.h"
+#include "lib/format.h"
 
 namespace boot {
 namespace {
@@ -10,6 +11,20 @@ constexpr int kMaxModes = 64;
 
 bool UsableFormat(EFI_GRAPHICS_PIXEL_FORMAT format) {
   return format == PixelRedGreenBlueReserved8BitPerColor || format == PixelBlueGreenRedReserved8BitPerColor;
+}
+
+// All modes, several per log line ("*" marks pixel formats we cannot use).
+void LogModes(const gfx::VideoMode* modes, int count) {
+  char line[96];
+  size_t used = 0;
+  for (int i = 0; i < count; ++i) {
+    used += lib::Format(line + used, sizeof(line) - used, " %ux%u%s", modes[i].width, modes[i].height,
+                        modes[i].usable ? "" : "*");
+    if (used > 70 || i == count - 1) {
+      Log("video: modes%s\n", line);
+      used = 0;
+    }
+  }
 }
 
 }  // namespace
@@ -36,6 +51,7 @@ bool SetUpVideo(EFI_BOOT_SERVICES* bs, gfx::Framebuffer* framebuffer) {
     bs->FreePool(info);
   }
 
+  LogModes(modes, count);
   const int current = static_cast<int>(gop->Mode->Mode);
   const int chosen = gfx::ChooseVideoMode(modes, count, current);
   if (chosen < 0) {

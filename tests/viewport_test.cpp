@@ -7,19 +7,19 @@ using gfx::ComputeViewport;
 using gfx::VideoMode;
 
 TEST(ViewportExactFit) {
-  const gfx::Viewport vp = ComputeViewport(1280, 960);
-  EXPECT_EQ(vp.scale, 4);
+  const gfx::Viewport vp = ComputeViewport(960, 720);
+  EXPECT_EQ(vp.scale, 3);
   EXPECT_EQ(vp.x, 0);
   EXPECT_EQ(vp.y, 0);
-  EXPECT_EQ(vp.width, 1280);
-  EXPECT_EQ(vp.height, 960);
+  EXPECT_EQ(vp.width, 960);
+  EXPECT_EQ(vp.height, 720);
 }
 
 TEST(ViewportCentersWithBorders) {
-  const gfx::Viewport vp = ComputeViewport(1920, 1080);  // 4.5x vertically -> 4
-  EXPECT_EQ(vp.scale, 4);
-  EXPECT_EQ(vp.x, (1920 - 1280) / 2);
-  EXPECT_EQ(vp.y, (1080 - 960) / 2);
+  const gfx::Viewport vp = ComputeViewport(1024, 768);  // 3.2x -> 3
+  EXPECT_EQ(vp.scale, 3);
+  EXPECT_EQ(vp.x, (1024 - 960) / 2);
+  EXPECT_EQ(vp.y, (768 - 720) / 2);
 }
 
 TEST(ViewportScaleIsCapped) { EXPECT_EQ(ComputeViewport(3840, 2160).scale, gfx::kMaxScale); }
@@ -36,12 +36,12 @@ TEST(ChoosePrefersHigherScale) {
 }
 
 TEST(ChoosePrefersExactFitAtSameScale) {
-  const VideoMode modes[] = {{1280, 800, true}, {1280, 960, true}, {1920, 1080, true}};
+  const VideoMode modes[] = {{1280, 800, true}, {960, 720, true}, {1920, 1080, true}};
   EXPECT_EQ(ChooseVideoMode(modes, 3, 0), 1);
 }
 
 TEST(ChoosePrefersCurrentModeOverOtherNonExact) {
-  // Laptop: native 1920x1080 is current; 2560x1440 would also give the capped 4x but is not native.
+  // Laptop: native 1920x1080 is current; 2560x1440 would also give the capped 3x but is not native.
   const VideoMode modes[] = {{640, 480, true}, {2560, 1440, true}, {1920, 1080, true}};
   EXPECT_EQ(ChooseVideoMode(modes, 3, 2), 2);
 }
