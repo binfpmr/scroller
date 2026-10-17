@@ -14,6 +14,8 @@ set_property(CACHE SCROLLER_TARGET PROPERTY STRINGS uefi host)
 
 # Platform-independent code, built both for the target and for the host tests.
 set(SCROLLER_CORE_SOURCES
+  src/gfx/present.cpp
+  src/gfx/viewport.cpp
   src/lib/format.cpp
 )
 

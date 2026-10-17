@@ -8,3 +8,6 @@ function(scroller_add_test name)
 endfunction()
 
 scroller_add_test(format_test format_test.cpp)
+scroller_add_test(viewport_test viewport_test.cpp)
+scroller_add_test(present_test present_test.cpp)
+scroller_add_test(arena_test arena_test.cpp)
