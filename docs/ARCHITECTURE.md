@@ -1,0 +1,85 @@
+# Architecture
+
+A small 2D platformer that boots directly on x86_64 hardware via UEFI. No OS, no libc, no third-party runtime.
+
+## Decisions
+
+| Topic | Decision | Why |
+|---|---|---|
+| Boot | UEFI x86_64 application (`BOOTX64.EFI`) | Boots on modern PCs and QEMU/OVMF; firmware gives us long mode, paging, a framebuffer and file access for free. Legacy BIOS/Mode X is not planned. |
+| Firmware use | UEFI as a *loader*, then `ExitBootServices` | UEFI input has no key-release events and would fight us over IRQs/DMA (sound). After exit we own the machine. |
+| Video | Game renders into a 320x240 XRGB8888 buffer in RAM; `present()` integer-scales it into the GOP framebuffer | No real Mode X under UEFI. 32-bit colour, no palette emulation. |
+| Video mode | Prefer exact multiples (1280x960 x4, 960x720 x3, 640x480 x2); otherwise the largest integer scale that fits, centered with black borders | Pixel-perfect scaling, works with whatever modes the firmware offers (laptops often expose only the native panel mode). |
+| Toolchain | clang + lld targeting `x86_64-unknown-windows` (PE/COFF), NASM (`-f win64`) for assembly | Produces `.efi` directly; no gnu-efi/EDK2. UEFI uses the Microsoft x64 ABI, which is the native ABI of this target, so no `EFIAPI` annotations are needed. |
+| Languages | C++20 (freestanding subset) for almost everything, NASM where asm is required (ISR stubs, descriptor loads), C allowed for self-contained low-level pieces | One main language keeps it simple. |
+| UEFI headers | Our own minimal definitions (`src/uefi/`), only what we use | A few hundred lines; no external dependency. |
+| Timing | Fixed 60 Hz game step; TSC calibrated against UEFI `Stall()` before exit; no interrupts needed in v1 | Simplest thing that works; interrupts come with sound. |
+| Input (v1) | Poll the i8042 PS/2 controller (scan code set 1/2 make/break codes) | QEMU's default keyboard; most laptop built-in keyboards are also PS/2 behind the EC. USB (xHCI + HID boot keyboard) is a later milestone. |
+| Input fallback | Build option `SCROLLER_UEFI_INPUT`: stay in boot services, use `SimpleTextInputEx`, treat a key as held for ~N ms after its last (repeat) event | Lets us try real USB-only hardware before the xHCI driver exists. Input feel is worse; debug aid only. |
+| Assets | Converted at build time by host Python tools (PIL) into simple binary blobs, copied onto the ESP, loaded into RAM before `ExitBootServices` | No disk driver needed for v1. |
+| Tests | Game logic, graphics and lib code also build for the host and have unit tests (CTest) | Fast feedback without booting. |
+
+## Boot / runtime phases
+
+```
+OVMF / firmware
+  -> efi_main()                         [boot/]  boot services available
+       - init debug log (QEMU debugcon port 0xE9 + serial COM1)
+       - GOP: pick video mode, remember framebuffer + pixel format
+       - load assets from \scroller\ on the boot volume (SimpleFileSystem)
+       - allocate one big memory arena (AllocatePages)
+       - calibrate TSC with Stall()
+       - GetMemoryMap + ExitBootServices
+  -> kernel_main(BootInfo&)             [platform/]  we own the machine
+       - (later) own GDT/IDT, exception handlers, timer, sound, USB, disk
+       - main loop: poll input -> game.update() at fixed 60 Hz -> game.render() -> present()
+```
+
+`BootInfo` is the only thing passed across the boundary: framebuffer description, loaded asset blobs, arena, TSC frequency. Nothing after `ExitBootServices` may call into UEFI (except runtime services, which we don't plan to use).
+
+After exit we keep the firmware's identity-mapped page tables and GDT until we need our own (exceptions/interrupts milestone).
+
+## Source layout (planned)
+
+```
+src/
+  boot/          UEFI entry, loader phase, BootInfo
+  uefi/          minimal UEFI type and protocol definitions
+  arch/x86_64/   port I/O, cpu helpers (rdtsc, cli/sti, hlt), later GDT/IDT + NASM stubs
+  drivers/       debug log (debugcon/serial), ps2 keyboard; later: hpet/apic timer, sb16, hda, xhci, usb_hid, ahci, nvme
+  platform/      the interface the game sees (input state, time, present, assets) + its bare-metal implementation
+  gfx/           Surface (320x240 XRGB), blits, sprites, tilemap renderer, scaler to GOP
+  game/          pure game logic: level, tile collision, player physics, camera
+  lib/           freestanding runtime: mem*/str* functions, fmt/log formatting, arena allocator, fixed-point math
+tools/           host Python: asset conversion, gdb helper
+assets/          source art and levels
+scripts/         build-image / run-qemu / smoke-test shell scripts
+tests/           host unit tests for game/, gfx/, lib/
+```
+
+Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` interface headers. Only `boot/`, `arch/`, `drivers/` and `platform/` implementations touch hardware or UEFI. This is what makes the host build and tests possible.
+
+## Game core
+
+- Fixed timestep, 60 updates/s. Render once per update (no interpolation in v1).
+- Positions/velocities in fixed point (e.g. 16.16 or 24.8 sub-pixels) so physics is deterministic and identical on host and target.
+- World = tilemap of 16x16 tiles, larger than the screen in both axes. Camera follows the player with a dead zone and is clamped to level bounds, so scrolling works in all 4 directions.
+- Player: AABB collision against solid tiles, resolved one axis at a time. Run with acceleration/friction, jump with variable height (release early = lower jump), gravity with terminal velocity, coyote time and jump buffering are cheap extras.
+- Rendering: draw only visible tiles (screen is 20x15 tiles, +1 for partial tiles), then sprites, into the 320x240 surface.
+
+## Freestanding C++ rules
+
+- Compile flags (roughly): `--target=x86_64-unknown-windows -ffreestanding -nostdlib -fno-exceptions -fno-rtti -fno-stack-protector -mno-stack-arg-probe -mno-red-zone -fshort-wchar`; link with `-fuse-ld=lld -Wl,/subsystem:efi_application -Wl,/entry:efi_main`.
+- No exceptions, no RTTI, no heap `new`/`delete` (allocate from the arena), no global objects with non-trivial constructors (nothing runs them).
+- Only compiler-provided freestanding headers (`<stdint.h>`, `<stddef.h>`, `<stdarg.h>`, ...). No STL containers.
+- The compiler may emit calls to `memset`/`memcpy`/`memmove`/`memcmp`; `lib/` provides them.
+- SSE is enabled by UEFI and may be used; floats are allowed, but game physics uses fixed point.
+
+## Known risks
+
+- **USB-only keyboards** need an xHCI + HID driver after `ExitBootServices` (milestone M6). Until then: PS/2 or the `SCROLLER_UEFI_INPUT` fallback.
+- **Framebuffer speed on real hardware**: the GOP framebuffer may be mapped uncached; writing ~5 MB/frame at x4 can be slow. Fix by marking it write-combining via PAT (M8).
+- **GOP pixel formats**: handle BGRX and RGBX; bitmask formats only if we meet one. `BltOnly` modes (no framebuffer) are not supported.
+- **No vsync** under GOP: expect some tearing; acceptable.
+- **Sound on real hardware**: Sound Blaster 16 exists only in QEMU/emulators; real PCs need Intel HDA.
+- **Runtime disk access on real hardware**: likely NVMe, or USB mass storage when booting from a stick; both are substantial drivers.
