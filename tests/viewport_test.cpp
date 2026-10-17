@@ -15,14 +15,16 @@ TEST(ViewportExactFit) {
   EXPECT_EQ(vp.height, 720);
 }
 
-TEST(ViewportCentersWithBorders) {
-  const gfx::Viewport vp = ComputeViewport(1024, 768);  // 3.2x -> 3
-  EXPECT_EQ(vp.scale, 3);
-  EXPECT_EQ(vp.x, (1024 - 960) / 2);
-  EXPECT_EQ(vp.y, (768 - 720) / 2);
+TEST(ViewportLargestIntegerScaleCentred) {
+  const gfx::Viewport vp = ComputeViewport(1920, 1080);  // 4.5x vertically -> 4
+  EXPECT_EQ(vp.scale, 4);
+  EXPECT_EQ(vp.x, (1920 - 1280) / 2);
+  EXPECT_EQ(vp.y, (1080 - 960) / 2);
+  EXPECT_EQ(ComputeViewport(3840, 2160).scale, 9);
+  EXPECT_EQ(ComputeViewport(3072, 1920).scale, 8);
 }
 
-TEST(ViewportScaleIsCapped) { EXPECT_EQ(ComputeViewport(3840, 2160).scale, gfx::kMaxScale); }
+TEST(ViewportScaleIsCapped) { EXPECT_EQ(ComputeViewport(20000, 20000).scale, gfx::kMaxScale); }
 
 TEST(ViewportTooSmallStillScaleOne) {
   const gfx::Viewport vp = ComputeViewport(320, 200);
@@ -30,20 +32,19 @@ TEST(ViewportTooSmallStillScaleOne) {
   EXPECT_EQ(vp.y, 0);
 }
 
-TEST(ChoosePrefersHigherScale) {
-  const VideoMode modes[] = {{640, 480, true}, {1024, 768, true}, {800, 600, true}};
-  EXPECT_EQ(ChooseVideoMode(modes, 3, 0), 1);  // 1024x768 -> 3x
-}
-
-TEST(ChoosePrefersExactFitAtSameScale) {
-  const VideoMode modes[] = {{1280, 800, true}, {960, 720, true}, {1920, 1080, true}};
-  EXPECT_EQ(ChooseVideoMode(modes, 3, 0), 1);
-}
-
-TEST(ChoosePrefersCurrentModeOverOtherNonExact) {
-  // Laptop: native 1920x1080 is current; 2560x1440 would also give the capped 3x but is not native.
-  const VideoMode modes[] = {{640, 480, true}, {2560, 1440, true}, {1920, 1080, true}};
+TEST(ChooseKeepsUsableCurrentMode) {
+  // Native 1920x1080 is current: keep it although 2560x1440 or an exact 1280x960 exist.
+  const VideoMode modes[] = {{1280, 960, true}, {2560, 1440, true}, {1920, 1080, true}};
   EXPECT_EQ(ChooseVideoMode(modes, 3, 2), 2);
+  const VideoMode qemu[] = {{960, 720, true}, {640, 480, true}, {2560, 1600, true}};
+  EXPECT_EQ(ChooseVideoMode(qemu, 3, 0), 0);
+}
+
+TEST(ChooseOtherModeIfCurrentUnusable) {
+  const VideoMode modes[] = {{1920, 1080, false}, {640, 480, true}, {1024, 768, true}, {800, 600, true}};
+  EXPECT_EQ(ChooseVideoMode(modes, 4, 0), 2);  // 1024x768 -> 3x
+  const VideoMode exact[] = {{320, 200, true}, {1280, 800, true}, {960, 720, true}};
+  EXPECT_EQ(ChooseVideoMode(exact, 3, 0), 2);  // current too small; both others 3x, 960x720 exact
 }
 
 TEST(ChooseSkipsUnusableAndTooSmall) {

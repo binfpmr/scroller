@@ -5,9 +5,9 @@
 
 namespace gfx {
 
-// Upper bound on the integer scale factor: every scale step costs framebuffer bandwidth, and the framebuffer may be
-// uncached on real hardware.
-inline constexpr int kMaxScale = 3;
+// Upper bound on the integer scale factor (covers 5120x3840). Only limits the row buffer in gfx::Present; with a
+// write-combining framebuffer even a full 4K screen presents fast enough.
+inline constexpr int kMaxScale = 16;
 
 struct Viewport {
   int scale = 1;
@@ -26,8 +26,10 @@ struct VideoMode {
   bool usable = false;  // pixel format we can draw to
 };
 
-// Picks the mode to use: highest integer scale first, then an exact fit (no borders), then the current mode (on real
-// hardware that is usually the panel's native mode, which scales without blur). Returns -1 if nothing is usable.
+// Picks the mode to use. The current mode wins whenever it is usable and at least 320x240: on real hardware it is the
+// panel's native mode, and any other mode would be rescaled (blurred) by the panel; in QEMU it is the preferred
+// resolution tools/qemu.py sets. Otherwise: the highest integer scale, then an exact fit (no borders).
+// Returns -1 if nothing is usable.
 int ChooseVideoMode(const VideoMode* modes, int count, int current);
 
 }  // namespace gfx

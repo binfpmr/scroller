@@ -24,10 +24,13 @@ Viewport ComputeViewport(uint32_t fb_width, uint32_t fb_height) {
 }
 
 int ChooseVideoMode(const VideoMode* modes, int count, int current) {
+  if (current >= 0 && current < count && modes[current].usable &&
+      ScaleFor(modes[current].width, modes[current].height) >= 1) {
+    return current;
+  }
   int best = -1;
   int best_scale = 0;
   bool best_exact = false;
-  bool best_current = false;
   for (int i = 0; i < count; ++i) {
     const VideoMode& m = modes[i];
     const int scale = ScaleFor(m.width, m.height);
@@ -36,14 +39,10 @@ int ChooseVideoMode(const VideoMode* modes, int count, int current) {
     }
     const bool exact = m.width == static_cast<uint32_t>(kScreenWidth * scale) &&
                        m.height == static_cast<uint32_t>(kScreenHeight * scale);
-    const bool is_current = i == current;
-    const bool better = best < 0 || scale > best_scale ||
-                        (scale == best_scale && (exact != best_exact ? exact : is_current && !best_current));
-    if (better) {
+    if (best < 0 || scale > best_scale || (scale == best_scale && exact && !best_exact)) {
       best = i;
       best_scale = scale;
       best_exact = exact;
-      best_current = is_current;
     }
   }
   return best;
