@@ -13,6 +13,14 @@ inline uint8_t Inb(uint16_t port) {
   return value;
 }
 
+inline void Outl(uint16_t port, uint32_t value) { asm volatile("outl %0, %1" : : "a"(value), "Nd"(port)); }
+
+inline uint32_t Inl(uint16_t port) {
+  uint32_t value;
+  asm volatile("inl %1, %0" : "=a"(value) : "Nd"(port));
+  return value;
+}
+
 inline void Pause() { asm volatile("pause"); }
 
 inline void Halt() { asm volatile("hlt"); }
