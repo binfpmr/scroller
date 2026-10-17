@@ -38,7 +38,7 @@ scripts/run-qemu.sh --debug         # also: gdb stub on :1234; the game waits in
 scripts/smoke-test.sh               # headless; waits for "boot ok" in the log, writes build/uefi/smoke.png
 ```
 
-All three wrap `tools/qemu.py` (`run`, `debug`, `smoke`); extra options: `--build build/uefi-clang` to run another preset's image, `--display gtk-gl` (or `sdl`, `sdl-gl`) for a GPU-drawn window, which avoids slowdowns on fractionally scaled screens, `--resolution WxH` for the display's preferred mode (default 960x720; OVMF starts in it, like a native panel, e.g. try `1920x1080` to see the laptop case), `--headless` for run/debug, `--expect TEXT`, `--timeout S`, `--screenshot PATH` for smoke. The smoke test takes the screenshot on failure too, so a hang shows where it is stuck.
+All three wrap `tools/qemu.py` (`run`, `debug`, `smoke`); extra options: `--build build/uefi-clang` to run another preset's image, `--display` (default `gtk-gl`, a GPU-drawn window; plain `gtk` scales in software and slows the guest on fractionally scaled screens; also `sdl`, `sdl-gl`), `--resolution WxH` for the display's preferred mode (default 960x720; OVMF starts in it, like a native panel, e.g. try `1920x1080` to see the laptop case), `--headless` for run/debug, `--expect TEXT`, `--timeout S`, `--screenshot PATH` for smoke. The smoke test takes the screenshot on failure too, so a hang shows where it is stuck.
 
 Smoke tests can drive the game with a key script (`tools/qemu.py smoke --help`):
 

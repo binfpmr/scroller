@@ -55,7 +55,7 @@ def pin_to_one_core_type() -> None:
 
 
 def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, resolution: str,
-                 display: str = "gtk") -> list[str]:
+                 display: str = "gtk-gl") -> list[str]:
     vars_copy = build / "OVMF_VARS.fd"
     shutil.copyfile(OVMF_VARS, vars_copy)  # fresh NVRAM every run: no stale boot entries
 
@@ -239,11 +239,11 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", parents=[common])
     run.add_argument("--headless", action="store_true", help="no window; serial goes to serial.log")
-    run.add_argument("--display", choices=sorted(DISPLAYS), default="gtk", help="QEMU window backend (default gtk)")
+    run.add_argument("--display", choices=sorted(DISPLAYS), default="gtk-gl", help="QEMU window backend (default gtk-gl)")
     run.set_defaults(func=cmd_run)
     debug = sub.add_parser("debug", parents=[common])
     debug.add_argument("--headless", action="store_true", help="no window; serial goes to serial.log")
-    debug.add_argument("--display", choices=sorted(DISPLAYS), default="gtk", help="QEMU window backend (default gtk)")
+    debug.add_argument("--display", choices=sorted(DISPLAYS), default="gtk-gl", help="QEMU window backend (default gtk-gl)")
     debug.add_argument("--timeout", type=float, default=60)
     debug.set_defaults(func=cmd_debug)
     smoke = sub.add_parser("smoke", parents=[common])
