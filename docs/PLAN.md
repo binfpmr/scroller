@@ -12,7 +12,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] `scripts/run-qemu.sh` (interactive, `--debug` for gdb stub)
 - [x] `scripts/smoke-test.sh`: headless boot, wait, capture screenshot + log, fail on missing "boot ok" line
 - [x] gdb: breakpoint in `efi_main` hits with source (command line, verified)
-- [ ] VS Code: build, run, debug from the UI (needs a check by a human)
+- [x] VS Code: build, run, debug from the UI (checked by user)
 - [x] `lib/` basics: mem*, minimal formatted logging
 
 ## M1: own the machine

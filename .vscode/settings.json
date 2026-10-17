@@ -10,8 +10,17 @@
   "C_Cpp.intelliSenseEngine": "disabled",
   "C_Cpp.formatting": "disabled",
   "editor.formatOnSave": true,
-  "[cpp]": { "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd" },
-  "[c]": { "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd" },
-  "files.associations": { "*.S": "asm-intel-x86-generic", "*.ld": "linkerscript" },
-  "files.exclude": { "build/": true, ".cache/": true }
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "[c]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "files.associations": {
+    "*.S": "asm-intel-x86-generic",
+    "*.ld": "linkerscript"
+  },
+  "files.exclude": {
+    ".cache/": true
+  }
 }
