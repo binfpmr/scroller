@@ -1,0 +1,43 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "uefi",
+      "inherits": "base",
+      "displayName": "UEFI image (GCC)",
+      "toolchainFile": "${sourceDir}/cmake/toolchain-gcc.cmake",
+      "cacheVariables": { "SCROLLER_TARGET": "uefi" }
+    },
+    {
+      "name": "uefi-clang",
+      "inherits": "base",
+      "displayName": "UEFI image (clang)",
+      "toolchainFile": "${sourceDir}/cmake/toolchain-clang.cmake",
+      "cacheVariables": { "SCROLLER_TARGET": "uefi" }
+    },
+    {
+      "name": "host",
+      "inherits": "base",
+      "displayName": "Host unit tests",
+      "cacheVariables": { "SCROLLER_TARGET": "host" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "uefi", "configurePreset": "uefi" },
+    { "name": "uefi-clang", "configurePreset": "uefi-clang" },
+    { "name": "host", "configurePreset": "host" }
+  ],
+  "testPresets": [
+    { "name": "host", "configurePreset": "host", "output": { "outputOnFailure": true } }
+  ]
+}
