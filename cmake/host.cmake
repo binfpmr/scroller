@@ -4,5 +4,12 @@ add_compile_options(-Wall -Wextra -Werror)
 add_library(scroller_core STATIC ${SCROLLER_CORE_SOURCES})
 target_include_directories(scroller_core PUBLIC src)
 
+# Level analysis tool (see tools/levelcheck/reachability.h).
+add_library(levelcheck_lib STATIC tools/levelcheck/reachability.cpp)
+target_link_libraries(levelcheck_lib PUBLIC scroller_core)
+target_include_directories(levelcheck_lib PUBLIC tools/levelcheck)
+add_executable(levelcheck tools/levelcheck/levelcheck.cpp)
+target_link_libraries(levelcheck PRIVATE levelcheck_lib)
+
 enable_testing()
 add_subdirectory(tests)
