@@ -99,17 +99,4 @@ uint64_t Scanline::MeasurePeriod(uint64_t tsc_hz) {
   return count >= 3 ? (wraps[count - 1] - wraps[0]) / (count - 1) : 0;
 }
 
-void Scanline::WaitForFrameStart(uint64_t timeout_cycles) const {
-  const uint64_t deadline = x86::Rdtsc() + timeout_cycles;
-  uint32_t last = Line();
-  while (x86::Rdtsc() < deadline) {
-    const uint32_t line = Line();
-    if (line < last) {
-      return;
-    }
-    last = line;
-    x86::Pause();
-  }
-}
-
 }  // namespace intel_display

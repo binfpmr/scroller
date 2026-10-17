@@ -10,7 +10,7 @@ namespace vga {
 // Watches the retrace bit for up to ~120 ms. Returns true and the refresh period in TSC cycles if it looks real.
 bool ProbeRetrace(uint64_t tsc_hz, uint64_t* period_cycles);
 
-// Waits until the next vertical retrace starts, at most `timeout_cycles`.
-void WaitForRetraceStart(uint64_t timeout_cycles);
+// Current state of the retrace bit.
+bool InRetrace();
 
 }  // namespace vga

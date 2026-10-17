@@ -19,7 +19,9 @@ class Vsync {
   const char* description() const { return description_; }
   // Diagnostics of the Intel path (empty if the GPU is not Intel).
   const char* intel_status() const { return intel_.status(); }
-  void WaitForFrameStart() const;
+  // Waits for the next frame start (at most two refresh periods), calling `poll(context)` all the while so input keeps
+  // flowing: most of each frame is spent here.
+  void WaitForFrameStart(void (*poll)(void* context), void* context) const;
 
  private:
   enum class Method { kNone, kIntelScanline, kVgaRetrace };

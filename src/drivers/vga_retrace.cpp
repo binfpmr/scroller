@@ -10,9 +10,9 @@ namespace {
 constexpr uint16_t kInputStatus1 = 0x3da;
 constexpr uint8_t kVerticalRetrace = 0x08;
 
-bool InRetrace() { return (x86::Inb(kInputStatus1) & kVerticalRetrace) != 0; }
-
 }  // namespace
+
+bool InRetrace() { return (x86::Inb(kInputStatus1) & kVerticalRetrace) != 0; }
 
 bool ProbeRetrace(uint64_t tsc_hz, uint64_t* period_cycles) {
   constexpr int kEdges = 6;
@@ -50,16 +50,6 @@ bool ProbeRetrace(uint64_t tsc_hz, uint64_t* period_cycles) {
     *period_cycles = mean;
   }
   return plausible;
-}
-
-void WaitForRetraceStart(uint64_t timeout_cycles) {
-  const uint64_t deadline = x86::Rdtsc() + timeout_cycles;
-  while (InRetrace() && x86::Rdtsc() < deadline) {
-    x86::Pause();
-  }
-  while (!InRetrace() && x86::Rdtsc() < deadline) {
-    x86::Pause();
-  }
 }
 
 }  // namespace vga

@@ -26,6 +26,32 @@ constexpr int kStatsIntervalTicks = 5 * kTicksPerSecond;
 
 constexpr const char* kStartLevel = "levels/level1.txt";
 
+// Keyboard polling for the main loop and the vsync wait. On real hardware every call polls: the i8042 holds one byte
+// at a time and the keyboard sends the next only after it was read, so reading late delays input (it felt sluggish
+// with 1 kHz polling plus a vsync wait of most of the frame). In a VM each port access is a VM exit competing with
+// QEMU's display thread for its global lock (frames dropped to ~35 FPS on a scaled screen), so there it polls at most
+// once per millisecond.
+class InputPoller {
+ public:
+  InputPoller(KeyboardSource& keyboard, InputTracker& tracker, uint64_t tsc_hz)
+      : keyboard_(keyboard), tracker_(tracker), interval_(x86::UnderHypervisor() ? tsc_hz / 1000 : 0) {}
+
+  void Poll() {
+    const uint64_t now = x86::Rdtsc();
+    if (now >= next_) {
+      keyboard_.Poll(tracker_);
+      next_ = now + interval_;
+    }
+  }
+  static void Callback(void* poller) { static_cast<InputPoller*>(poller)->Poll(); }
+
+ private:
+  KeyboardSource& keyboard_;
+  InputTracker& tracker_;
+  uint64_t interval_;
+  uint64_t next_ = 0;
+};
+
 // Parses one sprite sheet from the pack; on failure formats "name line N: problem" into `message`.
 bool LoadSheet(const lib::Pack& pack, const char* name, lib::Arena& arena, gfx::SpriteSheet* sheet, char* message,
                size_t message_size) {
@@ -138,8 +164,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     stats.SetInfo(info);
   }
   const uint64_t tick_cycles = boot.tsc_hz / kTicksPerSecond;
-  const uint64_t poll_cycles = boot.tsc_hz / 1000;
-  uint64_t next_poll = 0;
+  InputPoller input(keyboard, tracker, boot.tsc_hz);
   uint64_t next_tick = x86::Rdtsc();
   uint64_t ticks = 0;
   uint64_t frames = 0;
@@ -147,14 +172,8 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   Log("boot ok: game running\n");
 
   for (;;) {
-    // Poll the keyboard at most once per millisecond: each port access is a VM exit under QEMU, and a tight polling
-    // loop there competes with QEMU's display thread for its global lock (frames dropped to ~35 FPS when the window
-    // was on a fractionally scaled screen). 1 ms of extra input latency does not matter.
-    uint64_t now = x86::Rdtsc();
-    if (now >= next_poll) {
-      keyboard.Poll(tracker);
-      next_poll = now + poll_cycles;
-    }
+    input.Poll();
+    const uint64_t now = x86::Rdtsc();
     if (now < next_tick) {
       x86::Pause();
       continue;
@@ -188,7 +207,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     game.Render(screen);
     stats.Draw(screen);
     const uint64_t render_end = x86::Rdtsc();
-    vsync.WaitForFrameStart();
+    vsync.WaitForFrameStart(&InputPoller::Callback, &input);
     const uint64_t present_start = x86::Rdtsc();
     gfx::Present(screen, fb, viewport);
     const uint64_t present_end = x86::Rdtsc();

@@ -1,5 +1,6 @@
 #include "platform/vsync.h"
 
+#include "arch/x86_64/cpu.h"
 #include "drivers/vga_retrace.h"
 #include "lib/format.h"
 
@@ -26,16 +27,30 @@ void Vsync::Init(const pci::Device* gpu, uint64_t tsc_hz, lib::Arena* arena) {
               static_cast<unsigned long long>(hz10 % 10));
 }
 
-void Vsync::WaitForFrameStart() const {
-  switch (method_) {
-    case Method::kIntelScanline:
-      intel_.WaitForFrameStart(2 * period_cycles_);
-      break;
-    case Method::kVgaRetrace:
-      vga::WaitForRetraceStart(2 * period_cycles_);
-      break;
-    case Method::kNone:
-      break;
+void Vsync::WaitForFrameStart(void (*poll)(void* context), void* context) const {
+  if (method_ == Method::kNone) {
+    return;
+  }
+  const uint64_t deadline = x86::Rdtsc() + 2 * period_cycles_;
+  if (method_ == Method::kIntelScanline) {
+    // A new frame starts when the scanline counter wraps.
+    uint32_t last = intel_.Line();
+    while (x86::Rdtsc() < deadline) {
+      poll(context);
+      const uint32_t line = intel_.Line();
+      if (line < last) {
+        return;
+      }
+      last = line;
+    }
+    return;
+  }
+  // VGA: wait for the end of a retrace in progress, then for the next one to begin.
+  while (vga::InRetrace() && x86::Rdtsc() < deadline) {
+    poll(context);
+  }
+  while (!vga::InRetrace() && x86::Rdtsc() < deadline) {
+    poll(context);
   }
 }
 

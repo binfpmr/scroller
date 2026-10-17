@@ -25,3 +25,13 @@ TEST(DrawTextSetsGlyphPixelsAndClips) {
   gfx::DrawText(s, 17, 8, "WWW", 9);  // partly outside: must not write out of bounds
   gfx::DrawText(s, -3, -3, "w?", 9);  // lower case and negative positions
 }
+
+TEST(ExclamationMarkIsNotTheFallbackGlyph) {
+  std::vector<gfx::Color> a(6 * 7, 0), b(6 * 7, 0);
+  gfx::Surface sa{a.data(), 6, 7}, sb{b.data(), 6, 7};
+  gfx::DrawText(sa, 0, 0, "!", 1);
+  gfx::DrawText(sb, 0, 0, "?", 1);
+  EXPECT_TRUE(a != b);
+  EXPECT_EQ(sa.Row(0)[2], 1u);  // the bar of '!'
+  EXPECT_EQ(sa.Row(5)[2], 0u);  // the gap above the dot
+}

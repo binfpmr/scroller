@@ -15,8 +15,8 @@ class Scanline {
   // first pipe whose scanline counter wraps at a plausible refresh rate. On failure status() says why.
   bool Init(const pci::Device& gpu, uint64_t tsc_hz, lib::Arena* arena);
 
-  // Waits until the counter wraps (a new frame starts at the top), at most `timeout_cycles`.
-  void WaitForFrameStart(uint64_t timeout_cycles) const;
+  // Current scanline of the chosen pipe; it wraps to 0 when a new frame starts at the top.
+  uint32_t Line() const;
 
   char pipe_name() const { return static_cast<char>('A' + pipe_); }
   uint64_t period_cycles() const { return period_cycles_; }
@@ -24,7 +24,6 @@ class Scanline {
   const char* status() const { return status_; }
 
  private:
-  uint32_t Line() const;
   // Refresh period of pipe_ in TSC cycles from a few counter wraps (also updates max_line_); 0 if not scanning.
   uint64_t MeasurePeriod(uint64_t tsc_hz);
   uint32_t Read(uint32_t offset) const { return mmio_[offset / 4]; }

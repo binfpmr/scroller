@@ -21,6 +21,9 @@ inline CpuidResult Cpuid(uint32_t leaf, uint32_t subleaf = 0) {
   return r;
 }
 
+// Running in a virtual machine (CPUID 1 ECX bit 31, set by hypervisors).
+inline bool UnderHypervisor() { return (Cpuid(1).ecx & (1u << 31)) != 0; }
+
 // Invariant TSC: constant rate across P-/C-states (CPUID 8000_0007h EDX bit 8).
 inline bool HasInvariantTsc() {
   if (Cpuid(0x80000000).eax < 0x80000007) {
