@@ -22,7 +22,7 @@ clang-format -i <files>                                  # Google style, 120 col
 
 - Toolchain is GCC + GNU binutils (clang optional, no NASM). Output is a static-PIE ELF linked at 0, converted to PE by `objcopy`; `src/boot/crt0.S` self-relocates. Any absolute address in data needs a `R_X86_64_RELATIVE` reloc, which crt0 handles; other dynamic reloc types are a link error to fix, not to ignore.
 - Our code is System V ABI; anything UEFI calls or that calls UEFI is `EFIAPI` (`__attribute__((ms_abi))`).
-- Assembly is GNU `as` in Intel syntax (`.intel_syntax noprefix`); inline asm is Intel too (`-masm=intel`).
+- Assembly is GNU `as` in AT&T syntax (the default), inline asm too.
 - Freestanding C++23 / C23: no exceptions, RTTI, STL, libc, heap `new`, or global objects with non-trivial constructors. Memory comes from the arena allocated before `ExitBootServices`.
 - Nothing after `ExitBootServices` may call UEFI boot services; everything needed later goes into `BootInfo`.
 - `game/` and `gfx/` must not include anything from `boot/`, `uefi/`, `arch/`, `drivers/`, so they keep building for the host tests.

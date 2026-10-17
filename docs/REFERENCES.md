@@ -6,8 +6,8 @@ Local copies of manuals go in `refs/` (git-ignored). File names below are sugges
 
 | What | For | Suggested file |
 |---|---|---|
-| UEFI Specification 2.10 (uefi.org) | GOP, SimpleFileSystem, LoadedImage, memory map, ExitBootServices | `refs/UEFI_Spec_2_10.pdf` |
-| Intel 64 and IA-32 SDM, Volume 3 (System Programming) | GDT/IDT, exceptions, APIC, PAT, TSC | `refs/intel-sdm-vol3.pdf` |
+| UEFI Specification 2.10 / 2.11 (uefi.org) | GOP, SimpleFileSystem, LoadedImage, memory map, ExitBootServices | `refs/UEFI_Spec_2_10_Aug29.pdf`, `refs/UEFI_Spec_Final_2.11.pdf` |
+| Intel 64 and IA-32 SDM, Volume 3 (System Programming) | GDT/IDT, exceptions, APIC, PAT, TSC | `refs/325384-093-sdm-vol-3abcd.pdf` |
 
 ## Needed later
 

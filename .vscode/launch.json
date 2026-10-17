@@ -16,7 +16,6 @@
       "preLaunchTask": "QEMU (debug)",
       "postDebugTask": "stop QEMU",
       "setupCommands": [
-        { "text": "set disassembly-flavor intel" },
         { "text": "source ${workspaceFolder}/tools/gdb/scroller.py" }
       ]
     }

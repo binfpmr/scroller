@@ -13,7 +13,7 @@ A small 2D platformer that boots directly on x86_64 hardware via UEFI. No OS, no
 | Toolchain | GCC (`gcc`, `g++`) + GNU binutils (`as`, `ld`, `objcopy`) as a freestanding ELF toolchain, no OS target assumed; clang (`--target=x86_64-unknown-none-elf`) as an optional second compiler | No EDK2, no gnu-efi. A real `x86_64-elf` cross compiler can be plugged in via a toolchain prefix if wanted; the host GCC with freestanding flags produces equivalent code. |
 | Executable format | Link a static PIE ELF at base 0 (`scroller.elf`, keeps DWARF for gdb), convert to PE with `objcopy --target=efi-app-x86_64` (`scroller.efi`); `crt0.S` applies the ELF `R_X86_64_RELATIVE` relocations itself before any C++ runs | UEFI loads PE images at an arbitrary address. ELF section addresses equal the PE RVAs, so debugging uses the ELF at a known offset. |
 | Calling convention | Our code uses the System V ABI; UEFI functions and `efi_main`'s firmware entry use the Microsoft x64 ABI (`EFIAPI` = `__attribute__((ms_abi))`; `crt0.S` bridges the entry) | Standard approach for GCC on ELF. |
-| Languages | Freestanding C++23 for almost everything, C23 where it fits (self-contained low-level pieces), GNU `as` for what needs assembly (entry/relocation, ISR stubs, descriptor loads). Intel syntax everywhere (`.intel_syntax noprefix`, `-masm=intel` for inline asm) | One main language keeps it simple. |
+| Languages | Freestanding C++23 for almost everything, C23 where it fits (self-contained low-level pieces), GNU `as` for what needs assembly (entry/relocation, ISR stubs, descriptor loads). AT&T syntax everywhere, including inline asm | One main language keeps it simple. |
 | UEFI headers | Our own minimal definitions (`src/uefi/`), only what we use | A few hundred lines; no external dependency. |
 | Timing | Fixed 60 Hz game step; TSC calibrated against UEFI `Stall()` before exit; no interrupts needed in v1 | Simplest thing that works; interrupts come with sound. |
 | Input (v1) | Poll the i8042 PS/2 controller (scan code set 1/2 make/break codes) | QEMU's default keyboard; most laptop built-in keyboards are also PS/2 behind the EC. USB (xHCI + HID boot keyboard) is a later milestone. |
@@ -74,7 +74,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 
 ## Freestanding C++ rules
 
-- Compile flags (roughly): `-std=c++23` / `-std=c23`, `-ffreestanding -fpie -fvisibility=hidden -fno-plt -fno-exceptions -fno-rtti -fno-stack-protector -fno-stack-check -fcf-protection=none -fno-asynchronous-unwind-tables -mno-red-zone -masm=intel`.
+- Compile flags (roughly): `-std=c++23` / `-std=c23`, `-ffreestanding -fpie -fvisibility=hidden -fno-plt -fno-exceptions -fno-rtti -fno-stack-protector -fno-stack-check -fcf-protection=none -fno-asynchronous-unwind-tables -mno-red-zone`.
 - Link (roughly): `-nostdlib -static-pie -Wl,--no-dynamic-linker -Wl,-z,norelro -T src/boot/efi.ld`, then `objcopy --target=efi-app-x86_64 --subsystem=10`.
 - UEFI strings are `char16_t` (`u"..."` literals), so no `-fshort-wchar`.
 - No exceptions, no RTTI, no heap `new`/`delete` (allocate from the arena), no global objects with non-trivial constructors (nothing runs them).

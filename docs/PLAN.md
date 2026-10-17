@@ -4,7 +4,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## M0: toolchain and "hello pixels"
 
-- [ ] Install missing tools (see `docs/WORKFLOW.md`)
+- [x] Install missing tools (see `docs/WORKFLOW.md`)
 - [ ] CMake project with `uefi` (GCC), `uefi-clang` and `host` presets, freestanding toolchain file
 - [ ] `crt0.S` + linker script + `objcopy` to PE; verify relocations are applied and OVMF loads the image
 - [ ] Minimal UEFI headers + `efi_main` that logs to debugcon/serial and fills the screen with a colour
@@ -74,8 +74,8 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - Controls: arrows move, Space or Z jump, Esc reboots.
 - Art: placeholder sprites drawn as text art in the repo.
 - Levels: plain text, one character per tile; no level editor for now.
-- Toolchain: GCC + GNU as/binutils, clang optional; no NASM.
+- Toolchain: host GCC with freestanding flags (no cross GCC for now) + GNU as/binutils, clang optional; no NASM. AT&T syntax.
 
 ## Open questions
 
-- Do we want a real `x86_64-elf` cross GCC (built by a script into e.g. `~/opt/cross`) instead of the host GCC with freestanding flags?
+- (none)
