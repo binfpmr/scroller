@@ -74,12 +74,17 @@ void StatsOverlay::Update(uint64_t now, const char* wc) {
   present_cycles_ = 0;
 }
 
+void StatsOverlay::SetInfo(const char* info) { lib::Format(info_, sizeof(info_), "%s", info); }
+
 void StatsOverlay::Draw(gfx::Surface& screen) const {
   if (!visible || text_[0] == '\0') {
     return;
   }
-  gfx::FillRect(screen, 0, 0, gfx::TextWidth(text_) + 4, 2 * gfx::kLineHeight + 2, gfx::Rgb(0, 0, 0));
+  const int width = lib::Max(gfx::TextWidth(text_), gfx::TextWidth(info_)) + 4;
+  const int lines = 2 + (info_[0] != '\0' ? 2 : 0);
+  gfx::FillRect(screen, 0, 0, width, lines * gfx::kLineHeight + 2, gfx::Rgb(0, 0, 0));
   gfx::DrawText(screen, 2, 2, text_, gfx::Rgb(255, 255, 255));
+  gfx::DrawText(screen, 2, 2 + 2 * gfx::kLineHeight, info_, gfx::Rgb(180, 220, 255));
 }
 
 }  // namespace platform

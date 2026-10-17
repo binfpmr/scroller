@@ -29,6 +29,32 @@ inline bool HasInvariantTsc() {
   return (Cpuid(0x80000007).edx & (1u << 8)) != 0;
 }
 
+// CPU brand string (CPUID 8000_0002h..8000_0004h), leading spaces removed; "unknown" if not available.
+inline void CpuBrand(char (&out)[49]) {
+  if (Cpuid(0x80000000).eax < 0x80000004) {
+    __builtin_memcpy(out, "unknown", 8);
+    return;
+  }
+  uint32_t words[12];
+  for (uint32_t i = 0; i < 3; ++i) {
+    const CpuidResult r = Cpuid(0x80000002 + i);
+    words[i * 4 + 0] = r.eax;
+    words[i * 4 + 1] = r.ebx;
+    words[i * 4 + 2] = r.ecx;
+    words[i * 4 + 3] = r.edx;
+  }
+  const char* text = reinterpret_cast<const char*>(words);
+  int start = 0;
+  while (start < 48 && text[start] == ' ') {
+    ++start;
+  }
+  int n = 0;
+  for (int i = start; i < 48 && text[i] != '\0'; ++i) {
+    out[n++] = text[i];
+  }
+  out[n] = '\0';
+}
+
 inline void DisableInterrupts() { asm volatile("cli" ::: "memory"); }
 
 }  // namespace x86

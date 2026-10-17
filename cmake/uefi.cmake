@@ -46,7 +46,9 @@ add_executable(scroller
   src/boot/uefi_keyboard.cpp
   src/boot/video.cpp
   src/drivers/debug_log.cpp
+  src/drivers/pci.cpp
   src/drivers/ps2_keyboard.cpp
+  src/drivers/vga_retrace.cpp
   src/lib/cxx_support.cpp
   src/lib/mem.c
   src/platform/game_loop.cpp

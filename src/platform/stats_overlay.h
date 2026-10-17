@@ -17,6 +17,8 @@ class StatsOverlay {
   // Recomputes the text once per second; `wc` is "ON" or "OFF" (framebuffer write-combining).
   void Update(uint64_t now, const char* wc);
   void Draw(gfx::Surface& screen) const;
+  // Fixed lines shown under the numbers (hardware description), copied.
+  void SetInfo(const char* info);
 
   bool visible = false;  // F1
 
@@ -31,6 +33,7 @@ class StatsOverlay {
   uint64_t last_mperf_ = 0;
   int updates_ = 0;
   char text_[192] = "";
+  char info_[160] = "";
 };
 
 }  // namespace platform

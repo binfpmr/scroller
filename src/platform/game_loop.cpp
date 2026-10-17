@@ -5,9 +5,12 @@
 #include "arch/x86_64/write_combining.h"
 #include "assets/test_level.h"
 #include "drivers/debug_log.h"
+#include "drivers/pci.h"
+#include "drivers/vga_retrace.h"
 #include "game/game.h"
 #include "gfx/present.h"
 #include "lib/arena.h"
+#include "lib/format.h"
 #include "platform/reset.h"
 #include "platform/stats_overlay.h"
 
@@ -56,8 +59,26 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   Log("level: %dx%d tiles, start %d,%d\n", game.level().width, game.level().height, game.level().start_x,
       game.level().start_y);
 
+  // Vertical sync: no GOP support, so try the legacy VGA retrace bit (see drivers/vga_retrace.h).
+  uint64_t refresh_cycles = 0;
+  const bool vsync = vga::ProbeRetrace(boot.tsc_hz, &refresh_cycles);
+
   InputTracker tracker;
   StatsOverlay stats(boot.tsc_hz);
+  {
+    char cpu[49];
+    x86::CpuBrand(cpu);
+    pci::Device gpu;
+    const bool has_gpu = pci::FindByClass(0x03, &gpu);
+    char info[160];
+    lib::Format(info, sizeof(info), "%s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s %llu.%llu HZ", cpu,
+                has_gpu ? gpu.vendor_id : 0, has_gpu ? gpu.device_id : 0, gpu.bus, gpu.device, gpu.function,
+                vsync ? "3DA" : "NONE",
+                static_cast<unsigned long long>(vsync ? boot.tsc_hz * 10 / refresh_cycles / 10 : 0),
+                static_cast<unsigned long long>(vsync ? boot.tsc_hz * 10 / refresh_cycles % 10 : 0));
+    Log("hw: %s\n", info);
+    stats.SetInfo(info);
+  }
   const uint64_t tick_cycles = boot.tsc_hz / kTicksPerSecond;
   uint64_t next_tick = x86::Rdtsc();
   uint64_t ticks = 0;
@@ -100,6 +121,9 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     const uint64_t render_start = x86::Rdtsc();
     game.Render(screen);
     stats.Draw(screen);
+    if (vsync) {
+      vga::WaitForRetraceStart(2 * refresh_cycles);
+    }
     const uint64_t present_start = x86::Rdtsc();
     gfx::Present(screen, fb, viewport);
     const uint64_t present_end = x86::Rdtsc();
