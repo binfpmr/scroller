@@ -1,0 +1,11 @@
+# Build output (all presets build under build/<preset>/)
+/build/
+
+# Local copies of reference manuals (PDFs etc.), see docs/REFERENCES.md
+/refs/
+
+# clangd index cache
+/.cache/
+
+# Python
+__pycache__/
