@@ -1,0 +1,85 @@
+# Eine kleine Nachtmusik: Mozart, Serenade No. 13 in G major, K. 525, 1st movement, the opening bars 1-4, played
+# twice (the second time the bass doubles the theme's rhythm). 4/4, one row per eighth note.
+
+tempo 132
+rows_per_beat 2
+loop yes
+
+instrument lead square duty 25 attack 3 decay 120 sustain 55 release 60 volume 55
+instrument bass triangle attack 3 decay 200 sustain 70 release 80 volume 80
+instrument kick noise attack 1 decay 70 sustain 0 volume 45 note C-3
+instrument hat noise attack 1 decay 25 sustain 0 volume 20 note C-7
+
+channels lead bass kick hat
+# bar 1
+G-5 G-3 x .
+... ... . .
+--- --- . x
+D-5 ... . .
+G-5 G-3 x .
+... ... . .
+--- --- . x
+D-5 ... . .
+# bar 2
+G-5 G-3 x .
+D-5 D-3 . .
+G-5 G-3 . x
+B-5 B-3 . .
+D-6 G-3 x .
+... ... . .
+... ... . x
+... ... . .
+# bar 3
+C-6 D-3 x .
+... ... . .
+--- --- . x
+A-5 ... . .
+C-6 D-3 x .
+... ... . .
+--- --- . x
+A-5 ... . .
+# bar 4
+C-6 D-3 x .
+A-5 F#3 . .
+F#5 A-3 . x
+A-5 F#3 . .
+D-5 D-3 x .
+... ... . .
+... ... . x
+... ... . .
+# bar 5
+G-5 G-3 x .
+... ... . .
+--- --- . x
+D-5 ... . .
+G-5 G-3 x .
+... ... . .
+--- --- . x
+D-5 ... . .
+# bar 6
+G-5 G-3 x .
+D-5 D-3 . .
+G-5 G-3 . x
+B-5 B-3 . .
+D-6 G-3 x .
+... ... . .
+... ... . x
+... ... . .
+# bar 7
+C-6 D-3 x .
+... ... . .
+--- --- . x
+A-5 ... . .
+C-6 D-3 x .
+... ... . .
+--- --- . x
+A-5 ... . .
+# bar 8
+C-6 D-3 x .
+A-5 F#3 . .
+F#5 A-3 . x
+A-5 F#3 . .
+D-5 D-3 x .
+... ... . .
+... ... . x
+... ... . .

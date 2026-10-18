@@ -1,0 +1,157 @@
+# Ode to Joy: Beethoven, Symphony No. 9 in D minor, Op. 125, finale; the theme in D major, 16 bars (A A' B A').
+# Melody as written, bass reduced to the chord roots. 4/4, one row per eighth note.
+
+tempo 120
+rows_per_beat 2
+loop yes
+
+instrument lead square duty 25 attack 3 decay 120 sustain 55 release 60 volume 55
+instrument bass triangle attack 3 decay 200 sustain 70 release 80 volume 80
+instrument kick noise attack 1 decay 70 sustain 0 volume 45 note C-3
+instrument hat noise attack 1 decay 25 sustain 0 volume 20 note C-7
+
+channels lead bass kick hat
+# bar 1
+F#5 D-3 x .
+... ... . .
+F#5 ... . x
+... ... . .
+G-5 D-3 x .
+... ... . .
+A-5 ... . x
+... ... . .
+# bar 2
+A-5 A-2 x .
+... ... . .
+G-5 ... . x
+... ... . .
+F#5 A-2 x .
+... ... . .
+E-5 ... . x
+... ... . .
+# bar 3
+D-5 D-3 x .
+... ... . .
+D-5 ... . x
+... ... . .
+E-5 D-3 x .
+... ... . .
+F#5 ... . x
+... ... . .
+# bar 4
+F#5 A-2 x .
+... ... . .
+... ... . x
+E-5 ... . .
+E-5 A-2 x .
+... ... . .
+... ... . x
+... ... . .
+# bar 5
+F#5 D-3 x .
+... ... . .
+F#5 ... . x
+... ... . .
+G-5 D-3 x .
+... ... . .
+A-5 ... . x
+... ... . .
+# bar 6
+A-5 A-2 x .
+... ... . .
+G-5 ... . x
+... ... . .
+F#5 A-2 x .
+... ... . .
+E-5 ... . x
+... ... . .
+# bar 7
+D-5 D-3 x .
+... ... . .
+D-5 ... . x
+... ... . .
+E-5 D-3 x .
+... ... . .
+F#5 ... . x
+... ... . .
+# bar 8
+E-5 A-2 x .
+... ... . .
+... ... . x
+D-5 ... . .
+D-5 D-3 x .
+... ... . .
+... ... . x
+... ... . .
+# bar 9
+E-5 A-2 x .
+... ... . .
+E-5 ... . x
+... ... . .
+F#5 D-3 x .
+... ... . .
+D-5 ... . x
+... ... . .
+# bar 10
+E-5 A-2 x .
+... ... . .
+F#5 ... . x
+G-5 ... . .
+F#5 D-3 x .
+... ... . .
+D-5 ... . x
+... ... . .
+# bar 11
+E-5 A-2 x .
+... ... . .
+F#5 ... . x
+G-5 ... . .
+F#5 D-3 x .
+... ... . .
+E-5 ... . x
+... ... . .
+# bar 12
+D-5 D-3 x .
+... ... . .
+E-5 ... . x
+... ... . .
+A-4 A-2 x .
+... ... . .
+... ... . x
+... ... . .
+# bar 13
+F#5 D-3 x .
+... ... . .
+F#5 ... . x
+... ... . .
+G-5 D-3 x .
+... ... . .
+A-5 ... . x
+... ... . .
+# bar 14
+A-5 A-2 x .
+... ... . .
+G-5 ... . x
+... ... . .
+F#5 A-2 x .
+... ... . .
+E-5 ... . x
+... ... . .
+# bar 15
+D-5 D-3 x .
+... ... . .
+D-5 ... . x
+... ... . .
+E-5 D-3 x .
+... ... . .
+F#5 ... . x
+... ... . .
+# bar 16
+E-5 A-2 x .
+... ... . .
+... ... . x
+D-5 ... . .
+D-5 D-3 x .
+... ... . .
+... ... . x
+... ... . .

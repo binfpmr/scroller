@@ -1,0 +1,103 @@
+# Canon in D: Johann Pachelbel, the ground bass (8 notes over 2 bars) under the first violin's entries: alone, then
+# half notes, then quarter notes. 4/4, one row per eighth note.
+
+tempo 84
+rows_per_beat 2
+loop yes
+
+instrument lead square duty 50 attack 4 decay 160 sustain 45 release 90 volume 45
+instrument bass triangle attack 3 decay 200 sustain 70 release 80 volume 80
+instrument kick noise attack 1 decay 70 sustain 0 volume 45 note C-3
+instrument hat noise attack 1 decay 25 sustain 0 volume 20 note C-7
+
+channels lead bass kick hat
+# bar 1
+--- D-3 x .
+... ... . .
+... A-2 . .
+... ... . .
+... B-2 . x
+... ... . .
+... F#2 . .
+... ... . .
+# bar 2
+... G-2 x .
+... ... . .
+... D-2 . .
+... ... . .
+... G-2 . x
+... ... . .
+... A-2 . .
+... ... . .
+# bar 3
+F#5 D-3 x .
+... ... . .
+... A-2 . .
+... ... . .
+E-5 B-2 . x
+... ... . .
+... F#2 . .
+... ... . .
+# bar 4
+D-5 G-2 x .
+... ... . .
+... D-2 . .
+... ... . .
+C#5 G-2 . x
+... ... . .
+... A-2 . .
+... ... . .
+# bar 5
+B-4 D-3 x .
+... ... . .
+... A-2 . .
+... ... . .
+A-4 B-2 . x
+... ... . .
+... F#2 . .
+... ... . .
+# bar 6
+B-4 G-2 x .
+... ... . .
+... D-2 . .
+... ... . .
+C#5 G-2 . x
+... ... . .
+... A-2 . .
+... ... . .
+# bar 7
+D-5 D-3 x .
+... ... . .
+C#5 A-2 . .
+... ... . .
+B-4 B-2 . x
+... ... . .
+A-4 F#2 . .
+... ... . .
+# bar 8
+G-4 G-2 x .
+... ... . .
+F#4 D-2 . .
+... ... . .
+G-4 G-2 . x
+... ... . .
+E-4 A-2 . .
+... ... . .
+# bar 9
+D-4 D-3 x .
+... ... . .
+F#4 A-2 . .
+... ... . .
+A-4 B-2 . x
+... ... . .
+G-4 F#2 . .
+... ... . .
+# bar 10
+F#4 G-2 x .
+... ... . .
+D-4 D-2 . .
+... ... . .
+F#4 G-2 . x
+... ... . .
+E-4 A-2 . .
+... ... . .

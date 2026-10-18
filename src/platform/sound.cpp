@@ -22,7 +22,12 @@ constexpr uint32_t kSb16Rate = 44100;
 constexpr uint32_t kHalfFrames = 1024;  // 23 ms at 44.1 kHz
 
 audio::Engine g_engine;
-audio::Song g_music;
+// One tune per level, in this order (level 6 starts over with the first).
+constexpr const char* kLevelMusic[] = {"music/minuet.txt", "music/ode_to_joy.txt", "music/eine_kleine.txt",
+                                       "music/canon.txt", "music/fur_elise.txt"};
+constexpr int kTunes = sizeof(kLevelMusic) / sizeof(kLevelMusic[0]);
+audio::Song g_music[kTunes];
+bool g_have_music[kTunes] = {};
 audio::Song g_jump;
 audio::Song g_land;
 audio::Song g_duck;
@@ -100,15 +105,17 @@ bool LoadSong(const lib::Pack& pack, const char* name, lib::Arena& arena, audio:
 void LoadSongs(const lib::Pack& pack, lib::Arena& arena) {
   g_engine.SetMusicVolume(g_music_on ? kMusicVolume : 0);  // the music runs silently while off
   g_engine.SetMasterVolume(g_muted ? 0 : g_volume);
-  const bool have_music = LoadSong(pack, "music/minuet.txt", arena, &g_music);
+  for (int i = 0; i < kTunes; ++i) {
+    g_have_music[i] = LoadSong(pack, kLevelMusic[i], arena, &g_music[i]);
+  }
   g_have_effects =
       LoadSong(pack, "sounds/jump.txt", arena, &g_jump) && LoadSong(pack, "sounds/land.txt", arena, &g_land) &&
       LoadSong(pack, "sounds/duck.txt", arena, &g_duck) && LoadSong(pack, "sounds/fall.txt", arena, &g_fall) &&
       LoadSong(pack, "sounds/checkpoint.txt", arena, &g_checkpoint) &&
       LoadSong(pack, "sounds/hit.txt", arena, &g_hit) && LoadSong(pack, "sounds/walljump.txt", arena, &g_wall_jump) &&
       LoadSong(pack, "sounds/goal.txt", arena, &g_goal);
-  if (have_music) {
-    g_engine.PlayMusic(&g_music);
+  if (g_have_music[0]) {
+    g_engine.PlayMusic(&g_music[0]);
   }
 }
 
@@ -202,6 +209,17 @@ void SetMusicOn(bool on) {
   ApplyVolume();
 }
 bool MusicOn() { return g_music_on; }
+
+void PlayLevelMusic(int level_index) {
+  const int tune = level_index % kTunes;
+  if (!g_have_music[tune]) {
+    return;
+  }
+  Log("sound: level %d plays %s\n", level_index + 1, kLevelMusic[tune]);
+  x86::DisableInterrupts();  // the engine also runs in interrupt handlers
+  g_engine.PlayMusic(&g_music[tune]);
+  x86::EnableInterrupts();
+}
 
 void PauseSound() {
   if (g_hda.buffer() != nullptr) {

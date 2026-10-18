@@ -58,8 +58,10 @@ All listed frames must exist; a missing one is reported at boot (and by the test
 
 ## Music and sound effects (`assets/music/*.txt`, `assets/sounds/*.txt`)
 
-A small tracker format, one row per line, one column per channel. The game plays `music/minuet.txt` in a loop and
-`sounds/jump.txt`, `land.txt`, `walljump.txt`, `goal.txt` as effects (on two extra voices above the music).
+A small tracker format, one row per line, one column per channel. Every level has its own tune (`kLevelMusic` in
+`src/platform/sound.cpp`: Minuet in G, Ode to Joy, Eine kleine Nachtmusik, Pachelbel's Canon, Für Elise, then over
+again), played in a loop; the game also plays the effects in `sounds/` (jump, land, wall-jump, duck, checkpoint,
+fall, hit, goal) on two extra voices above the music.
 
 ```
 # Minuet in G, BWV Anh. 114

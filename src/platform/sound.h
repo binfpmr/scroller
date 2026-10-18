@@ -10,9 +10,12 @@
 
 namespace platform {
 
-// Needs interrupts set up (the device refills its buffer from an interrupt). Loads music/minuet.txt and the sound
+// Needs interrupts set up (the device refills its buffer from an interrupt). Loads the level tunes (music/) and the sound
 // effects from the pack; starts the music. Returns false (game stays silent) if there is no usable device.
 bool InitSound(const BootInfo& boot, const lib::Pack& pack, lib::Arena& arena);
+
+// Starts the tune of a level (0-based) from its beginning; the levels take turns through the tunes.
+void PlayLevelMusic(int level_index);
 
 // Plays the effects for game::Game::TakeEvents() bits.
 void PlaySoundEvents(uint8_t events);

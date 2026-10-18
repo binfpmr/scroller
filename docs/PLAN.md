@@ -129,7 +129,8 @@ Decided: pure "reach the goal", placeholder text-art style, no title screen.
       flyers (fly back and forth or in a pattern); touching one respawns at the checkpoint. levelcheck must keep
       working (enemies only make it harder, so reachability stays a check on the geometry)
 - [x] Parallax background: clouds, hills, bushes in layers scrolling slower than the level
-- [ ] A different tune per level: short chiptune transcriptions of public-domain Baroque/Classical pieces
+- [x] A different tune per level: short chiptune transcriptions of public-domain Baroque/Classical pieces (Minuet in
+      G, Ode to Joy, Eine kleine Nachtmusik, Canon in D, Für Elise)
 - [ ] More levels: long, tall, or both; each with checkpoints
 
 ## M9: later
