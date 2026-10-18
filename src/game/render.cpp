@@ -76,9 +76,28 @@ const gfx::Sprite* PlayerFrame(const Player& player, const Frames& frames, uint3
 }
 
 void RenderWorld(gfx::Surface& screen, const Level& level, const Camera& camera, const Player& player,
-                 const Frames& frames, uint32_t ticks, int checkpoint_tx, int checkpoint_ty) {
+                 const Frames& frames, uint32_t ticks, int checkpoint_tx, int checkpoint_ty, const Enemy* enemies,
+                 int enemy_count) {
   DrawSky(screen, camera, level);
   DrawTiles(screen, level, camera, frames, checkpoint_tx, checkpoint_ty);
+  for (int i = 0; i < enemy_count; ++i) {
+    const Enemy& e = enemies[i];
+    const gfx::Sprite* sprite = nullptr;
+    switch (e.kind) {
+      case EnemyKind::kWalker:
+        sprite = frames.walker[(e.ticks / 12) & 1];
+        break;
+      case EnemyKind::kJumper:
+        sprite = e.on_ground ? frames.jumper : frames.jumper_air;
+        break;
+      case EnemyKind::kFlyer:
+        sprite = frames.flyer[(e.ticks / 6) & 1];
+        break;
+    }
+    // 16x16 sprite centred on the bottom edge of the 12x12 hitbox.
+    gfx::DrawSprite(screen, *sprite, e.pixel_x() - 2 - camera.x, e.pixel_y() + Enemy::kHeight - 16 - camera.y,
+                    e.dir < 0);
+  }
   // The 16x16 frame is centred horizontally on the 12x14 hitbox, feet on its bottom edge.
   const gfx::Sprite& sprite = *PlayerFrame(player, frames, ticks);
   const int x = player.pixel_x() + (Player::kWidth - sprite.width) / 2 - camera.x;

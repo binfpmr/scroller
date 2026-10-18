@@ -28,13 +28,14 @@ audio::Song g_land;
 audio::Song g_duck;
 audio::Song g_fall;
 audio::Song g_checkpoint;
+audio::Song g_hit;
 audio::Song g_wall_jump;
 audio::Song g_goal;
 bool g_have_effects = false;
 volatile uint64_t g_interrupts = 0;  // buffer refills
 char g_status[48] = "NONE";
 constexpr int kMusicVolume = 50;  // music sits below the effects
-int g_volume = 60;  // master volume on a decibel scale (audio::Engine): 60 % is -20 dB
+int g_volume = 60;                // master volume on a decibel scale (audio::Engine): 60 % is -20 dB
 bool g_muted = false;
 bool g_music_on = false;  // off by default; N switches it on
 
@@ -103,7 +104,8 @@ void LoadSongs(const lib::Pack& pack, lib::Arena& arena) {
   g_have_effects =
       LoadSong(pack, "sounds/jump.txt", arena, &g_jump) && LoadSong(pack, "sounds/land.txt", arena, &g_land) &&
       LoadSong(pack, "sounds/duck.txt", arena, &g_duck) && LoadSong(pack, "sounds/fall.txt", arena, &g_fall) &&
-      LoadSong(pack, "sounds/checkpoint.txt", arena, &g_checkpoint) && LoadSong(pack, "sounds/walljump.txt", arena, &g_wall_jump) &&
+      LoadSong(pack, "sounds/checkpoint.txt", arena, &g_checkpoint) &&
+      LoadSong(pack, "sounds/hit.txt", arena, &g_hit) && LoadSong(pack, "sounds/walljump.txt", arena, &g_wall_jump) &&
       LoadSong(pack, "sounds/goal.txt", arena, &g_goal);
   if (have_music) {
     g_engine.PlayMusic(&g_music);
@@ -166,6 +168,8 @@ void PlaySoundEvents(uint8_t events) {
   x86::DisableInterrupts();  // the engine also runs in the interrupt handler
   if (events & game::Game::kEventGoal) {
     g_engine.PlaySound(&g_goal);
+  } else if (events & game::Game::kEventHit) {
+    g_engine.PlaySound(&g_hit);
   } else if (events & game::Game::kEventFall) {
     g_engine.PlaySound(&g_fall);
   } else if (events & game::Game::kEventCheckpoint) {

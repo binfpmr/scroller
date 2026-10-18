@@ -196,9 +196,11 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   }
   static gfx::SpriteSheet player_sheet;
   static gfx::SpriteSheet tile_sheet;
+  static gfx::SpriteSheet enemy_sheet;
   char message[160];
   if (!LoadSheet(pack, "sprites/player.txt", arena, &player_sheet, message, sizeof(message)) ||
-      !LoadSheet(pack, "sprites/tiles.txt", arena, &tile_sheet, message, sizeof(message))) {
+      !LoadSheet(pack, "sprites/tiles.txt", arena, &tile_sheet, message, sizeof(message)) ||
+      !LoadSheet(pack, "sprites/enemies.txt", arena, &enemy_sheet, message, sizeof(message))) {
     Fatal(message, screen, fb, viewport, keyboard, boot);
   }
   if (interrupts) {
@@ -211,7 +213,8 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   }
 
   game::Game game;
-  if (!game.Init(arena, levels, level_count, {.player = &player_sheet, .tiles = &tile_sheet}, &error)) {
+  if (!game.Init(arena, levels, level_count, {.player = &player_sheet, .tiles = &tile_sheet, .enemies = &enemy_sheet},
+                 &error)) {
     Fatal(error, screen, fb, viewport, keyboard, boot);
   }
   Log("levels: %d, first %dx%d tiles, start %d,%d\n", level_count, game.level().width, game.level().height,

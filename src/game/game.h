@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "game/camera.h"
+#include "game/enemy.h"
 #include "game/level.h"
 #include "game/player.h"
 #include "gfx/sprite.h"
@@ -16,8 +17,9 @@ namespace game {
 
 // Sprite sheets the game draws with (parsed from the asset pack by the caller).
 struct GameAssets {
-  const gfx::SpriteSheet* player = nullptr;  // sprites/player.txt
-  const gfx::SpriteSheet* tiles = nullptr;   // sprites/tiles.txt
+  const gfx::SpriteSheet* player = nullptr;   // sprites/player.txt
+  const gfx::SpriteSheet* tiles = nullptr;    // sprites/tiles.txt
+  const gfx::SpriteSheet* enemies = nullptr;  // sprites/enemies.txt
 };
 
 // One level's text (levels/levelN.txt).
@@ -40,6 +42,10 @@ struct Frames {
   const gfx::Sprite* flag;
   const gfx::Sprite* checkpoint;
   const gfx::Sprite* checkpoint_on;
+  const gfx::Sprite* walker[2];
+  const gfx::Sprite* jumper;
+  const gfx::Sprite* jumper_air;
+  const gfx::Sprite* flyer[2];
 };
 
 class Game {
@@ -71,11 +77,14 @@ class Game {
   int level_count() const { return level_count_; }
   const Player& player() const { return player_; }
   const Camera& camera() const { return camera_; }
+  int enemy_count() const { return enemy_count_; }
+  const Enemy& enemy(int i) const { return enemies_[i]; }
   int respawn_tx() const { return respawn_tx_; }
   int respawn_ty() const { return respawn_ty_; }
   bool won() const { return win_ticks_ > 0; }
 
   // Sound events since the last call (PlayerEvent bits, plus these), then cleared.
+  static constexpr uint8_t kEventHit = 1 << 4;         // touched an enemy, respawned
   static constexpr uint8_t kEventFall = 1 << 5;        // fell out of the level, respawned
   static constexpr uint8_t kEventCheckpoint = 1 << 6;  // reached a new checkpoint
   static constexpr uint8_t kEventGoal = 1 << 7;
@@ -100,6 +109,8 @@ class Game {
   int title_ticks_ = 0;
   int respawn_tx_ = 0;  // where Respawn puts the player: the start or the last checkpoint reached
   int respawn_ty_ = 0;
+  Enemy enemies_[Level::kMaxEnemies];
+  int enemy_count_ = 0;
   int checkpoint_tx_ = -1;  // the checkpoint reached last (drawn green), -1: none
   int checkpoint_ty_ = -1;
   Player player_;

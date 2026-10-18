@@ -125,7 +125,7 @@ Decided: pure "reach the goal", placeholder text-art style, no title screen.
 
 - [x] Falling out of the level (bottomless pits, the only hazard) respawns at the last checkpoint
 - [x] Checkpoints (tile `C`; touching one makes it the respawn point; a chime, and a slide down when falling)
-- [ ] Enemies to avoid, never defeated: walkers (turn at walls and ledges), jumpers (hop in place or along),
+- [x] Enemies to avoid, never defeated: walkers (turn at walls and ledges), jumpers (hop in place or along),
       flyers (fly back and forth or in a pattern); touching one respawns at the checkpoint. levelcheck must keep
       working (enemies only make it harder, so reachability stays a check on the geometry)
 - [ ] Parallax background: clouds, hills, bushes in layers scrolling slower than the level

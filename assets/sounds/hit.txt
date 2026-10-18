@@ -1,0 +1,9 @@
+# Hit: touched an enemy; a short low buzz.
+tempo 300
+rows_per_beat 4
+instrument buzz square duty 12 attack 1 decay 120 sustain 0 volume 40
+instrument thump noise attack 1 decay 60 sustain 0 volume 35 note C-3
+channels buzz thump
+C-3 x
+A-2 .
+--- .

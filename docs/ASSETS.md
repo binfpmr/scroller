@@ -13,6 +13,7 @@ One line per tile row, one character per 16x16 tile; shorter lines are padded wi
 | `#` | ground (solid), drawn with grass when the tile above is open |
 | `X` | stone (solid) |
 | `G` | goal flag (not solid); touching it shows WELL DONE and starts the next level |
+| `w` `j` `f` | enemy start (the tile itself is empty): walker (walks, turns at walls and ledges), jumper (hops along every 1.5 s, turns before ledges), flyer (flies back and forth 3 tiles each way, bobbing; place it in the air). Enemies cannot be defeated; touching one respawns the player at the last checkpoint, and all enemies return to their starts. `levelcheck` ignores them |
 | `C` | checkpoint (not solid, stands on the ground like `P`); touching it makes it the respawn point (turns green) |
 | `.` or space | empty |
 | `P` | player start (exactly one) |

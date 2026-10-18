@@ -28,6 +28,7 @@ set(SCROLLER_CORE_SOURCES
   src/drivers/ps2_decoder.cpp
   src/drivers/usb_descriptors.cpp
   src/game/camera.cpp
+  src/game/enemy.cpp
   src/game/game.cpp
   src/game/level.cpp
   src/game/player.cpp

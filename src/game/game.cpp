@@ -39,7 +39,15 @@ bool Game::Init(lib::Arena& arena, const LevelText* levels, int level_count, con
       FindFrame(t, tn, "stone", &frames_.stone, message, ms) && FindFrame(t, tn, "flag", &frames_.flag, message, ms) &&
       FindFrame(t, tn, "checkpoint", &frames_.checkpoint, message, ms) &&
       FindFrame(t, tn, "checkpoint_on", &frames_.checkpoint_on, message, ms);
-  if (!frames_ok) {
+  const gfx::SpriteSheet* e = assets.enemies;
+  const char* en = "sprites/enemies.txt";
+  const bool enemy_frames_ok = frames_ok && FindFrame(e, en, "walker1", &frames_.walker[0], message, ms) &&
+                               FindFrame(e, en, "walker2", &frames_.walker[1], message, ms) &&
+                               FindFrame(e, en, "jumper", &frames_.jumper, message, ms) &&
+                               FindFrame(e, en, "jumper_air", &frames_.jumper_air, message, ms) &&
+                               FindFrame(e, en, "flyer1", &frames_.flyer[0], message, ms) &&
+                               FindFrame(e, en, "flyer2", &frames_.flyer[1], message, ms);
+  if (!enemy_frames_ok) {
     *error = message;
     return false;
   }
@@ -65,12 +73,20 @@ void Game::Restart() {
   respawn_tx_ = level().start_x;
   respawn_ty_ = level().start_y;
   checkpoint_tx_ = checkpoint_ty_ = -1;
+  enemy_count_ = level().enemy_count;
+  for (int i = 0; i < enemy_count_; ++i) {
+    const EnemySpawn& s = level().enemies[i];
+    enemies_[i].Spawn(s.kind, s.tx, s.ty);
+  }
   Respawn();
   win_ticks_ = 0;
   title_ticks_ = level_count_ > 1 ? kTitleTicks : 0;
 }
 
 void Game::Respawn() {
+  for (int i = 0; i < enemy_count_; ++i) {
+    enemies_[i].Reset();  // so none waits at the checkpoint
+  }
   player_ = Player();
   player_.Spawn(respawn_tx_, respawn_ty_);
   camera_.CenterOn(player_.pixel_x() + Player::kWidth / 2, player_.pixel_y() + Player::kHeight / 2,
@@ -111,6 +127,16 @@ void Game::Update(const platform::InputState& input) {
   events_ |= player_.events;
   camera_.Follow(player_.pixel_x() + Player::kWidth / 2, player_.pixel_y() + Player::kHeight / 2, level().pixel_width(),
                  level().pixel_height());
+  for (int i = 0; i < enemy_count_; ++i) {
+    UpdateEnemy(enemies_[i], level());
+  }
+  for (int i = 0; i < enemy_count_; ++i) {
+    if (EnemyTouches(enemies_[i], player_.pixel_x(), player_.pixel_y(), Player::kWidth, Player::kHeight)) {
+      Respawn();
+      events_ |= kEventHit;
+      return;
+    }
+  }
   int tx = 0, ty = 0;
   if (TouchedTile(Tile::kCheckpoint, &tx, &ty) && (tx != checkpoint_tx_ || ty != checkpoint_ty_)) {
     checkpoint_tx_ = respawn_tx_ = tx;
@@ -128,7 +154,8 @@ void Game::Update(const platform::InputState& input) {
 }
 
 void Game::Render(gfx::Surface& screen) const {
-  RenderWorld(screen, level(), camera_, player_, frames_, ticks_, checkpoint_tx_, checkpoint_ty_);
+  RenderWorld(screen, level(), camera_, player_, frames_, ticks_, checkpoint_tx_, checkpoint_ty_, enemies_,
+              enemy_count_);
   if (won()) {
     DrawBanner(screen, current_ + 1 == level_count_ && level_count_ > 1 ? "ALL DONE!" : "WELL DONE!");
   } else if (title_ticks_ > 0) {

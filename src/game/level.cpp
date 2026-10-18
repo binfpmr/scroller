@@ -18,7 +18,8 @@ bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level
     if (c == '\r') {
       continue;
     }
-    if (c != '#' && c != 'X' && c != 'G' && c != 'C' && c != '.' && c != ' ' && c != 'P') {
+    if (c != '#' && c != 'X' && c != 'G' && c != 'C' && c != '.' && c != ' ' && c != 'P' && c != 'w' && c != 'j' &&
+        c != 'f') {
       *error = "unknown tile character";
       return false;
     }
@@ -46,6 +47,12 @@ bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level
   for (int i = 0; i < width * height; ++i) {
     tiles[i] = Tile::kEmpty;
   }
+  EnemySpawn* enemies = arena.AllocateArray<EnemySpawn>(Level::kMaxEnemies);
+  int enemy_count = 0;
+  if (enemies == nullptr) {
+    *error = "out of memory for the level";
+    return false;
+  }
 
   // Pass 2: fill.
   int x = 0;
@@ -71,12 +78,24 @@ bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level
     } else if (c == 'P') {
       level->start_x = x;
       level->start_y = y;
+    } else if (c == 'w' || c == 'j' || c == 'f') {
+      if (enemy_count == Level::kMaxEnemies) {
+        *error = "too many enemies";
+        return false;
+      }
+      enemies[enemy_count++] = {.kind = c == 'w'   ? EnemyKind::kWalker
+                                        : c == 'j' ? EnemyKind::kJumper
+                                                   : EnemyKind::kFlyer,
+                                .tx = x,
+                                .ty = y};
     }
     ++x;
   }
   level->width = width;
   level->height = height;
   level->tiles = tiles;
+  level->enemies = enemies;
+  level->enemy_count = enemy_count;
   return true;
 }
 

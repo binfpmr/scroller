@@ -47,13 +47,15 @@ struct TestAssets {
   std::vector<uint8_t> storage = std::vector<uint8_t>(1 << 20);
   gfx::SpriteSheet player;
   gfx::SpriteSheet tiles;
+  gfx::SpriteSheet enemies;
 
   TestAssets() {
     lib::Arena arena(storage.data(), storage.size());
     Parse("sprites/player.txt", player, arena);
     Parse("sprites/tiles.txt", tiles, arena);
+    Parse("sprites/enemies.txt", enemies, arena);
   }
-  game::GameAssets assets() const { return {.player = &player, .tiles = &tiles}; }
+  game::GameAssets assets() const { return {.player = &player, .tiles = &tiles, .enemies = &enemies}; }
 
  private:
   static void Parse(const char* name, gfx::SpriteSheet& sheet, lib::Arena& arena) {

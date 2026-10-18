@@ -19,12 +19,24 @@ enum class Tile : uint8_t {
   kCheckpoint,  // 'C': not solid; touching it makes it the respawn point
 };
 
+enum class EnemyKind : uint8_t { kWalker, kJumper, kFlyer };
+
+struct EnemySpawn {  // trivially constructible: allocated with Arena::AllocateArray
+  EnemyKind kind;
+  int tx;
+  int ty;
+};
+
 struct Level {
+  static constexpr int kMaxEnemies = 64;
+
   int width = 0;  // in tiles
   int height = 0;
   Tile* tiles = nullptr;  // row-major
   int start_x = 0;        // player start tile
   int start_y = 0;
+  EnemySpawn* enemies = nullptr;  // where enemies start (their tiles are empty)
+  int enemy_count = 0;
 
   // Outside the map: solid to the left and right (walls), empty above and below (below: a bottomless pit).
   Tile At(int tx, int ty) const {
@@ -46,7 +58,7 @@ struct Level {
 
 // Text format, one line per tile row ('\n' or "\r\n"); shorter lines are padded with empty tiles:
 //   '#' ground (solid)   'X' stone (solid)   'G' goal flag   'C' checkpoint   '.' or ' ' empty
-//   'P' player start (exactly one)
+//   'P' player start (exactly one)   'w' walker   'j' jumper   'f' flyer (at most kMaxEnemies)
 // On error returns false and points *error at a static message.
 bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level, const char** error);
 
