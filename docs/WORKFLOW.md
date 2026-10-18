@@ -116,7 +116,8 @@ tools/devlink.py reboot [--cold]         # warm reboot; with network boot first 
 the new `scroller.efi`, stops its DMA devices and jumps into it; the new build reinitialises every device. It skips
 the firmware, so changes to the UEFI phase (`efi_main` before ExitBootServices: video mode, memory, network boot
 addresses) need a real reboot, and so does a build whose `BootInfo` changed (the game refuses it, the tool reboots
-instead). A warm reboot avoids the HP Pavilion's false fan error (90B) at a cold start, which waits for Enter.
+instead). On the HP Pavilion every reboot (warm or cold) stops at a false fan error (90B) and powers off unless Enter
+is pressed, so there a reboot needs a person; hot reload does not.
 
 **gdb over the network** (real hardware, or QEMU without `--debug`): `tools/devlink.py gdb` is a gdb server on
 localhost:2345 that passes the packets to the game's own stub over the debug link. Connecting stops the game.
