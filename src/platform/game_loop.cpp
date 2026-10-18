@@ -15,6 +15,7 @@
 #include "lib/arena.h"
 #include "lib/format.h"
 #include "lib/pack.h"
+#include "platform/interrupt_controllers.h"
 #include "platform/panic.h"
 #include "platform/reset.h"
 #include "platform/stats_overlay.h"
@@ -120,6 +121,10 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   const gfx::Viewport viewport = gfx::ComputeViewport(fb.width, fb.height);
   gfx::ClearFramebuffer(fb, gfx::Rgb(0, 0, 0));
   SetPanicContext(&screen, &fb, &viewport, &keyboard, boot.runtime_services);
+  // Our IDT must be loaded before any interrupt controller is enabled.
+  if (boot.owns_machine && !x86::InitInterrupts(arena, &OnException)) {
+    Halt("cannot set up interrupt tables");
+  }
 
   acpi::Madt madt;
   const uint8_t* madt_table = acpi::FindTable(boot.acpi_rsdp, "APIC");
@@ -139,9 +144,9 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   } else {
     Log("acpi: no usable MADT\n");
   }
-  if (boot.owns_machine && !x86::InitInterrupts(arena, &OnException)) {
-    Halt("cannot set up interrupt tables");
-  }
+  const bool interrupts =
+      boot.owns_machine && SetUpInterruptControllers(have_madt ? &madt : nullptr, arena, boot.tsc_hz);
+  Log("interrupts: %s\n", interrupts ? "on" : "off");
   Log("viewport: scale %d at %d,%d\n", viewport.scale, viewport.x, viewport.y);
 
   const char* error = nullptr;
@@ -201,7 +206,11 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     input.Poll();
     const uint64_t now = x86::Rdtsc();
     if (now < next_tick) {
-      x86::Pause();
+      if (TimerHz() != 0) {
+        x86::Halt();  // sleep until the next interrupt (the 1 kHz timer at the latest)
+      } else {
+        x86::Pause();
+      }
       continue;
     }
 
@@ -248,7 +257,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     present_cycles += present_end - present_start;
     ++frames;
     stats.AddFrame(render_end - render_start, present_start - render_end, present_end - present_start);
-    stats.Update(present_end, write_combining ? "ON" : "OFF");
+    stats.Update(present_end, write_combining ? "ON" : "OFF", TimerTicks(), UnexpectedInterrupts());
   }
 }
 

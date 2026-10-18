@@ -61,12 +61,16 @@ add_executable(scroller
   src/boot/video.cpp
   src/drivers/debug_log.cpp
   src/drivers/intel_display.cpp
+  src/drivers/io_apic.cpp
+  src/drivers/local_apic.cpp
+  src/drivers/pic.cpp
   src/drivers/pci.cpp
   src/drivers/ps2_keyboard.cpp
   src/drivers/vga_retrace.cpp
   src/lib/cxx_support.cpp
   src/lib/mem.c
   src/platform/game_loop.cpp
+  src/platform/interrupt_controllers.cpp
   src/platform/panic.cpp
   src/platform/reset.cpp
   src/platform/stats_overlay.cpp

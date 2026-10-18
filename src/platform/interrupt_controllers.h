@@ -1,0 +1,31 @@
+// Interrupt controller setup after ExitBootServices: legacy PICs masked, local APIC enabled with a periodic timer,
+// IOAPIC inputs masked until a driver routes one.
+#pragma once
+
+#include <stdint.h>
+
+#include "arch/x86_64/interrupts.h"
+#include "drivers/acpi.h"
+#include "lib/arena.h"
+
+namespace platform {
+
+inline constexpr uint8_t kTimerVector = 0x40;
+inline constexpr uint32_t kTimerHz = 1000;
+
+// Requires x86::InitInterrupts. Enables interrupts at the end. False (interrupts left off) if there is no local APIC.
+// `madt` may be null (no ACPI): then the APIC address comes from the CPU and no IOAPIC is used.
+bool SetUpInterruptControllers(const acpi::Madt* madt, lib::Arena& arena, uint64_t tsc_hz);
+
+// Timer interrupts since setup (1 kHz); 0 if the timer is not running.
+uint64_t TimerTicks();
+uint32_t TimerHz();
+
+// Interrupts on vectors nobody handles (each is acknowledged and counted).
+uint64_t UnexpectedInterrupts();
+
+// Routes an ISA IRQ (applying the MADT override) to `vector` and installs `handler`, which must call
+// lapic::EndOfInterrupt(). False if no IOAPIC covers it.
+bool RouteIsaIrq(uint8_t irq, uint8_t vector, x86::InterruptHandler handler);
+
+}  // namespace platform

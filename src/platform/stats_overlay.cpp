@@ -35,7 +35,7 @@ void StatsOverlay::AddFrame(uint64_t render_cycles, uint64_t wait_cycles, uint64
   present_cycles_ += present_cycles;
 }
 
-void StatsOverlay::Update(uint64_t now, const char* wc) {
+void StatsOverlay::Update(uint64_t now, const char* wc, uint64_t timer_ticks, uint64_t unexpected_irqs) {
   if (now - period_start_ < tsc_hz_) {
     return;
   }
@@ -62,12 +62,16 @@ void StatsOverlay::Update(uint64_t now, const char* wc) {
   }
   lib::Format(text_, sizeof(text_),
               "FPS %llu.%llu  RENDER %llu.%02llu  WAIT %llu.%02llu  PRESENT %llu.%02llu MS\n"
-              "CPU %s MHZ  TSC %llu MHZ  WC %s  VER %s",
+              "CPU %s MHZ  TSC %llu MHZ  WC %s  VER %s\n"
+              "TIMER IRQ %llu HZ  OTHER IRQS %llu",
               static_cast<unsigned long long>(fps10 / 10), static_cast<unsigned long long>(fps10 % 10),
               static_cast<unsigned long long>(render / 100), static_cast<unsigned long long>(render % 100),
               static_cast<unsigned long long>(wait / 100), static_cast<unsigned long long>(wait % 100),
               static_cast<unsigned long long>(present / 100), static_cast<unsigned long long>(present % 100), cpu,
-              static_cast<unsigned long long>(tsc_mhz), wc, kScrollerVersion);
+              static_cast<unsigned long long>(tsc_mhz), wc, kScrollerVersion,
+              static_cast<unsigned long long>((timer_ticks - last_timer_ticks_) * tsc_hz_ / elapsed),
+              static_cast<unsigned long long>(unexpected_irqs));
+  last_timer_ticks_ = timer_ticks;
   if (updates_++ % 5 == 0) {
     Log("stats: %s\n", text_);
   }
@@ -86,13 +90,13 @@ void StatsOverlay::Draw(gfx::Surface& screen) const {
     return;
   }
   const int width = lib::Max(gfx::TextWidth(text_), gfx::TextWidth(info_)) + 4;
-  int lines = 2;
+  int lines = 3;
   for (const char* c = info_; *c != '\0'; ++c) {
     lines += (c == info_ || *c == '\n') ? 1 : 0;
   }
   gfx::FillRect(screen, 0, 0, width, lines * gfx::kLineHeight + 2, gfx::Rgb(0, 0, 0));
   gfx::DrawText(screen, 2, 2, text_, gfx::Rgb(255, 255, 255));
-  gfx::DrawText(screen, 2, 2 + 2 * gfx::kLineHeight, info_, gfx::Rgb(180, 220, 255));
+  gfx::DrawText(screen, 2, 2 + 3 * gfx::kLineHeight, info_, gfx::Rgb(180, 220, 255));
 }
 
 }  // namespace platform
