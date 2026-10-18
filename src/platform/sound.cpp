@@ -5,7 +5,9 @@
 #include "audio/engine.h"
 #include "audio/song.h"
 #include "drivers/debug_log.h"
+#include "drivers/hda.h"
 #include "drivers/local_apic.h"
+#include "drivers/pci.h"
 #include "drivers/sb16.h"
 #include "game/game.h"
 #include "lib/format.h"
@@ -26,11 +28,36 @@ audio::Song g_land;
 audio::Song g_wall_jump;
 audio::Song g_goal;
 bool g_have_effects = false;
+volatile uint64_t g_interrupts = 0;  // buffer refills
+char g_status[48] = "NONE";
 
+// HDA: the timer interrupt keeps the looping buffer kHdaLeadFrames ahead of the play position.
+constexpr uint32_t kHdaLeadFrames = 2048;  // ~43 ms
+hda::Controller g_hda;
+uint64_t g_hda_written = 0;  // absolute frames written
+
+void RefillHda() {
+  const uint64_t target = g_hda.FramesPlayed() + kHdaLeadFrames;
+  int16_t mono[256];
+  while (g_hda_written < target) {
+    const uint32_t offset = static_cast<uint32_t>(g_hda_written % hda::Controller::kBufferFrames);
+    uint32_t frames = static_cast<uint32_t>(target - g_hda_written);
+    frames = lib::Min(frames, hda::Controller::kBufferFrames - offset);
+    frames = lib::Min<uint32_t>(frames, 256);
+    g_engine.Render(mono, frames);
+    int16_t* out = g_hda.buffer() + 2 * offset;
+    for (uint32_t i = 0; i < frames; ++i) {
+      out[2 * i] = mono[i];
+      out[2 * i + 1] = mono[i];
+    }
+    g_hda_written += frames;
+  }
+  g_interrupts = g_interrupts + 1;
+}
+
+// Sound Blaster 16: refilled from its own interrupt, half a buffer at a time.
 int16_t* g_buffer = nullptr;
 int g_next_half = 0;
-volatile uint64_t g_interrupts = 0;
-char g_status[48] = "NONE";
 
 void OnSb16Interrupt(x86::InterruptFrame&) {
   sb16::AcknowledgeInterrupt();
@@ -55,15 +82,7 @@ bool LoadSong(const lib::Pack& pack, const char* name, lib::Arena& arena, audio:
   return true;
 }
 
-}  // namespace
-
-bool InitSound(const BootInfo& boot, const lib::Pack& pack, lib::Arena& arena) {
-  sb16::Config config;
-  if (!boot.owns_machine || boot.isa_dma_buffer == 0 || !sb16::Probe(&config)) {
-    Log("sound: no device\n");
-    return false;
-  }
-  g_engine.Init(kSb16Rate);
+void LoadSongs(const lib::Pack& pack, lib::Arena& arena) {
   const bool have_music = LoadSong(pack, "music/minuet.txt", arena, &g_music);
   g_have_effects =
       LoadSong(pack, "sounds/jump.txt", arena, &g_jump) && LoadSong(pack, "sounds/land.txt", arena, &g_land) &&
@@ -71,7 +90,32 @@ bool InitSound(const BootInfo& boot, const lib::Pack& pack, lib::Arena& arena) {
   if (have_music) {
     g_engine.PlayMusic(&g_music);
   }
+}
 
+bool StartHda(lib::Pack const& pack, lib::Arena& arena) {
+  pci::Device device;
+  if (!pci::FindByClass(0x04, 0x03, &device) || !g_hda.Init(device, arena)) {
+    return false;
+  }
+  g_engine.Init(hda::Controller::kSampleRate);
+  LoadSongs(pack, arena);
+  x86::DisableInterrupts();
+  g_hda_written = 0;
+  g_hda.Start();
+  RefillHda();
+  SetTimerCallback(&RefillHda);
+  x86::EnableInterrupts();
+  lib::Format(g_status, sizeof(g_status), "%s", g_hda.description());
+  return true;
+}
+
+bool StartSb16(const BootInfo& boot, const lib::Pack& pack, lib::Arena& arena) {
+  sb16::Config config;
+  if (boot.isa_dma_buffer == 0 || !sb16::Probe(&config)) {
+    return false;
+  }
+  g_engine.Init(kSb16Rate);
+  LoadSongs(pack, arena);
   g_buffer = reinterpret_cast<int16_t*>(boot.isa_dma_buffer);
   g_engine.Render(g_buffer, 2 * kHalfFrames);
   g_next_half = 0;
@@ -82,6 +126,19 @@ bool InitSound(const BootInfo& boot, const lib::Pack& pack, lib::Arena& arena) {
   }
   lib::Format(g_status, sizeof(g_status), "SB16 %u HZ IRQ %u DMA %u", kSb16Rate, config.irq, config.dma16);
   return true;
+}
+
+}  // namespace
+
+bool InitSound(const BootInfo& boot, const lib::Pack& pack, lib::Arena& arena) {
+  if (!boot.owns_machine) {
+    return false;
+  }
+  if (StartHda(pack, arena) || StartSb16(boot, pack, arena)) {
+    return true;
+  }
+  Log("sound: no device\n");
+  return false;
 }
 
 void PlaySoundEvents(uint8_t events) {

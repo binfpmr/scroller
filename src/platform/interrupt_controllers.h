@@ -20,6 +20,8 @@ bool SetUpInterruptControllers(const acpi::Madt* madt, lib::Arena& arena, uint64
 
 // Timer interrupts since setup (1 kHz); 0 if the timer is not running.
 uint64_t TimerTicks();
+// Called from the timer interrupt at every tick (e.g. to refill an audio buffer); null removes it.
+void SetTimerCallback(void (*callback)());
 uint32_t TimerHz();
 
 // Interrupts on vectors nobody handles (each is acknowledged and counted).

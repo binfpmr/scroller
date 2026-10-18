@@ -1,5 +1,5 @@
-// Sound output: the audio engine fed to whatever device is present (Sound Blaster 16 for now), music started from
-// the asset pack, and game events turned into sound effects.
+// Sound output: the audio engine fed to whatever device is present (Intel HDA, else Sound Blaster 16), music started
+// from the asset pack, and game events turned into sound effects.
 #pragma once
 
 #include <stdint.h>

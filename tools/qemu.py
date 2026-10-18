@@ -55,7 +55,7 @@ def pin_to_one_core_type() -> None:
 
 
 def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, resolution: str,
-                 display: str = "gtk-gl", sound: str = "sb16") -> list[str]:
+                 display: str = "gtk-gl", sound: str = "hda") -> list[str]:
     vars_copy = build / "OVMF_VARS.fd"
     shutil.copyfile(OVMF_VARS, vars_copy)  # fresh NVRAM every run: no stale boot entries
 
@@ -246,8 +246,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--build", type=Path, default=ROOT / "build" / "uefi", help="build directory with scroller.img")
-    common.add_argument("--sound", choices=["sb16", "hda", "none"], default="sb16",
-                        help="sound device (default sb16); smoke tests record it to <build>/audio.wav")
+    common.add_argument("--sound", choices=["sb16", "hda", "none"], default="hda",
+                        help="sound device (default hda, as on real PCs); smoke tests record it to <build>/audio.wav")
     common.add_argument("--resolution", default="960x720",
                         help="display's preferred resolution WxH (default: 960x720, the 320x240 screen at x3)")
     sub = parser.add_subparsers(dest="command", required=True)

@@ -60,6 +60,7 @@ add_executable(scroller
   src/boot/uefi_keyboard.cpp
   src/boot/video.cpp
   src/drivers/debug_log.cpp
+  src/drivers/hda.cpp
   src/drivers/intel_display.cpp
   src/drivers/io_apic.cpp
   src/drivers/local_apic.cpp

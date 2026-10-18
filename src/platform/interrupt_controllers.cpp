@@ -11,12 +11,16 @@ namespace {
 volatile uint64_t g_timer_ticks = 0;
 volatile uint64_t g_unexpected = 0;
 uint32_t g_timer_hz = 0;
+void (*volatile g_timer_callback)() = nullptr;
 const acpi::Madt* g_madt = nullptr;
 ioapic::IoApic g_io_apics[acpi::Madt::kMaxIoApics];
 int g_io_apic_count = 0;
 
 void OnTimer(x86::InterruptFrame&) {
   g_timer_ticks = g_timer_ticks + 1;
+  if (void (*callback)() = g_timer_callback) {
+    callback();
+  }
   lapic::EndOfInterrupt();
 }
 
@@ -59,6 +63,7 @@ bool SetUpInterruptControllers(const acpi::Madt* madt, lib::Arena& arena, uint64
 }
 
 uint64_t TimerTicks() { return g_timer_ticks; }
+void SetTimerCallback(void (*callback)()) { g_timer_callback = callback; }
 uint32_t TimerHz() { return g_timer_hz; }
 uint64_t UnexpectedInterrupts() { return g_unexpected; }
 
