@@ -246,9 +246,9 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
                           found[i].bus, found[i].device, found[i].function);
     }
     char info[400];
-    lib::Format(info, sizeof(info), "%s\n%s%s\nUSB %s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu, netboot,
-                nic_count == 0 ? "\nNIC NONE" : nics, UsbStatus(), has_gpu ? gpu.vendor_id : 0,
-                has_gpu ? gpu.device_id : 0, gpu.bus, gpu.device, gpu.function, vsync.description(),
+    lib::Format(info, sizeof(info), "%s\n%s%s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu, netboot,
+                nic_count == 0 ? "\nNIC NONE" : nics, has_gpu ? gpu.vendor_id : 0, has_gpu ? gpu.device_id : 0, gpu.bus,
+                gpu.device, gpu.function, vsync.description(),
                 !vsync.active() && vsync.intel_status()[0] != '\0' ? "\nINTEL " : "",
                 vsync.active() ? "" : vsync.intel_status());
     Log("hw: %s\n", info);
@@ -361,6 +361,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
                                .last_key = keyboard.last_code(),
                                .network = NetworkStatus(),
                                .network_detail = NetworkDetail(),
+                               .usb = UsbStatus(),
                                .frames_received = net != nullptr ? net->frames_received() : 0,
                                .frames_sent = net != nullptr ? net->frames_sent() : 0});
   }

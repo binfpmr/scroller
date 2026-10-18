@@ -30,8 +30,8 @@ constexpr uint32_t kLegacyBiosOwned = 1u << 16, kLegacyOsOwned = 1u << 24;
 
 // TRB types.
 constexpr uint32_t kTrbNormal = 1, kTrbSetup = 2, kTrbData = 3, kTrbStatus = 4, kTrbLink = 6, kTrbEnableSlot = 9,
-                   kTrbAddressDevice = 11, kTrbConfigureEndpoint = 12, kTrbEvaluateContext = 13, kTrbNoOp = 23,
-                   kTrbTransferEvent = 32, kTrbCommandCompletion = 33, kTrbPortStatusChange = 34;
+                   kTrbDisableSlot = 10, kTrbAddressDevice = 11, kTrbConfigureEndpoint = 12, kTrbEvaluateContext = 13,
+                   kTrbNoOp = 23, kTrbTransferEvent = 32, kTrbCommandCompletion = 33, kTrbPortStatusChange = 34;
 constexpr uint32_t kTrbIoc = 1u << 5, kTrbIsp = 1u << 2, kTrbIdt = 1u << 6, kTrbDirIn = 1u << 16;
 // Endpoint types in endpoint contexts.
 constexpr uint32_t kEpControl = 4, kEpInterruptIn = 7;
@@ -71,7 +71,9 @@ const char* SpeedName(Speed speed) {
 
 bool Ring::Init(lib::Arena& arena) {
   // 4 KiB aligned, so the ring never crosses a 64 KiB boundary.
-  trbs_ = static_cast<volatile Trb*>(arena.Allocate(sizeof(Trb) * kSize, 4096));
+  if (trbs_ == nullptr) {
+    trbs_ = static_cast<volatile Trb*>(arena.Allocate(sizeof(Trb) * kSize, 4096));
+  }
   if (trbs_ == nullptr) {
     return false;
   }
@@ -282,6 +284,31 @@ void Controller::Halt() {
   Wait(20000, [&] { return (Read32(op_, kUsbSts) & kStsHalted) != 0; });
 }
 
+uint32_t Controller::TakePortChanges() {
+  for (Event e = NextEvent(); e.valid; e = NextEvent()) {
+    HandleOtherEvent(e.trb);
+  }
+  const uint32_t changes = port_changes_;
+  port_changes_ = 0;
+  for (int p = 1; p <= ports_; ++p) {
+    if ((changes & (1u << (p - 1))) != 0) {
+      const uint32_t offset = kPortBase + 0x10 * (p - 1);
+      const uint32_t portsc = Read32(op_, offset);
+      Write32(op_, offset, (portsc & ~(kPortChangeBits | kPortEnabled)) | (portsc & kPortChangeBits));
+    }
+  }
+  return changes;
+}
+
+void Controller::DisableSlot(int slot) {
+  const int code =
+      Command({.parameter = 0, .status = 0, .control = kTrbDisableSlot << 10 | static_cast<uint32_t>(slot) << 24});
+  if (code != kCompletionSuccess) {
+    Log("xhci: Disable Slot %d failed (code %d)\n", slot, code);
+  }
+  dcbaa_[slot] = 0;
+}
+
 uint32_t Controller::RawPortStatus(int port) { return Read32(op_, kPortBase + 0x10 * (port - 1)); }
 
 PortStatus Controller::Port(int port) {
@@ -326,7 +353,11 @@ Controller::Event Controller::NextEvent() {
 
 void Controller::HandleOtherEvent(const Trb& event) {
   if (TrbType(event) == kTrbPortStatusChange) {
-    return;  // ports are looked at directly
+    const uint32_t port = static_cast<uint32_t>(event.parameter >> 24) & 0xff;
+    if (port >= 1 && port <= static_cast<uint32_t>(ports_)) {
+      port_changes_ |= 1u << (port - 1);
+    }
+    return;
   }
   if (TrbType(event) == kTrbTransferEvent) {
     if (queued_count_ < kQueuedTransfers) {
@@ -388,9 +419,11 @@ bool Controller::AddressDevice(int port, Device* device, lib::Arena& arena) {
   device->port = port;
   device->speed = Port(port).speed;
   device->ep0_max_packet = DefaultMaxPacket(device->speed);
-  device->input_context = static_cast<uint8_t*>(arena.Allocate(context_bytes * (kContexts + 1), 64));
-  device->output_context = static_cast<uint8_t*>(arena.Allocate(context_bytes * kContexts, 64));
-  device->buffer = static_cast<uint8_t*>(arena.Allocate(4096, 4096));
+  if (device->input_context == nullptr) {
+    device->input_context = static_cast<uint8_t*>(arena.Allocate(context_bytes * (kContexts + 1), 64));
+    device->output_context = static_cast<uint8_t*>(arena.Allocate(context_bytes * kContexts, 64));
+    device->buffer = static_cast<uint8_t*>(arena.Allocate(4096, 4096));
+  }
   if (device->input_context == nullptr || device->output_context == nullptr || device->buffer == nullptr ||
       !device->ep0.Init(arena)) {
     return false;

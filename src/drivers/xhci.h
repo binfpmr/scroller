@@ -23,6 +23,7 @@ class Ring {
  public:
   static constexpr int kSize = 64;  // TRBs, including the Link TRB
 
+  // Allocates the ring on the first call; later calls empty it again (reused for a re-plugged device).
   bool Init(lib::Arena& arena);
   // Queues a TRB (cycle bit set here); returns its physical address (completion events refer to it).
   uint64_t Push(const Trb& trb);
@@ -84,9 +85,15 @@ class Controller {
   uint32_t RawPortStatus(int port);  // PORTSC, for diagnostics
   // Resets a USB 2 port with a device (USB 3 ports enable themselves); true if it is enabled afterwards.
   bool ResetPort(int port);
+  // Ports (bit port-1) that reported a status change (connect, disconnect, ...) since the last call. Their change
+  // bits are acknowledged.
+  uint32_t TakePortChanges();
+  // Frees a device's slot (after it was unplugged).
+  void DisableSlot(int slot);
 
   // Enable Slot + Address Device for the (reset, enabled) device on `port`, then reads the first 8 bytes of the device
-  // descriptor to learn endpoint 0's packet size. Allocates the device's memory from `arena`.
+  // descriptor to learn endpoint 0's packet size. Allocates the device's memory from `arena` unless `device` already
+  // has it from an earlier device.
   bool AddressDevice(int port, Device* device, lib::Arena& arena);
   // A control transfer on endpoint 0 with device->buffer as data (length <= 4096). Returns the completion code.
   int ControlTransfer(Device& device, uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
@@ -143,6 +150,7 @@ class Controller {
   static constexpr int kQueuedTransfers = 16;
   TransferEvent queued_[kQueuedTransfers];
   int queued_count_ = 0;
+  uint32_t port_changes_ = 0;
 };
 
 }  // namespace xhci

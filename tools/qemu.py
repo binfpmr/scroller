@@ -12,6 +12,7 @@ Key script (--keys), space-separated actions run after the boot line appeared:
   +KEY / -KEY    press / release a key (to act or take screenshots while it is held)
   wait:SECONDS   pause
   shot:NAME      screenshot to <build dir>/smoke-NAME.png
+  usbkbd+ / usbkbd-   plug a USB keyboard into the xHCI controller / unplug it (hot-plug)
   expect:TEXT    wait (up to --timeout) until TEXT appears in the debug log after the previous expect's match
                  (or after the start of the script)
 
@@ -185,6 +186,13 @@ def play_keys(qmp: Qmp, script: str, build: Path, log: Path, timeout: float, pro
                     return False
                 time.sleep(0.1)
             mark = found + len(value)
+        elif name in ("usbkbd+", "usbkbd-"):
+            # Hot-plug a USB keyboard into the xHCI controller, or unplug it again.
+            if name == "usbkbd+":
+                qmp.execute("device_add", driver="usb-kbd", bus="xhci.0", id="hotkbd")
+            else:
+                qmp.execute("device_del", id="hotkbd")
+            time.sleep(0.2)
         elif name[0] in "+-":
             send_key(qmp, name[1:], name[0] == "+")
             time.sleep(0.05)

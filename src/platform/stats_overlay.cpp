@@ -65,7 +65,7 @@ void StatsOverlay::Update(uint64_t now, const LiveStats& live) {
               "CPU %s MHZ  TSC %llu MHZ  WC %s  VER %s\n"
               "TIMER IRQ %llu HZ  OTHER IRQS %llu  KBD %s\n"
               "SOUND %s  %llu IRQ/S  KEY %X\n"
-              "NET %s  RX %llu  TX %llu%s%s",
+              "NET %s  RX %llu  TX %llu%s%s\nUSB %s",
               static_cast<unsigned long long>(fps10 / 10), static_cast<unsigned long long>(fps10 % 10),
               static_cast<unsigned long long>(render / 100), static_cast<unsigned long long>(render % 100),
               static_cast<unsigned long long>(wait / 100), static_cast<unsigned long long>(wait % 100),
@@ -76,7 +76,7 @@ void StatsOverlay::Update(uint64_t now, const LiveStats& live) {
               static_cast<unsigned long long>((live.sound_irqs - last_sound_irqs_) * tsc_hz_ / elapsed), live.last_key,
               live.network, static_cast<unsigned long long>(live.frames_received),
               static_cast<unsigned long long>(live.frames_sent), live.network_detail[0] != '\0' ? "\n" : "",
-              live.network_detail);
+              live.network_detail, live.usb);
   last_timer_ticks_ = live.timer_ticks;
   last_sound_irqs_ = live.sound_irqs;
   if (updates_++ % 5 == 0) {

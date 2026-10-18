@@ -1,5 +1,6 @@
 #include "platform/usb.h"
 
+#include "arch/x86_64/cpu.h"
 #include "drivers/debug_log.h"
 #include "drivers/hid_keyboard.h"
 #include "drivers/usb_descriptors.h"
@@ -12,11 +13,13 @@ namespace {
 
 constexpr uint32_t kClassXhci = 0x0c0330;  // serial bus, USB, xHCI
 constexpr int kMaxDevices = 8;
+constexpr uint64_t kConnectSettleMs = 100;  // USB 2.0 7.1.7.3: wait after a connect before resetting the port
 
 // USB requests.
 constexpr uint8_t kGetDescriptor = 6, kSetConfiguration = 9, kHidSetIdle = 0x0a, kHidSetProtocol = 0x0b;
 
 struct UsbDevice {
+  bool present = false;  // entries of unplugged devices are reused, with their memory
   xhci::Device device;
   usb::DeviceInfo info;
   bool keyboard = false;
@@ -28,11 +31,33 @@ struct UsbDevice {
 constinit xhci::Controller g_xhci;
 bool g_have_xhci = false;
 constinit UsbDevice g_devices[kMaxDevices];
-int g_device_count = 0;
-int g_keyboards = 0;
 hid::BootKeyboard g_keyboard_state[kMaxDevices];
 uint8_t g_last_usage = 0;
 char g_status[96] = "NONE";
+lib::Arena* g_arena = nullptr;
+uint64_t g_tsc_hz = 0;
+uint32_t g_waiting_ports = 0;  // connected, enumerated once they have settled
+uint64_t g_waiting_since_ms[xhci::Controller::kMaxPorts + 1] = {};
+
+uint64_t NowMs() { return x86::Rdtsc() / (g_tsc_hz / 1000); }
+
+void UpdateStatus() {
+  int devices = 0, keyboards = 0;
+  for (const UsbDevice& d : g_devices) {
+    devices += d.present ? 1 : 0;
+    keyboards += d.present && d.keyboard ? 1 : 0;
+  }
+  lib::Format(g_status, sizeof(g_status), "%s  %d DEV  %d KBD", g_xhci.description(), devices, keyboards);
+}
+
+UsbDevice* DeviceOnPort(int port) {
+  for (UsbDevice& d : g_devices) {
+    if (d.present && d.device.port == port) {
+      return &d;
+    }
+  }
+  return nullptr;
+}
 
 // Reads the configuration and, for a HID boot keyboard, sets it up and queues the first report read.
 void SetUp(UsbDevice& d, lib::Arena& arena) {
@@ -68,7 +93,9 @@ void SetUp(UsbDevice& d, lib::Arena& arena) {
   if (ep == nullptr) {
     return;
   }
-  d.report = static_cast<uint8_t*>(arena.Allocate(64, 64));
+  if (d.report == nullptr) {
+    d.report = static_cast<uint8_t*>(arena.Allocate(64, 64));
+  }
   if (d.report == nullptr || !d.keyboard_ring.Init(arena) ||
       !g_xhci.ConfigureInterruptIn(dev, ep->address, ep->max_packet, ep->interval, d.keyboard_ring)) {
     return;
@@ -85,9 +112,45 @@ void SetUp(UsbDevice& d, lib::Arena& arena) {
   d.keyboard_endpoint = (ep->address & 0xf) * 2 + 1;
   lib::Fill(d.report, 0, 8);
   g_xhci.QueueIn(dev, d.keyboard_endpoint, d.keyboard_ring, d.report, 8);
-  ++g_keyboards;
   Log("usb: port %d: boot keyboard, endpoint %02x, %u bytes every %u\n", dev.port, ep->address, ep->max_packet,
       ep->interval);
+}
+
+// Resets the port, addresses the device in a free entry and sets it up.
+void Enumerate(int port) {
+  UsbDevice* d = nullptr;
+  for (UsbDevice& candidate : g_devices) {
+    if (!candidate.present) {
+      d = &candidate;
+      break;
+    }
+  }
+  if (d == nullptr) {
+    Log("usb: port %d: too many devices\n", port);
+    return;
+  }
+  if (!g_xhci.ResetPort(port)) {
+    Log("usb: port %d: device does not enable\n", port);
+    return;
+  }
+  d->keyboard = false;
+  if (!g_xhci.AddressDevice(port, &d->device, *g_arena)) {
+    return;
+  }
+  d->present = true;
+  g_keyboard_state[d - g_devices] = hid::BootKeyboard();
+  SetUp(*d, *g_arena);
+}
+
+void Unplugged(UsbDevice& d, InputTracker& tracker) {
+  Log("usb: port %d: %04x:%04x unplugged\n", d.device.port, d.info.vendor_id, d.info.product_id);
+  if (d.keyboard) {
+    const uint8_t none[8] = {};
+    g_keyboard_state[&d - g_devices].Feed(none, tracker);  // release whatever it held
+  }
+  g_xhci.DisableSlot(d.device.slot);
+  d.present = false;
+  d.keyboard = false;
 }
 
 }  // namespace
@@ -114,33 +177,25 @@ void InitUsb(const BootInfo& boot, lib::Arena& arena) {
     Log("%s%d(%u)=%08x", port % 6 == 1 ? "\n  " : " ", port, g_xhci.Port(port).usb_major, g_xhci.RawPortStatus(port));
   }
   Log("\n");
-  for (int port = 1; port <= g_xhci.port_count() && g_device_count < kMaxDevices; ++port) {
-    if (!g_xhci.Port(port).connected) {
-      continue;
+  g_arena = &arena;
+  g_tsc_hz = boot.tsc_hz;
+  for (int port = 1; port <= g_xhci.port_count(); ++port) {
+    if (g_xhci.Port(port).connected) {
+      Enumerate(port);
     }
-    if (!g_xhci.ResetPort(port)) {
-      Log("usb: port %d: device does not enable\n", port);
-      continue;
-    }
-    UsbDevice& d = g_devices[g_device_count];
-    if (!g_xhci.AddressDevice(port, &d.device, arena)) {
-      continue;
-    }
-    ++g_device_count;
-    SetUp(d, arena);
   }
-  lib::Format(g_status, sizeof(g_status), "%s  %d DEV  %d KBD", g_xhci.description(), g_device_count, g_keyboards);
+  UpdateStatus();
 }
 
 void PollUsb(InputTracker& tracker) {
-  if (g_keyboards == 0) {
+  if (!g_have_xhci) {
     return;
   }
   xhci::TransferEvent e;
   while (g_xhci.PollTransfer(&e)) {
-    for (int i = 0; i < g_device_count; ++i) {
+    for (int i = 0; i < kMaxDevices; ++i) {
       UsbDevice& d = g_devices[i];
-      if (!d.keyboard || d.device.slot != e.slot || d.keyboard_endpoint != e.endpoint) {
+      if (!d.present || !d.keyboard || d.device.slot != e.slot || d.keyboard_endpoint != e.endpoint) {
         continue;
       }
       if (e.code == xhci::Controller::kCompletionSuccess || e.code == xhci::Controller::kCompletionShortPacket) {
@@ -150,10 +205,43 @@ void PollUsb(InputTracker& tracker) {
           g_last_usage = usage;
         }
         g_xhci.QueueIn(d.device, d.keyboard_endpoint, d.keyboard_ring, d.report, 8);
-      } else {
+      } else if (g_xhci.Port(d.device.port).connected) {
         Log("usb: keyboard on port %d: transfer error %d, stopped\n", d.device.port, e.code);
       }
     }
+  }
+
+  // Hot-plug: unplugged devices go at once, new ones are enumerated once they have settled.
+  const uint32_t changes = g_xhci.TakePortChanges();
+  const uint64_t now = NowMs();
+  bool changed = false;
+  for (int port = 1; port <= g_xhci.port_count(); ++port) {
+    const uint32_t bit = 1u << (port - 1);
+    if ((changes & bit) != 0) {
+      const bool connected = g_xhci.Port(port).connected;
+      UsbDevice* d = DeviceOnPort(port);
+      if (d != nullptr && !connected) {
+        Unplugged(*d, tracker);
+        changed = true;
+      }
+      if (connected && d == nullptr) {
+        g_waiting_ports |= bit;
+        g_waiting_since_ms[port] = now;
+      } else {
+        g_waiting_ports &= ~bit;
+      }
+    }
+    if ((g_waiting_ports & bit) != 0 && now - g_waiting_since_ms[port] >= kConnectSettleMs) {
+      g_waiting_ports &= ~bit;
+      if (g_xhci.Port(port).connected) {
+        Log("usb: port %d: device plugged in\n", port);
+        Enumerate(port);  // the reset's own change event is ignored later: the port then has a device
+        changed = true;
+      }
+    }
+  }
+  if (changed) {
+    UpdateStatus();
   }
 }
 
