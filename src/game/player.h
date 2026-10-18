@@ -30,7 +30,7 @@ struct PlayerTuning {
   static constexpr int kDuckJumpWindowTicks = 10;
   // Holding Down this long on the ground does the duck-jump by itself (full height, as if jump stayed held); Down
   // must be released before it happens again.
-  static constexpr int kDuckAutoJumpTicks = 120;
+  static constexpr int kDuckAutoJumpTicks = 60;
 
   // Wall-jump: jumping in the air while touching a side wall, or up to kWallCoyoteTicks after, starts a full jump
   // from zero horizontal speed. Until the top of that jump the input is overridden as if jump and the direction away

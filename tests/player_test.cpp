@@ -351,7 +351,7 @@ TEST(DuckingStartsWithASoundEvent) {
   EXPECT_EQ(p.events, 0);  // only when it starts
 }
 
-TEST(HoldingDownTwoSecondsDuckJumpsByItself) {
+TEST(HoldingDownDuckJumpsByItself) {
   test::TestLevel t(kTall);
   const int duck_jump = JumpHeightAfterDuck(t.level, 0);
   Player p = SpawnAtStart(t.level);

@@ -132,7 +132,7 @@ The assets are inside the image, so a disk is only needed for saves or levels lo
 
 ## Settled
 
-- Controls: Left/Right move, Up or Space jump, Down ducks (hold 2 s: duck-jump), Esc back to level 1, Ctrl+Alt+Delete reboots, Ctrl+Alt+R hot-reloads from the network-boot server, media keys or `=`/`-`/`M` for volume, `N` music on/off (off at start).
+- Controls: Left/Right move, Up or Space jump, Down ducks (hold 1 s: duck-jump), Esc back to level 1, Ctrl+Alt+Delete reboots, Ctrl+Alt+R hot-reloads from the network-boot server, media keys or `=`/`-`/`M` for volume, `N` music on/off (off at start).
 - Art: placeholder sprites drawn as text art in the repo.
 - Levels: plain text, one character per tile; no level editor for now.
 - Toolchain: host GCC with freestanding flags (no cross GCC for now) + GNU as/binutils, clang optional; no NASM. AT&T syntax.
