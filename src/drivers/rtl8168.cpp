@@ -70,6 +70,9 @@ bool Driver::Init(const pci::Device& device, lib::Arena& arena) {
     Log("rtl8168: out of memory\n");
     return false;
   }
+  // Twice: on the HP Pavilion's RTL8168H (version 541) the first setup after the firmware's network driver receives
+  // exactly one pass through the ring and then stops (no overflow reported); after a second one it keeps going.
+  Setup();
   Setup();
   version_ = (mmio::Read<uint32_t>(mmio_, kTxConfig) >> 20) & 0x7cf;  // chip version, bits 30:26 and 23:20
   Log("rtl8168: %04x:%04x version %03x MAC %02x:%02x:%02x:%02x:%02x:%02x PHY %02x MISC %08x MCU %02x\n",

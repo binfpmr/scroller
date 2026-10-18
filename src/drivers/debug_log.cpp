@@ -65,7 +65,7 @@ size_t ReadHistory(uint64_t* position, char* out, size_t max) {
 }  // namespace debug_log
 
 void Log(const char* fmt, ...) {
-  char buf[256];
+  char buf[512];
   va_list args;
   va_start(args, fmt);
   size_t n = lib::FormatV(buf, sizeof(buf), fmt, args);

@@ -112,7 +112,7 @@ void OnException(const x86::InterruptFrame& f) {
     }
   }
   Add(text, "\nVERSION %s  ESC: REBOOT\n", kScrollerVersion);
-  debug_log::Write(text.data, text.length);  // Log() would truncate at 256 characters
+  debug_log::Write(text.data, text.length);  // Log() would truncate at 512 characters
   Log("decode: addr2line -f -C -e build/uefi/scroller.elf 0x%llx", static_cast<ull>(f.rip - base));
   for (int i = 0; i < frames; ++i) {
     Log(" 0x%llx", static_cast<ull>(trace[i]));
