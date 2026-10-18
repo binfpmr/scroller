@@ -4,7 +4,7 @@ function(scroller_add_test name)
   target_link_libraries(${name} PRIVATE scroller_core)
   target_compile_definitions(${name} PRIVATE SCROLLER_ASSETS_DIR="${CMAKE_SOURCE_DIR}/assets")
   # Test helpers forward format strings that are not literals.
-  target_compile_options(${name} PRIVATE -Wno-format-security -Wno-format-nonliteral)
+  target_compile_options(${name} PRIVATE -Wno-format-security -Wno-format-nonliteral -Wno-format-overflow)
   add_test(NAME ${name} COMMAND ${name})
 endfunction()
 
@@ -26,7 +26,7 @@ target_compile_definitions(pack_test PRIVATE SCROLLER_SOURCE_DIR="${CMAKE_SOURCE
 scroller_add_test(sprite_test sprite_test.cpp)
 scroller_add_test(render_test render_test.cpp)
 scroller_add_test(assets_test assets_test.cpp)
-target_link_libraries(assets_test PRIVATE levelcheck_lib)
+add_dependencies(assets_test levelcheck)
 scroller_add_test(acpi_test acpi_test.cpp)
 scroller_add_test(ring_buffer_test ring_buffer_test.cpp)
 scroller_add_test(audio_test audio_test.cpp)
@@ -35,3 +35,15 @@ scroller_add_test(usb_test usb_test.cpp)
 scroller_add_test(pe_test pe_test.cpp)
 scroller_add_test(tftp_test tftp_test.cpp)
 scroller_add_test(enemy_test enemy_test.cpp)
+
+# One reachability check per level (goal reachable, no dead ends), in parallel. Level 1 is the beginner level: plain
+# jumps must be enough. Re-run the CMake configure step after adding a level.
+file(GLOB SCROLLER_LEVELS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/assets/levels/*.txt)
+foreach(level ${SCROLLER_LEVELS})
+  get_filename_component(name ${level} NAME_WE)
+  if(name STREQUAL "level1")
+    add_test(NAME levelcheck_${name} COMMAND levelcheck --basic ${level})
+  else()
+    add_test(NAME levelcheck_${name} COMMAND levelcheck ${level})
+  endif()
+endforeach()

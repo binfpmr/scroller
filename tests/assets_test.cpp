@@ -5,7 +5,6 @@
 
 #include "audio/song.h"
 #include "game_test_util.h"
-#include "reachability.h"
 
 namespace fs = std::filesystem;
 
@@ -28,7 +27,9 @@ TEST(AllSpriteSheetsParse) {
   EXPECT_TRUE(count >= 2);
 }
 
-TEST(AllLevelsLoadAndGoalsAreReachable) {
+// Reachability (goal reachable, no dead ends) is checked per level by levelcheck itself: one CTest entry per level
+// file (tests/CMakeLists.txt), so they run in parallel.
+TEST(AllLevelsLoad) {
   const test::TestAssets assets;
   int count = 0;
   for (const auto& entry : fs::directory_iterator(fs::path(SCROLLER_ASSETS_DIR) / "levels")) {
@@ -41,39 +42,10 @@ TEST(AllLevelsLoadAndGoalsAreReachable) {
     if (!g.Init(arena, text.data(), text.size(), assets.assets(), &error)) {
       std::cerr << name << ": " << error << "\n";
       test::Fail(__FILE__, __LINE__, "level does not load");
-      continue;
-    }
-    bool has_goal = false;
-    for (int i = 0; i < g.level().width * g.level().height; ++i) {
-      has_goal = has_goal || g.level().tiles[i] == game::Tile::kGoal;
-    }
-    if (has_goal) {
-      const levelcheck::Reachability reach = levelcheck::Explore(g.level());
-      if (!reach.ReachesGoal(g.level())) {
-        std::cerr << name << ": goal not reachable (run levelcheck)\n";
-        test::Fail(__FILE__, __LINE__, "goal not reachable");
-      }
-      if (reach.HasDeadEnd(g.level())) {
-        std::cerr << name << ": has dead ends, spots the goal cannot be reached from (run levelcheck)\n";
-        test::Fail(__FILE__, __LINE__, "dead end");
-      }
     }
     ++count;
   }
   EXPECT_TRUE(count >= 1);
-}
-
-// The first level is for beginners: walking and plain jumps must be enough, without dead ends.
-TEST(FirstLevelNeedsOnlyPlainJumps) {
-  const std::string text = test::ReadAsset("levels/level1.txt");
-  std::vector<uint8_t> storage(1 << 20);
-  lib::Arena arena(storage.data(), storage.size());
-  game::Level level;
-  const char* error = nullptr;
-  EXPECT_TRUE(game::ParseLevel(text.data(), text.size(), arena, &level, &error));
-  const levelcheck::Reachability reach = levelcheck::Explore(level, 200000, levelcheck::Moves::kBasic);
-  EXPECT_TRUE(reach.ReachesGoal(level));
-  EXPECT_TRUE(!reach.HasDeadEnd(level));
 }
 
 TEST(AllSongsParse) {

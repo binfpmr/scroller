@@ -29,11 +29,11 @@ std::string BuildPack(const std::string& dir) {
 TEST(PackToolRoundTrip) {
   char dir_template[] = "/tmp/scroller_pack_XXXXXX";
   const std::string dir = mkdtemp(dir_template);
-  std::system(("mkdir -p " + dir + "/assets/levels").c_str());
+  EXPECT_EQ(std::system(("mkdir -p " + dir + "/assets/levels").c_str()), 0);
   std::ofstream(dir + "/assets/levels/a.txt") << "P#";
   std::ofstream(dir + "/assets/b.txt") << "hello world";
   const std::string pack_data = BuildPack(dir);
-  std::system(("rm -rf " + dir).c_str());
+  EXPECT_EQ(std::system(("rm -rf " + dir).c_str()), 0);
 
   lib::Pack pack;
   const char* error = nullptr;

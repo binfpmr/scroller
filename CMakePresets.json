@@ -29,7 +29,7 @@
       "name": "host",
       "inherits": "base",
       "displayName": "Host unit tests",
-      "cacheVariables": { "SCROLLER_TARGET": "host" }
+      "cacheVariables": { "SCROLLER_TARGET": "host", "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
     }
   ],
   "buildPresets": [
