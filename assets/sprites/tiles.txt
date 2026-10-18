@@ -14,6 +14,11 @@ palette
   R e83c3c
   r a82424
   Y ffd040
+  W f6f8ff
+  w d4dcf0
+  B 3e9a40
+  b 2a6a2e
+  h 62c060
 
 size 16 16
 
@@ -124,3 +129,36 @@ frame checkpoint_on
 ......PP........
 .....sPPs.......
 ....ssssss......
+
+# Background (parallax layers): a cloud and a bush, drawn behind the tiles.
+size 32 12
+
+frame cloud
+..........WWWWWW................
+.......WWWWWWWWWWW..WWWW........
+.....WWWWWWWWWWWWWWWWWWWWW......
+...WWWWWWWWWWWWWWWWWWWWWWWWW....
+..WWWWWWWWWWWWWWWWWWWWWWWWWWWW..
+.WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW.
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+wWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWw
+.wwWWWWWWWWWWWWWWWWWWWWWWWWWWww.
+...wwwwwwwwwwwwwwwwwwwwwwwwww...
+................................
+
+size 24 12
+
+frame bush
+........bbbbb...........
+.....bbbBBBBBbb..bbbb...
+....bBBBBBBBBBBbbBBBBb..
+...bBBBBBBBBBBBBBBBBBBb.
+..bBBBBhBBBBBBBBBBhBBBBb
+.bBBBBhhBBBBBBBBBhhBBBBb
+.bBBBBBBBBBBBBBBBBBBBBBb
+bBBBBBBBBBBBBBBBBBBBBBBb
+bBBBBBBBBBBBBBBBBBBBBBBb
+bbBBBBBBBBBBBBBBBBBBBBbb
+.bbbbbbbbbbbbbbbbbbbbbb.
+........................

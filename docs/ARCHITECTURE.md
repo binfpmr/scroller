@@ -75,7 +75,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 - Enemies (`game/enemy.*`): walkers, jumpers and flyers from `w`/`j`/`f` in the level, 12x12 hitboxes, simple
   tile collision; they are only avoided: touching one (hitbox shrunk by 2 px) respawns the player at the last
   checkpoint and resets all enemies. Falling below the map (a bottomless pit) respawns too.
-- Rendering: sky gradient, then only the visible tiles, then the player sprite (frame chosen from its state, `game::PlayerFrame`), into the 320x240 surface.
+- Rendering: sky gradient, parallax layers (clouds at 1/6 of the camera speed, far hills 1/4, near hills 1/2, bushes 3/4; hills computed per column, sinking as the camera climbs), then only the visible tiles, then the player sprite (frame chosen from its state, `game::PlayerFrame`), into the 320x240 surface.
 - Level design check: `levelcheck` (host tool, `tools/levelcheck/`) searches all resting positions reachable from the start with the real physics and prints the level with reachable spots marked.
 
 ## Interrupts

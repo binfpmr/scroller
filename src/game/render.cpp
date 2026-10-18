@@ -28,6 +28,69 @@ void DrawSky(gfx::Surface& screen, const Camera& camera, const Level& level) {
   }
 }
 
+// Parallax: a layer at depth num/den moves num/den as fast as the camera. Its base line (the horizon the hills and
+// bushes stand on) is `lift` pixels above the screen bottom when the camera is at the bottom of the level, and sinks as
+// the camera climbs.
+struct Layer {
+  int num;
+  int den;
+  int lift;
+};
+
+int LayerOffsetX(const Camera& camera, const Layer& layer) { return camera.x * layer.num / layer.den; }
+
+int LayerBaseY(const gfx::Surface& screen, const Camera& camera, const Level& level, const Layer& layer) {
+  const int below_top = lib::Max(level.pixel_height() - screen.height - camera.y, 0);  // how far the camera climbed
+  return screen.height - layer.lift + below_top * layer.num / layer.den;
+}
+
+int Wrap(int value, int period) { return ((value % period) + period) % period; }
+
+// A rounded bump (parabola) of height `amplitude` repeating every `period` pixels.
+int Bump(int x, int period, int amplitude) {
+  const int t = 2 * Wrap(x, period) - period;  // -period..period
+  return amplitude * (period * period - t * t) / (period * period);
+}
+
+// Pseudo-random but fixed per index, for placing clouds and bushes.
+uint32_t Hash(int i) {
+  uint32_t h = static_cast<uint32_t>(i) * 2654435761u;
+  return h ^ (h >> 15);
+}
+
+void DrawHills(gfx::Surface& screen, const Camera& camera, const Level& level, const Layer& layer, int height,
+               int period1, int amplitude1, int period2, int amplitude2, Color fill, Color edge) {
+  const int base = LayerBaseY(screen, camera, level, layer);
+  const int offset = LayerOffsetX(camera, layer);
+  for (int x = 0; x < screen.width; ++x) {
+    const int lx = x + offset;
+    const int top = base - height - Bump(lx, period1, amplitude1) - Bump(lx + period2 / 3, period2, amplitude2);
+    for (int y = lib::Max(top, 0); y < screen.height; ++y) {
+      screen.Row(y)[x] = y < top + 2 ? edge : fill;
+    }
+  }
+}
+
+void DrawSprites(gfx::Surface& screen, const Camera& camera, const Level& level, const Layer& layer,
+                 const gfx::Sprite& sprite, int spacing, int jitter_x, int min_up, int range_up) {
+  const int base = LayerBaseY(screen, camera, level, layer);
+  const int offset = LayerOffsetX(camera, layer);
+  for (int i = offset / spacing - 1; i * spacing - offset < screen.width + spacing; ++i) {
+    const uint32_t h = Hash(i);
+    const int x = i * spacing + static_cast<int>(h % static_cast<uint32_t>(jitter_x)) - offset;
+    const int up = min_up + (range_up > 0 ? static_cast<int>((h >> 8) % static_cast<uint32_t>(range_up)) : 0);
+    gfx::DrawSprite(screen, sprite, x, base - up - sprite.height);
+  }
+}
+
+void DrawBackground(gfx::Surface& screen, const Camera& camera, const Level& level, const Frames& frames) {
+  DrawSky(screen, camera, level);
+  DrawSprites(screen, camera, level, {1, 6, 0}, *frames.cloud, 150, 70, 120, 60);  // clouds high above the hills
+  DrawHills(screen, camera, level, {1, 4, 72}, 30, 230, 34, 120, 14, Rgb(116, 170, 168), Rgb(136, 190, 184));
+  DrawHills(screen, camera, level, {1, 2, 64}, 10, 170, 28, 90, 10, Rgb(84, 160, 92), Rgb(110, 190, 110));
+  DrawSprites(screen, camera, level, {3, 4, 66}, *frames.bush, 110, 60, 0, 0);
+}
+
 void DrawTiles(gfx::Surface& screen, const Level& level, const Camera& camera, const Frames& frames, int checkpoint_tx,
                int checkpoint_ty) {
   const int first_tx = camera.x >> kTileShift;
@@ -78,7 +141,7 @@ const gfx::Sprite* PlayerFrame(const Player& player, const Frames& frames, uint3
 void RenderWorld(gfx::Surface& screen, const Level& level, const Camera& camera, const Player& player,
                  const Frames& frames, uint32_t ticks, int checkpoint_tx, int checkpoint_ty, const Enemy* enemies,
                  int enemy_count) {
-  DrawSky(screen, camera, level);
+  DrawBackground(screen, camera, level, frames);
   DrawTiles(screen, level, camera, frames, checkpoint_tx, checkpoint_ty);
   for (int i = 0; i < enemy_count; ++i) {
     const Enemy& e = enemies[i];
