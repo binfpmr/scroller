@@ -80,7 +80,8 @@ class Controller {
   // After the reset, ports need some time to see their devices again: waits until the connection states have been
   // stable for 100 ms (at most `max_ms`). Returns the number of connected ports.
   int WaitForPorts(int max_ms);
-  PortStatus Port(int port);  // 1-based, as in the specification
+  PortStatus Port(int port);         // 1-based, as in the specification
+  uint32_t RawPortStatus(int port);  // PORTSC, for diagnostics
   // Resets a USB 2 port with a device (USB 3 ports enable themselves); true if it is enabled afterwards.
   bool ResetPort(int port);
 

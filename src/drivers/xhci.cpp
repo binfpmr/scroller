@@ -282,6 +282,8 @@ void Controller::Halt() {
   Wait(20000, [&] { return (Read32(op_, kUsbSts) & kStsHalted) != 0; });
 }
 
+uint32_t Controller::RawPortStatus(int port) { return Read32(op_, kPortBase + 0x10 * (port - 1)); }
+
 PortStatus Controller::Port(int port) {
   const uint32_t portsc = Read32(op_, kPortBase + 0x10 * (port - 1));
   return {.connected = (portsc & kPortConnected) != 0,

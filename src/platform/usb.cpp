@@ -95,6 +95,10 @@ void SetUp(UsbDevice& d, lib::Arena& arena) {
 void InitUsb(const BootInfo& boot, lib::Arena& arena) {
   pci::Device found[8];
   const int count = pci::FindAllByClass(0x0c, found, 8);
+  for (int i = 0; i < count; ++i) {
+    Log("usb: serial bus controller %04x:%04x class %06x at %02x:%02x.%x\n", found[i].vendor_id, found[i].device_id,
+        found[i].class_code, found[i].bus, found[i].device, found[i].function);
+  }
   for (int i = 0; i < count && !g_have_xhci; ++i) {
     if (found[i].class_code == kClassXhci) {
       g_have_xhci = g_xhci.Init(found[i], arena, boot.tsc_hz);
@@ -105,7 +109,11 @@ void InitUsb(const BootInfo& boot, lib::Arena& arena) {
     return;
   }
   const int connected = g_xhci.WaitForPorts(1000);
-  Log("usb: %d of %d ports connected\n", connected, g_xhci.port_count());
+  Log("usb: %d of %d ports connected; PORTSC:", connected, g_xhci.port_count());
+  for (int port = 1; port <= g_xhci.port_count(); ++port) {
+    Log("%s%d(%u)=%08x", port % 6 == 1 ? "\n  " : " ", port, g_xhci.Port(port).usb_major, g_xhci.RawPortStatus(port));
+  }
+  Log("\n");
   for (int port = 1; port <= g_xhci.port_count() && g_device_count < kMaxDevices; ++port) {
     if (!g_xhci.Port(port).connected) {
       continue;
