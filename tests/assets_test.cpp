@@ -63,6 +63,19 @@ TEST(AllLevelsLoadAndGoalsAreReachable) {
   EXPECT_TRUE(count >= 1);
 }
 
+// The first level is for beginners: walking and plain jumps must be enough, without dead ends.
+TEST(FirstLevelNeedsOnlyPlainJumps) {
+  const std::string text = test::ReadAsset("levels/level1.txt");
+  std::vector<uint8_t> storage(1 << 20);
+  lib::Arena arena(storage.data(), storage.size());
+  game::Level level;
+  const char* error = nullptr;
+  EXPECT_TRUE(game::ParseLevel(text.data(), text.size(), arena, &level, &error));
+  const levelcheck::Reachability reach = levelcheck::Explore(level, 200000, levelcheck::Moves::kBasic);
+  EXPECT_TRUE(reach.ReachesGoal(level));
+  EXPECT_TRUE(!reach.HasDeadEnd(level));
+}
+
 TEST(AllSongsParse) {
   int count = 0;
   for (const char* dir : {"music", "sounds"}) {
