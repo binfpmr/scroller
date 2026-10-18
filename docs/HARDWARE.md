@@ -20,7 +20,7 @@ Serial numbers and UUIDs are left out on purpose.
 | Wired network | Realtek RTL8168H `10EC:8168` (chip version 541) at 05:00.0 | `drivers/rtl8168`: set up twice after the firmware (the first setup stops after one ring pass) |
 | Wi-Fi | Realtek RTL8822BE `10EC:B822` at 02:00.0 | not supported (needs firmware blobs, WPA) |
 | Keyboard | internal keyboard on PS/2 (i8042) | IRQ 1. Action Keys Mode: the F-row does its action by default (F1 still arrives as F1, code 3B); F6-F8 (volume) reach the PS/2 port as nothing we see, probably handled by the embedded controller (ACPI events), so they would need ACPI EC support |
-| USB | Intel 300-series PCH xHCI (to be confirmed, expected `8086:A36D`) | M7 |
+| USB | Intel 300-series PCH xHCI `8086:A36D` at 00:14.0, 24 ports (16 USB 2, 8 USB 3) | `drivers/xhci`; camera `04F2:B627` on port 5, Bluetooth `0BDA:B00B` on port 14 |
 
 ## QEMU (development)
 

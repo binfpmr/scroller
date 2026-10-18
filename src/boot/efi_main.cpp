@@ -2,7 +2,6 @@
 
 #include "arch/x86_64/cpu.h"
 #include "arch/x86_64/io.h"
-#include "boot/uefi_keyboard.h"
 #include "boot/video.h"
 #include "drivers/debug_log.h"
 #include "drivers/ps2_keyboard.h"
@@ -12,10 +11,6 @@
 #include "platform/reload.h"
 #include "scroller_version.h"
 #include "uefi/uefi.h"
-
-#ifndef SCROLLER_UEFI_INPUT
-#define SCROLLER_UEFI_INPUT 0
-#endif
 
 // The asset pack linked into the image (assets_blob.S).
 extern "C" const char scroller_assets_begin[];
@@ -27,10 +22,6 @@ volatile int scroller_debugger_wait = 1;
 }
 
 namespace {
-
-// Build option (cmake -DSCROLLER_UEFI_INPUT=ON, preset uefi-input): stay in boot services and read the keyboard
-// through UEFI. A plain `if` instead of #if keeps both paths compiling in every build.
-constexpr bool kUefiInput = SCROLLER_UEFI_INPUT;
 
 constexpr size_t kGameMemoryBytes = 32 * 1024 * 1024;
 constexpr size_t kPageTableBytes = 1024 * 1024;       // our page tables (MMIO mappings, write-combining splits)
@@ -228,12 +219,6 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
   }
   AllocateReloadMemory(bs, &boot);
   boot.stack_top = reinterpret_cast<uint64_t>(__builtin_frame_address(0));
-
-  if (kUefiInput) {
-    Log("input: UEFI console (boot services stay active)\n");
-    boot::UefiKeyboard keyboard(st->ConIn, boot.tsc_hz);
-    platform::RunGame(boot, keyboard);
-  }
 
   if (!ExitBootServices(image, bs, &boot)) {
     return EFI_LOAD_ERROR;

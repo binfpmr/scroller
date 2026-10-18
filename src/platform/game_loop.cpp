@@ -203,7 +203,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   }
   Log("sound: %s\n", SoundStatus());
   if (boot.owns_machine) {
-    InitNetwork(boot, arena);  // in the uefi-input build the firmware's network driver still owns the controller
+    InitNetwork(boot, arena);
     InitUsb(boot, arena);
   }
 

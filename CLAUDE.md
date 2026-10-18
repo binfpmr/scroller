@@ -40,8 +40,7 @@ Killing background tools: the pattern must not match the shell running pkill, e.
 - Freestanding C++23 / C23: no exceptions, RTTI, STL, libc, heap `new`, or global objects with non-trivial constructors. Memory comes from the arena allocated before `ExitBootServices`.
 - Nothing after `ExitBootServices` may call UEFI boot services; everything needed later goes into `BootInfo`.
 - Interrupts are on after setup (`platform/interrupt_controllers`); code shared with an interrupt handler needs
-  volatile/ring-buffer care. Handlers for APIC vectors must send `lapic::EndOfInterrupt()`. None of this happens in the
-  uefi-input build (firmware still owns the machine).
+  volatile/ring-buffer care. Handlers for APIC vectors must send `lapic::EndOfInterrupt()`.
 - `game/` and `gfx/` must not include anything from `boot/`, `uefi/`, `arch/`, `drivers/`, so they keep building for the host tests.
 - Game physics uses fixed point (`lib::Fixed`, 24.8), not floats. After changing `PlayerTuning` or a level, run the host tests (they include `levelcheck` reachability).
 - Hot reload hands the previous image's `BootInfo` to the new one: when `BootInfo` changes, its size usually changes

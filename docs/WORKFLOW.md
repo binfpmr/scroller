@@ -17,7 +17,6 @@ CMake presets, all using Ninja, output under `build/<preset>/`:
 | Preset | What | Output |
 |---|---|---|
 | `uefi` | Freestanding target build with GCC | `build/uefi/scroller.elf` (with symbols), `scroller.efi` (PE), `scroller.img` (GPT disk), `esp.img` (FAT ESP only) |
-| `uefi-input` | Like `uefi`, but stays in boot services and uses UEFI keyboard input (USB-only machines) | `build/uefi-input/...` |
 | `uefi-clang` | Same with clang (`x86_64-unknown-none-elf`), GNU ld/objcopy | `build/uefi-clang/...` |
 | `host` | Game/gfx/lib code + unit tests for Linux | `build/host/tests/...` |
 

@@ -19,12 +19,6 @@
       "cacheVariables": { "SCROLLER_TARGET": "uefi" }
     },
     {
-      "name": "uefi-input",
-      "inherits": "uefi",
-      "displayName": "UEFI image (GCC), UEFI keyboard input for USB-only machines",
-      "cacheVariables": { "SCROLLER_UEFI_INPUT": "ON" }
-    },
-    {
       "name": "uefi-clang",
       "inherits": "base",
       "displayName": "UEFI image (clang)",
@@ -40,7 +34,6 @@
   ],
   "buildPresets": [
     { "name": "uefi", "configurePreset": "uefi" },
-    { "name": "uefi-input", "configurePreset": "uefi-input" },
     { "name": "uefi-clang", "configurePreset": "uefi-clang" },
     { "name": "host", "configurePreset": "host" }
   ],

@@ -114,7 +114,7 @@ connection at a time, LAN only, so most of TCP's machinery can go:
 
 ### M7b: USB tidy-up (next)
 
-- [ ] Remove the `uefi-input` build
+- [x] Remove the `uefi-input` build (the `owns_machine` flag stays in BootInfo for reload compatibility)
 - [ ] Hot-plug: devices plugged in or out while the game runs (port status change events, Disable Slot)
 - [ ] USB keyboards on the crash and start-up error screens
 - [ ] No stale interrupt after a hot reload (mask and drain interrupt sources before the jump)

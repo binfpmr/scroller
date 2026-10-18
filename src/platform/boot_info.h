@@ -18,7 +18,7 @@ struct BootInfo {
   void* memory = nullptr;
   size_t memory_size = 0;
 
-  // Final UEFI memory map, as passed to ExitBootServices (empty in the SCROLLER_UEFI_INPUT build).
+  // Final UEFI memory map, as passed to ExitBootServices.
   const EFI_MEMORY_DESCRIPTOR* memory_map = nullptr;
   size_t memory_map_size = 0;
   size_t memory_descriptor_size = 0;
@@ -56,7 +56,8 @@ struct BootInfo {
   size_t reload_slot_size = 0;
   uint64_t stack_top = 0;
 
-  // True after ExitBootServices: the game owns the machine (page tables, devices). False in the uefi-input build.
+  // True after ExitBootServices: the game owns the machine (page tables, devices). Always true since the uefi-input
+  // build is gone; kept so BootInfo keeps its layout (hot reload compatibility).
   bool owns_machine = false;
 };
 
