@@ -25,7 +25,7 @@ struct BootInfo {
 
   EFI_RUNTIME_SERVICES* runtime_services = nullptr;
 
-  // Asset pack (lib/pack.h) read from \\scroller\\assets.pak on the boot volume; null if it could not be loaded.
+  // Asset pack (lib/pack.h), linked into the image.
   const void* assets = nullptr;
   size_t assets_size = 0;
 

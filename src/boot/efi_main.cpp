@@ -2,7 +2,6 @@
 
 #include "arch/x86_64/cpu.h"
 #include "arch/x86_64/io.h"
-#include "boot/file.h"
 #include "boot/uefi_keyboard.h"
 #include "boot/video.h"
 #include "drivers/debug_log.h"
@@ -15,6 +14,10 @@
 #ifndef SCROLLER_UEFI_INPUT
 #define SCROLLER_UEFI_INPUT 0
 #endif
+
+// The asset pack linked into the image (assets_blob.S).
+extern "C" const char scroller_assets_begin[];
+extern "C" const char scroller_assets_end[];
 
 // Cleared by the debugger (tools/gdb/scroller.py) to let a debug run continue. C linkage keeps the symbol name simple.
 extern "C" {
@@ -158,11 +161,8 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
     boot.isa_dma_buffer = dma;
   }
   Log("acpi: RSDP %p\n", boot.acpi_rsdp);
-  void* assets = nullptr;
-  if (boot::LoadFile(bs, image, u"\\scroller\\assets.pak", &assets, &boot.assets_size)) {
-    boot.assets = assets;
-    Log("assets: loaded %llu bytes\n", static_cast<unsigned long long>(boot.assets_size));
-  }  // otherwise the game shows the error on screen
+  boot.assets = scroller_assets_begin;
+  boot.assets_size = static_cast<size_t>(scroller_assets_end - scroller_assets_begin);
   if (!AllocateGameMemory(bs, &boot)) {
     return EFI_LOAD_ERROR;
   }

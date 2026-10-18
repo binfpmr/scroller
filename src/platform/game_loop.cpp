@@ -156,7 +156,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
 
   const char* error = nullptr;
   if (boot.assets == nullptr) {
-    Fatal("/SCROLLER/ASSETS.PAK NOT FOUND ON THE BOOT VOLUME", screen, fb, viewport, keyboard, boot);
+    Fatal("NO ASSET PACK IN THE IMAGE", screen, fb, viewport, keyboard, boot);
   }
   lib::Pack pack;
   if (!pack.Open(boot.assets, boot.assets_size, &error)) {
