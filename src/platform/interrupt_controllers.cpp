@@ -1,5 +1,7 @@
 #include "platform/interrupt_controllers.h"
 
+#include "arch/x86_64/cpu.h"
+#include "arch/x86_64/io.h"
 #include "drivers/debug_log.h"
 #include "drivers/io_apic.h"
 #include "drivers/local_apic.h"
@@ -95,6 +97,20 @@ void MaskIsaIrq(uint8_t irq) {
       g_io_apics[i].Mask(gsi);
     }
   }
+}
+
+void QuiesceInterrupts(uint64_t tsc_hz) {
+  x86::DisableInterrupts();
+  for (int i = 0; i < g_io_apic_count; ++i) {
+    g_io_apics[i].MaskAll();
+  }
+  lapic::StopTimer();
+  x86::EnableInterrupts();
+  const uint64_t end = x86::Rdtsc() + tsc_hz / 1000;
+  while (x86::Rdtsc() < end) {
+    x86::Pause();
+  }
+  x86::DisableInterrupts();
 }
 
 }  // namespace platform

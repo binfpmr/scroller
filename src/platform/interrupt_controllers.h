@@ -31,4 +31,9 @@ uint64_t UnexpectedInterrupts();
 bool RouteIsaIrq(uint8_t irq, uint8_t vector, x86::InterruptHandler handler);
 void MaskIsaIrq(uint8_t irq);
 
+// Before a hot reload: masks every IOAPIC input and stops the timer, lets interrupts already on their way arrive at
+// the current handlers (1 ms with interrupts on), then leaves interrupts off. Otherwise a pending one would reach the
+// next image before it has installed its handlers.
+void QuiesceInterrupts(uint64_t tsc_hz);
+
 }  // namespace platform

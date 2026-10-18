@@ -104,4 +104,9 @@ uint32_t StartPeriodicTimer(uint8_t vector, uint32_t hz, uint64_t tsc_hz) {
   return static_cast<uint32_t>(timer_hz / count);
 }
 
+void StopTimer() {
+  Write(kLvtTimer, kLvtMasked);
+  Write(kTimerInitial, 0);
+}
+
 }  // namespace lapic

@@ -19,5 +19,6 @@ void EndOfInterrupt();
 // Starts a periodic timer interrupt at about `hz` on `vector`, calibrated against the TSC. Returns the rate actually
 // programmed (0 on failure).
 uint32_t StartPeriodicTimer(uint8_t vector, uint32_t hz, uint64_t tsc_hz);
+void StopTimer();
 
 }  // namespace lapic

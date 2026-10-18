@@ -38,6 +38,7 @@ lib::Arena* g_arena = nullptr;
 uint64_t g_tsc_hz = 0;
 uint32_t g_waiting_ports = 0;  // connected, enumerated once they have settled
 uint64_t g_waiting_since_ms[xhci::Controller::kMaxPorts + 1] = {};
+volatile bool g_busy = false;
 
 uint64_t NowMs() { return x86::Rdtsc() / (g_tsc_hz / 1000); }
 
@@ -188,9 +189,10 @@ void InitUsb(const BootInfo& boot, lib::Arena& arena) {
 }
 
 void PollUsb(InputTracker& tracker) {
-  if (!g_have_xhci) {
-    return;
+  if (!g_have_xhci || g_busy) {
+    return;  // also when the crash screen polls after a fault inside this function
   }
+  g_busy = true;
   xhci::TransferEvent e;
   while (g_xhci.PollTransfer(&e)) {
     for (int i = 0; i < kMaxDevices; ++i) {
@@ -243,6 +245,7 @@ void PollUsb(InputTracker& tracker) {
   if (changed) {
     UpdateStatus();
   }
+  g_busy = false;
 }
 
 uint8_t UsbLastKey() { return g_last_usage; }

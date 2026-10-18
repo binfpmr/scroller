@@ -13,6 +13,7 @@
 #include "platform/gdb_stub.h"
 #include "platform/network.h"
 #include "platform/reset.h"
+#include "platform/usb.h"
 #include "scroller_version.h"
 
 extern "C" char __image_base[];  // linker script: where the image was loaded
@@ -115,7 +116,7 @@ void OnException(x86::InterruptFrame& f) {
       Add(text, "\n");
     }
   }
-  Add(text, "\nVERSION %s  ESC: REBOOT\n", kScrollerVersion);
+  Add(text, "\nVERSION %s\nESC: REBOOT  CTRL+ALT+R: RELOAD\n", kScrollerVersion);
   debug_log::Write(text.data, text.length);  // Log() would truncate at 512 characters
   Log("decode: addr2line -f -C -e build/uefi/scroller.elf 0x%llx", static_cast<ull>(f.rip - base));
   for (int i = 0; i < frames; ++i) {
@@ -134,11 +135,15 @@ void OnException(x86::InterruptFrame& f) {
     // second fault stops in the check above.
     PollNetwork();
     PollDevlink();
+    PollUsb(tracker);
     if (g_keyboard != nullptr) {
       g_keyboard->Poll(tracker);
       const InputState input = tracker.NextTick();
       if (input.Pressed(Key::kEscape) || input.RebootRequested()) {  // nothing else to do here: Esc is enough
         Reboot(g_runtime_services);
+      }
+      if (input.ReloadRequested()) {
+        RequestNetworkReload();  // carried out by PollDevlink above
       }
     }
     x86::Pause();

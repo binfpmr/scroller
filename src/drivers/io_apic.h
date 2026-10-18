@@ -17,6 +17,7 @@ class IoApic {
   // (0: ISA default, active high and edge triggered).
   void Route(uint32_t gsi, uint8_t vector, uint16_t flags, uint32_t apic_id);
   void Mask(uint32_t gsi);
+  void MaskAll();
 
  private:
   uint32_t Read(uint32_t reg) const;

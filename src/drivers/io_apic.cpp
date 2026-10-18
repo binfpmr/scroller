@@ -57,4 +57,10 @@ void IoApic::Route(uint32_t gsi, uint8_t vector, uint16_t flags, uint32_t apic_i
 
 void IoApic::Mask(uint32_t gsi) { Write(kRegRedirection + 2 * (gsi - gsi_base_), kMasked); }
 
+void IoApic::MaskAll() {
+  for (uint32_t i = 0; i < inputs_; ++i) {
+    Mask(gsi_base_ + i);
+  }
+}
+
 }  // namespace ioapic

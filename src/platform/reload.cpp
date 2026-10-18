@@ -6,6 +6,7 @@
 #include "drivers/debug_log.h"
 #include "lib/mem.h"
 #include "lib/pe.h"
+#include "platform/interrupt_controllers.h"
 #include "platform/network.h"
 #include "platform/reset.h"
 #include "platform/sound.h"
@@ -89,7 +90,7 @@ bool PrepareReload(const BootInfo& boot, const uint8_t* file, size_t size, const
 }
 
 void ExecuteReload(const BootInfo& boot) {
-  x86::DisableInterrupts();
+  QuiesceInterrupts(boot.tsc_hz);
   StopUsb();
   StopNetwork();
   StopSound();

@@ -92,7 +92,7 @@ bool LoadSheet(const lib::Pack& pack, const char* name, lib::Arena& arena, gfx::
   gfx::FillRect(screen, 0, 0, screen.width, screen.height, gfx::Rgb(90, 0, 0));
   gfx::DrawText(screen, 8, 8, "SCROLLER CANNOT START:", gfx::Rgb(255, 255, 255));
   gfx::DrawText(screen, 8, 8 + 2 * gfx::kLineHeight, message, gfx::Rgb(255, 220, 120));
-  gfx::DrawText(screen, 8, 8 + 4 * gfx::kLineHeight, "ESC: REBOOT", gfx::Rgb(255, 255, 255));
+  gfx::DrawText(screen, 8, 8 + 4 * gfx::kLineHeight, "ESC: REBOOT  CTRL+ALT+R: RELOAD", gfx::Rgb(255, 255, 255));
   gfx::Present(screen, fb, viewport);
   InputTracker tracker;
   for (;;) {
@@ -103,6 +103,9 @@ bool LoadSheet(const lib::Pack& pack, const char* name, lib::Arena& arena, gfx::
     const InputState input = tracker.NextTick();
     if (input.Pressed(Key::kEscape) || input.RebootRequested()) {  // nothing else to do here: Esc is enough
       Reboot(boot.runtime_services);
+    }
+    if (input.ReloadRequested()) {
+      RequestNetworkReload();  // carried out by PollDevlink above
     }
     x86::Pause();
   }
