@@ -19,7 +19,7 @@ A small 2D platformer that boots directly on x86_64 hardware via UEFI. No OS, no
 | Input | i8042 PS/2 keyboard (scan code set 1) on IRQ 1 through the IOAPIC, bytes queued by the handler; falls back to polling if a byte waits 50 ms without an interrupt | QEMU's default keyboard; most laptop built-in keyboards are also PS/2 behind the EC. USB (xHCI + HID boot keyboard) is a later milestone. |
 | Input fallback | Build option `SCROLLER_UEFI_INPUT` (preset `uefi-input`): stay in boot services, read `ConIn`, treat a key as held for 550 ms after its first event and 150 ms after each typematic repeat | Lets us try real USB-only hardware before the xHCI driver exists. Input feel is worse; debug aid only. |
 | Assets | Plain text (levels one character per tile, sprites as text art with a palette; `docs/ASSETS.md`), packed into one file (`assets.pak`) that is linked into the image (`boot/assets_blob.S`), parsed at boot by the same code the host tests run | Diff-friendly, editable in any editor, no binary format to keep in sync; no file system needed, so the same image boots from disk, USB stick or network. |
-| Controls | Left/Right move, Up or Space jump, Down ducks, Esc back to level 1, Ctrl+Alt+Delete reboots; volume up/down/mute with the media keys or `=`/`-`/`M`; F1 shows/hides the performance overlay (its last line shows the last raw key code) | |
+| Controls | Left/Right move, Up or Space jump, Down ducks, Esc back to level 1, Ctrl+Alt+Delete reboots; volume up/down/mute with the media keys or `=`/`-`/`M`, `N` music on/off (off at start); F1 shows/hides the performance overlay (its last line shows the last raw key code) | |
 | Exit | Ctrl+Alt+Delete (Esc on the error and crash screens) -> `ResetSystem(EfiResetCold)` (UEFI runtime services stay callable after `ExitBootServices`); fallback: 8042 reset pulse, then triple fault | Works on real hardware and QEMU. |
 | Tests | Game logic, graphics and lib code also build for the host and have unit tests (CTest) | Fast feedback without booting. |
 
@@ -99,7 +99,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
   1 kHz timer interrupt 43 ms ahead of the play position, so no PCI interrupt routing is needed), else a Sound Blaster
   16 (`drivers/sb16`: ISA DMA auto-init over a page below 16 MiB, refilled from its IRQ). Engine calls from the main
   loop run with interrupts disabled because rendering happens in interrupt handlers.
-- Volumes: music at 50 % relative to the effects, master volume 0..100 % (default 50 %) in software, changed in
+- Volumes: music off at start (`N` toggles it), at 40 % relative to the effects when on, master volume 0..100 % (default 20 %) in software, changed in
   steps of 10 % by the volume keys.
 - Game sound events: `Player::events` (jump, wall-jump, land) and the goal, collected by `Game::TakeEvents()`.
 

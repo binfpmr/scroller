@@ -23,6 +23,9 @@ void SetVolume(int percent);
 int Volume();
 void SetMuted(bool muted);
 bool Muted();
+// Background music on or off (off by default); the effects stay.
+void SetMusicOn(bool on);
+bool MusicOn();
 
 // For the debugger: while the machine is stopped (interrupts off, nothing refills the looping buffer) play silence,
 // then carry on from the hardware's current position. Interrupts must be off for both.

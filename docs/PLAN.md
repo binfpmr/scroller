@@ -103,10 +103,12 @@ connection at a time, LAN only, so most of TCP's machinery can go:
 ## M7: USB keyboard
 
 - [x] PCI enumeration
-- [ ] xHCI: BIOS handoff, reset, command and event rings (polled), No-Op command; ports listed in the log
-- [ ] Device enumeration on root ports: Enable Slot, Address Device, device and configuration descriptors (logged)
-- [ ] HID boot-protocol keyboard (interrupt IN endpoint, 8-byte reports) -> same `InputState`, next to PS/2
-- [ ] QEMU: `tools/qemu.py --usb-kbd` (qemu-xhci + usb-kbd); then the HP Pavilion with an external keyboard
+- [x] xHCI: BIOS handoff, reset, command and event rings (polled), No-Op command; ports listed in the log
+- [x] Device enumeration on root ports: Enable Slot, Address Device, device and configuration descriptors (logged;
+      HP Pavilion: xHCI `8086:A36D`, camera and Bluetooth enumerate)
+- [x] HID boot-protocol keyboard (interrupt IN endpoint, 8-byte reports) -> same `InputState`, next to PS/2
+- [x] QEMU: `tools/qemu.py --usb-kbd` (qemu-xhci + usb-kbd)
+- [ ] HP Pavilion with an external USB keyboard (needs a human)
 - [ ] Remove the `uefi-input` build
 - [ ] Later: hubs, HID gamepads (report descriptor parsing)
 
@@ -128,7 +130,7 @@ The assets are inside the image, so a disk is only needed for saves or levels lo
 
 ## Settled
 
-- Controls: Left/Right move, Up or Space jump, Down ducks, Esc back to level 1, Ctrl+Alt+Delete reboots, media keys or `=`/`-`/`M` for volume.
+- Controls: Left/Right move, Up or Space jump, Down ducks, Esc back to level 1, Ctrl+Alt+Delete reboots, media keys or `=`/`-`/`M` for volume, `N` music on/off (off at start).
 - Art: placeholder sprites drawn as text art in the repo.
 - Levels: plain text, one character per tile; no level editor for now.
 - Toolchain: host GCC with freestanding flags (no cross GCC for now) + GNU as/binutils, clang optional; no NASM. AT&T syntax.

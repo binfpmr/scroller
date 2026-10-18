@@ -63,6 +63,9 @@ bool MapKey(uint16_t code, platform::Key* key) {
     case 0x003b:  // F1
       *key = Key::kToggleStats;
       return true;
+    case 0x0031:  // N
+      *key = Key::kToggleMusic;
+      return true;
     case 0x001d:  // left Ctrl
     case 0xe01d:  // right Ctrl
       *key = Key::kCtrl;

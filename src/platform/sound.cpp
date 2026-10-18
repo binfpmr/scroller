@@ -33,10 +33,12 @@ char g_status[48] = "NONE";
 constexpr int kMusicVolume = 40;  // music sits below the effects
 int g_volume = 20;
 bool g_muted = false;
+bool g_music_on = false;  // off by default; N switches it on
 
 void ApplyVolume() {
   x86::DisableInterrupts();  // the engine also runs in interrupt handlers
   g_engine.SetMasterVolume(g_muted ? 0 : g_volume);
+  g_engine.SetMusicVolume(g_music_on ? kMusicVolume : 0);
   x86::EnableInterrupts();
 }
 
@@ -92,7 +94,7 @@ bool LoadSong(const lib::Pack& pack, const char* name, lib::Arena& arena, audio:
 }
 
 void LoadSongs(const lib::Pack& pack, lib::Arena& arena) {
-  g_engine.SetMusicVolume(kMusicVolume);
+  g_engine.SetMusicVolume(g_music_on ? kMusicVolume : 0);  // the music runs silently while off
   g_engine.SetMasterVolume(g_muted ? 0 : g_volume);
   const bool have_music = LoadSong(pack, "music/minuet.txt", arena, &g_music);
   g_have_effects =
@@ -180,6 +182,11 @@ void SetMuted(bool muted) {
   ApplyVolume();
 }
 bool Muted() { return g_muted; }
+void SetMusicOn(bool on) {
+  g_music_on = on;
+  ApplyVolume();
+}
+bool MusicOn() { return g_music_on; }
 
 void PauseSound() {
   if (g_hda.buffer() != nullptr) {

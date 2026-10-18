@@ -73,6 +73,7 @@ TEST(Ps2MapsGameKeys) {
   EXPECT_TRUE(ps2::MapKey(0xe01d, &k) && k == Key::kCtrl);
   EXPECT_TRUE(ps2::MapKey(0x38, &k) && k == Key::kAlt);
   EXPECT_TRUE(ps2::MapKey(0xe053, &k) && k == Key::kDelete);
+  EXPECT_TRUE(ps2::MapKey(0x31, &k) && k == Key::kToggleMusic);
   EXPECT_TRUE(ps2::MapKey(0xe030, &k) && k == Key::kVolumeUp);
   EXPECT_TRUE(ps2::MapKey(0xe02e, &k) && k == Key::kVolumeDown);
   EXPECT_TRUE(ps2::MapKey(0xe020, &k) && k == Key::kVolumeMute);

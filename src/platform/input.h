@@ -19,6 +19,7 @@ enum class Key : uint8_t {
   kCtrl,         // left or right Ctrl
   kAlt,          // left Alt or AltGr
   kDelete,       // Delete (or keypad Del)
+  kToggleMusic,  // 'N': background music on/off
   kCount,
 };
 

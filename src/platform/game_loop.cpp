@@ -253,6 +253,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   uint64_t next_tick = x86::Rdtsc();
   uint64_t ticks = 0;
   uint64_t volume_shown_until = 0;
+  bool music_message = false;  // the message shows the music state instead of the volume
   uint64_t frames = 0;
   uint64_t present_cycles = 0;
   Log("boot ok: game running\n");
@@ -289,6 +290,12 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
           SetVolume(Volume() + (input.Pressed(Key::kVolumeUp) ? 10 : -10));
         }
         volume_shown_until = ticks + 90;  // 1.5 s
+        music_message = false;
+      }
+      if (input.Pressed(Key::kToggleMusic)) {
+        SetMusicOn(!MusicOn());
+        volume_shown_until = ticks + 90;
+        music_message = true;
       }
       game.Update(input);
       PlaySoundEvents(game.TakeEvents());
@@ -312,7 +319,11 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     stats.Draw(screen);
     if (ticks < volume_shown_until) {
       char text[24];
-      lib::Format(text, sizeof(text), Muted() ? "VOLUME: MUTED" : "VOLUME %d%%", Volume());
+      if (music_message) {
+        lib::Format(text, sizeof(text), MusicOn() ? "MUSIC ON" : "MUSIC OFF");
+      } else {
+        lib::Format(text, sizeof(text), Muted() ? "VOLUME: MUTED" : "VOLUME %d%%", Volume());
+      }
       const int w = gfx::TextWidth(text) + 8;
       gfx::FillRect(screen, (screen.width - w) / 2, 8, w, gfx::kLineHeight + 4, gfx::Rgb(20, 20, 40));
       gfx::DrawText(screen, (screen.width - w) / 2 + 4, 10, text, gfx::Rgb(255, 255, 255));
