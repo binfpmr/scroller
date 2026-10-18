@@ -49,7 +49,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] Exception handler that dumps registers to the log and screen (with call chain, addr2line hint)
 - [x] Interrupt controller (APIC/IOAPIC via ACPI MADT) and a timer (LAPIC, 1 kHz)
 - [x] Interrupt-driven PS/2 keyboard with polling fallback; idle with `hlt`
-- [ ] Real hardware check: F1 shows TIMER ~1000 HZ and KBD PS/2 IRQ on the HP Pavilion
+- [x] Real hardware check (HP Pavilion): TIMER IRQ 1000 HZ, OTHER IRQS 0, KBD PS/2 IRQ, vsync; F9/F10 crash screens decode with addr2line
 
 ## M5: sound
 
