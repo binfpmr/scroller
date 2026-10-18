@@ -112,7 +112,9 @@ tools/devlink.py reload                  # start the current build without reboo
 tools/devlink.py reboot [--cold]         # warm reboot; with network boot first it loads the current build
 ```
 
-**Hot reload** is the fast loop: `cmake --build --preset uefi && tools/devlink.py reload`. The running game receives
+**Hot reload** is the fast loop: `cmake --build --preset uefi && tools/devlink.py reload`, or **Ctrl+Alt+R** on the
+test PC itself: after a network boot it fetches `scroller.efi` by TFTP from the same server (dnsmasq from
+`scripts/netboot-server.sh` must still run) and reloads it. The running game receives
 the new `scroller.efi`, stops its DMA devices and jumps into it; the new build reinitialises every device. It skips
 the firmware, so changes to the UEFI phase (`efi_main` before ExitBootServices: video mode, memory, network boot
 addresses) need a real reboot, and so does a build whose `BootInfo` changed (the game refuses it, the tool reboots
