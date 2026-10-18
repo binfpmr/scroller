@@ -15,8 +15,8 @@ A small 2D platformer that boots directly on x86_64 hardware via UEFI. No OS, no
 | Calling convention | Our code uses the System V ABI; UEFI functions and `efi_main`'s firmware entry use the Microsoft x64 ABI (`EFIAPI` = `__attribute__((ms_abi))`; `crt0.S` bridges the entry) | Standard approach for GCC on ELF. |
 | Languages | Freestanding C++23 for almost everything, C23 where it fits (self-contained low-level pieces), GNU `as` for what needs assembly (entry/relocation, ISR stubs, descriptor loads). AT&T syntax everywhere, including inline asm | One main language keeps it simple. |
 | UEFI headers | Our own minimal definitions (`src/uefi/`), only what we use | A few hundred lines; no external dependency. |
-| Timing | Fixed 60 Hz game step; TSC calibrated against UEFI `Stall()` before exit; no interrupts needed in v1 | Simplest thing that works; interrupts come with sound. |
-| Input (v1) | Poll the i8042 PS/2 controller (scan code set 1/2 make/break codes) | QEMU's default keyboard; most laptop built-in keyboards are also PS/2 behind the EC. USB (xHCI + HID boot keyboard) is a later milestone. |
+| Timing | Fixed 60 Hz game step on the TSC (calibrated against UEFI `Stall()` before exit); a 1 kHz local APIC timer interrupt wakes the main loop from `hlt` | The TSC keeps the game deterministic; the timer saves power and will drive sound. |
+| Input | i8042 PS/2 keyboard (scan code set 1) on IRQ 1 through the IOAPIC, bytes queued by the handler; falls back to polling if a byte waits 50 ms without an interrupt | QEMU's default keyboard; most laptop built-in keyboards are also PS/2 behind the EC. USB (xHCI + HID boot keyboard) is a later milestone. |
 | Input fallback | Build option `SCROLLER_UEFI_INPUT` (preset `uefi-input`): stay in boot services, read `ConIn`, treat a key as held for 550 ms after its first event and 150 ms after each typematic repeat | Lets us try real USB-only hardware before the xHCI driver exists. Input feel is worse; debug aid only. |
 | Assets | Plain text (levels one character per tile, sprites as text art with a palette; `docs/ASSETS.md`), packed into one file `\\scroller\\assets.pak` on the ESP, read with the UEFI Simple File System protocol before `ExitBootServices` and parsed at boot by the same code the host tests run | Diff-friendly, editable in any editor, no binary format to keep in sync, no disk driver needed for v1. |
 | Controls | Left/Right move, Up or Space jump, Down ducks, Esc reboots; F1 shows/hides the performance overlay | |
@@ -35,9 +35,11 @@ OVMF / firmware
        - allocate one big memory arena (AllocatePages)
        - calibrate TSC with Stall()
        - GetMemoryMap + ExitBootServices
-  -> kernel_main(BootInfo&)             [platform/]  we own the machine
-       - (later) own GDT/IDT, exception handlers, timer, sound, USB, disk
-       - main loop: poll input -> game.update() at fixed 60 Hz -> game.render() -> present()
+  -> RunGame(BootInfo&)                 [platform/game_loop]  we own the machine
+       - write-combining framebuffer, own GDT/TSS/IDT with crash reports (x86::InitInterrupts, platform/panic)
+       - ACPI MADT -> PICs masked, local APIC + 1 kHz timer, IOAPIC (platform/interrupt_controllers)
+       - keyboard on IRQ 1, vsync source, asset pack, game
+       - main loop: input -> game.Update() at fixed 60 Hz -> Render() -> wait for vsync (polling input) -> Present()
 ```
 
 `BootInfo` is the only thing passed across the boundary: framebuffer description, loaded asset blobs, arena, TSC frequency, runtime services pointer. Nothing after `ExitBootServices` may call into UEFI boot services; the only runtime service we use is `ResetSystem`.
@@ -72,6 +74,19 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 - Player (`game/player.*`): 12x14 hitbox, AABB collision against solid tiles resolved one axis at a time. Speeds stay below one tile per tick, so checking the leading edge's tile row/column after a move is enough (no tunnelling). Run with acceleration/friction, jump with buffering, coyote time and variable height (release early = lower jump), gravity with terminal velocity. Down on the ground ducks (look only); a jump while ducking or up to 10 ticks after is a duck-jump (50% higher). Jumping in the air while touching a side wall (or up to 6 ticks after) is a wall-jump: a full jump from zero horizontal speed, with the input overridden as "jump + away from the wall held" until the top of the arc. All tuning constants are in `PlayerTuning`; changing them changes which platforms are reachable, so re-run `levelcheck` and the tests.
 - Rendering: sky gradient, then only the visible tiles, then the player sprite (frame chosen from its state, `game::PlayerFrame`), into the 320x240 surface.
 - Level design check: `levelcheck` (host tool, `tools/levelcheck/`) searches all resting positions reachable from the start with the real physics and prints the level with reachable spots marked.
+
+## Interrupts
+
+- Our GDT: code 0x08, data 0x10, TSS 0x18 (IST1 stack for double fault, NMI, machine check). IDT: 256 interrupt gates
+  into `arch/x86_64/interrupt_stubs.S` (16-byte stubs), common path saves all registers and SSE state (`fxsave64`)
+  around `interrupt_dispatch()`, so handlers are ordinary C++.
+- Vectors: 0-31 CPU exceptions (crash report, `platform/panic`), 0x20-0x2F masked 8259 PICs (spurious 0x27/0x2F
+  ignored), 0x40 APIC timer, 0x41 keyboard, other vectors 0x30+ acknowledged and counted as unexpected, 0xFF APIC
+  spurious. Handlers for APIC-delivered vectors must call `lapic::EndOfInterrupt()`.
+- Local APIC in whatever mode the firmware left: xAPIC (MMIO) or x2APIC (MSRs). IOAPIC inputs stay masked until a
+  driver routes one with `platform::RouteIsaIrq` (MADT overrides applied).
+- Crash reports: name, error code, CR2, registers, call chain as image offsets (frame pointers kept), version; the
+  log line `decode: addr2line ...` resolves them against `build/uefi/scroller.elf`. Debug builds: F9 = #UD, F10 = #PF.
 
 ## Freestanding C++ rules
 

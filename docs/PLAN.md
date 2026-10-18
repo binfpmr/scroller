@@ -45,9 +45,11 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## M4: interrupts and diagnostics
 
-- [ ] Own GDT and IDT, GNU as ISR stubs
-- [ ] Exception handler that dumps registers to the log and screen
-- [ ] Interrupt controller (APIC/IOAPIC via ACPI MADT) and a timer (HPET or LAPIC)
+- [x] Own GDT and IDT, GNU as ISR stubs
+- [x] Exception handler that dumps registers to the log and screen (with call chain, addr2line hint)
+- [x] Interrupt controller (APIC/IOAPIC via ACPI MADT) and a timer (LAPIC, 1 kHz)
+- [x] Interrupt-driven PS/2 keyboard with polling fallback; idle with `hlt`
+- [ ] Real hardware check: F1 shows TIMER ~1000 HZ and KBD PS/2 IRQ on the HP Pavilion
 
 ## M5: sound
 

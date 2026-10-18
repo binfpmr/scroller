@@ -65,6 +65,17 @@ scripts/run-qemu.sh --debug &          # wait for "qemu: waiting for gdb"
 gdb -x tools/gdb/gdbinit               # connects, loads symbols, releases efi_main; then e.g. `break DrawTestPattern`, `continue`
 ```
 
+## Crash reports
+
+A CPU exception shows a blue screen with the registers and the call chain (also in `debugcon.log`). Decode it:
+
+```sh
+addr2line -f -C -e build/uefi/scroller.elf 0x4daa 0x312c 0x1055   # RIP offset, then the CALLED FROM offsets
+```
+
+The log prints this command ready to copy (`decode: ...`). Use the `scroller.elf` of the same version (shown on the
+crash screen). In Debug builds F9 and F10 crash on purpose to try it.
+
 ## Write to a USB stick / disk
 
 **Double-check the device name; `dd` will overwrite whatever you point it at.**
