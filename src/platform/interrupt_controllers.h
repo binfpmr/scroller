@@ -11,6 +11,7 @@
 namespace platform {
 
 inline constexpr uint8_t kTimerVector = 0x40;
+inline constexpr uint8_t kKeyboardVector = 0x41;
 inline constexpr uint32_t kTimerHz = 1000;
 
 // Requires x86::InitInterrupts. Enables interrupts at the end. False (interrupts left off) if there is no local APIC.
@@ -27,5 +28,6 @@ uint64_t UnexpectedInterrupts();
 // Routes an ISA IRQ (applying the MADT override) to `vector` and installs `handler`, which must call
 // lapic::EndOfInterrupt(). False if no IOAPIC covers it.
 bool RouteIsaIrq(uint8_t irq, uint8_t vector, x86::InterruptHandler handler);
+void MaskIsaIrq(uint8_t irq);
 
 }  // namespace platform

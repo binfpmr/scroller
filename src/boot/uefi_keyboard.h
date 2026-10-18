@@ -14,6 +14,7 @@ class UefiKeyboard final : public platform::KeyboardSource {
  public:
   UefiKeyboard(EFI_SIMPLE_TEXT_INPUT_PROTOCOL* input, uint64_t tsc_hz);
   void Poll(platform::InputTracker& tracker) override;
+  const char* mode() const override { return "UEFI"; }
 
  private:
   static constexpr int kKeys = static_cast<int>(platform::Key::kCount);

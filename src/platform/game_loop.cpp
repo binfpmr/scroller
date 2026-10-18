@@ -147,6 +147,10 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   const bool interrupts =
       boot.owns_machine && SetUpInterruptControllers(have_madt ? &madt : nullptr, arena, boot.tsc_hz);
   Log("interrupts: %s\n", interrupts ? "on" : "off");
+  if (interrupts) {
+    keyboard.StartInterrupts(kKeyboardVector, boot.tsc_hz);
+  }
+  Log("keyboard: %s\n", keyboard.mode());
   Log("viewport: scale %d at %d,%d\n", viewport.scale, viewport.x, viewport.y);
 
   const char* error = nullptr;
@@ -257,7 +261,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     present_cycles += present_end - present_start;
     ++frames;
     stats.AddFrame(render_end - render_start, present_start - render_end, present_end - present_start);
-    stats.Update(present_end, write_combining ? "ON" : "OFF", TimerTicks(), UnexpectedInterrupts());
+    stats.Update(present_end, write_combining ? "ON" : "OFF", TimerTicks(), UnexpectedInterrupts(), keyboard.mode());
   }
 }
 

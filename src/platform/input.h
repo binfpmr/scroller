@@ -47,6 +47,11 @@ class InputTracker {
 class KeyboardSource {
  public:
   virtual void Poll(InputTracker& tracker) = 0;
+  // Called once interrupt controllers are running; a source that can, switches to interrupt-driven input on
+  // `vector`. Returns true if it did.
+  virtual bool StartInterrupts(uint8_t /*vector*/, uint64_t /*tsc_hz*/) { return false; }
+  // Short description for the stats overlay, e.g. "PS/2 IRQ".
+  virtual const char* mode() const = 0;
 
  protected:
   ~KeyboardSource() = default;

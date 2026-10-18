@@ -17,7 +17,7 @@ class StatsOverlay {
   void AddFrame(uint64_t render_cycles, uint64_t wait_cycles, uint64_t present_cycles);
   // Recomputes the text once per second; `wc` is "ON" or "OFF" (framebuffer write-combining); `timer_ticks` and
   // `unexpected_irqs` are running interrupt counts.
-  void Update(uint64_t now, const char* wc, uint64_t timer_ticks, uint64_t unexpected_irqs);
+  void Update(uint64_t now, const char* wc, uint64_t timer_ticks, uint64_t unexpected_irqs, const char* keyboard);
   void Draw(gfx::Surface& screen) const;
   // Fixed lines shown under the numbers (hardware description), copied.
   void SetInfo(const char* info);

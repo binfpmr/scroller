@@ -79,4 +79,17 @@ bool RouteIsaIrq(uint8_t irq, uint8_t vector, x86::InterruptHandler handler) {
   return false;
 }
 
+void MaskIsaIrq(uint8_t irq) {
+  if (g_madt == nullptr) {
+    return;
+  }
+  uint16_t flags = 0;
+  const uint32_t gsi = g_madt->GsiForIsaIrq(irq, &flags);
+  for (int i = 0; i < g_io_apic_count; ++i) {
+    if (g_io_apics[i].Handles(gsi)) {
+      g_io_apics[i].Mask(gsi);
+    }
+  }
+}
+
 }  // namespace platform
