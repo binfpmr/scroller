@@ -59,8 +59,8 @@ All listed frames must exist; a missing one is reported at boot (and by the test
 ## Music and sound effects (`assets/music/*.txt`, `assets/sounds/*.txt`)
 
 A small tracker format, one row per line, one column per channel. Every level has its own tune (`kLevelMusic` in
-`src/platform/sound.cpp`: Minuet in G, Ode to Joy, Eine kleine Nachtmusik, Pachelbel's Canon, Für Elise, then over
-again), played in a loop; the game also plays the effects in `sounds/` (jump, land, wall-jump, duck, checkpoint,
+`src/platform/sound.cpp`: Minuet in G, Jesu Joy of Man's Desiring (BWV 147), Eine kleine Nachtmusik, Pachelbel's
+Canon, Prelude in C (BWV 846), Toccata in D minor (BWV 565), then over again), played in a loop; the game also plays the effects in `sounds/` (jump, land, wall-jump, duck, checkpoint,
 fall, hit, goal) on two extra voices above the music.
 
 ```

@@ -1,0 +1,63 @@
+# Jesu, Joy of Man's Desiring: Bach, cantata "Herz und Mund und Tat und Leben", BWV 147, chorale "Jesus bleibet meine
+# Freude": the opening of the triplet ritornello, closing on G. Transcribed from memory. 9/8, one row per eighth.
+
+tempo 72
+rows_per_beat 3
+loop yes
+
+instrument lead square duty 50 attack 4 decay 160 sustain 45 release 90 volume 45
+instrument bass triangle attack 3 decay 200 sustain 70 release 80 volume 80
+instrument kick noise attack 1 decay 70 sustain 0 volume 45 note C-3
+instrument hat noise attack 1 decay 25 sustain 0 volume 20 note C-7
+
+channels lead bass kick hat
+# bar 1
+G-4 G-2 x .
+A-4 ... . .
+B-4 ... . .
+D-5 B-2 . x
+C-5 ... . .
+C-5 ... . .
+E-5 C-3 . x
+D-5 ... . .
+D-5 ... . .
+# bar 2
+G-5 B-2 x .
+F#5 ... . .
+G-5 ... . .
+D-5 G-2 . x
+B-4 ... . .
+G-4 ... . .
+A-4 F#2 . x
+B-4 ... . .
+C-5 ... . .
+# bar 3
+D-5 G-2 x .
+E-5 ... . .
+D-5 ... . .
+C-5 A-2 . x
+B-4 ... . .
+A-4 ... . .
+B-4 G-2 . x
+G-4 ... . .
+A-4 ... . .
+# bar 4
+F#4 D-3 x .
+G-4 ... . .
+A-4 ... . .
+D-4 D-3 . x
+F#4 ... . .
+A-4 ... . .
+C-5 D-3 . x
+B-4 ... . .
+A-4 ... . .
+# bar 5
+G-4 G-2 x .
+... ... . .
+... ... . .
+... ... . x
+... ... . .
+... ... . .
+--- --- . x
+... ... . .
+... ... . .

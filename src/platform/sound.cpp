@@ -22,9 +22,9 @@ constexpr uint32_t kSb16Rate = 44100;
 constexpr uint32_t kHalfFrames = 1024;  // 23 ms at 44.1 kHz
 
 audio::Engine g_engine;
-// One tune per level, in this order (level 6 starts over with the first).
-constexpr const char* kLevelMusic[] = {"music/minuet.txt", "music/ode_to_joy.txt", "music/eine_kleine.txt",
-                                       "music/canon.txt", "music/fur_elise.txt"};
+// One tune per level, in this order (after the last one, the next level starts over with the first).
+constexpr const char* kLevelMusic[] = {"music/minuet.txt", "music/jesu_joy.txt",  "music/eine_kleine.txt",
+                                       "music/canon.txt",  "music/prelude_c.txt", "music/toccata.txt"};
 constexpr int kTunes = sizeof(kLevelMusic) / sizeof(kLevelMusic[0]);
 audio::Song g_music[kTunes];
 bool g_have_music[kTunes] = {};

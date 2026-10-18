@@ -130,7 +130,7 @@ Decided: pure "reach the goal", placeholder text-art style, no title screen.
       working (enemies only make it harder, so reachability stays a check on the geometry)
 - [x] Parallax background: clouds, hills, bushes in layers scrolling slower than the level
 - [x] A different tune per level: short chiptune transcriptions of public-domain Baroque/Classical pieces (Minuet in
-      G, Ode to Joy, Eine kleine Nachtmusik, Canon in D, Für Elise)
+      G, Jesu Joy of Man's Desiring, Eine kleine Nachtmusik, Canon in D, Prelude in C, Toccata in D minor)
 - [x] More levels: long (3), tall (4), long and tall (5); checkpoints and enemies in levels 2-5 (level 1, the
       beginner level, has none so far)
 
