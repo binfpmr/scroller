@@ -75,7 +75,8 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] GDB stub over the debug link + `tools/devlink.py gdb` bridge (TCP on localhost:2345 for gdb / VS Code):
       breakpoints, single steps, registers, memory, Ctrl+C, crashes stop in gdb, kill = reboot (verified in QEMU)
 - [x] GDB on the HP Pavilion (three sessions in a row: breakpoint, variables, next, stepi, detach)
-- [x] Hot reload over the debug link (`tools/devlink.py reload`, ~1.2 s in QEMU); warm reboot by default
+- [x] Hot reload over the debug link (`tools/devlink.py reload`: ~1.2 s in QEMU, ~0.9 s on the HP Pavilion); warm
+      reboot by default (skips the Pavilion's false fan error at a cold start)
 - [ ] Optional: simplified TCP in `net/` (design below), then gdb connects to the game directly
 
 ### Simplified TCP (design, not scheduled)

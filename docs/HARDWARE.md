@@ -9,6 +9,7 @@ Serial numbers and UUIDs are left out on purpose.
 |---|---|---|
 | Model | 15-cx0xxx, system board ID 8478, built 2019 | |
 | Firmware | Insyde H2O, BIOS F.16 (setup: Esc / F10 at power-on, boot menu F9) | Secure Boot off; PXE IPv4 boot works |
+| Fan check | a cold start stops at "System Fan (90B)" until Enter is pressed (false alarm, both fans run); a warm reset skips it (back in ~33 s), a hot reload skips the firmware entirely (~0.9 s) | reboots are warm by default |
 | Setup options | Virtualization Technology enabled, Action Keys Mode enabled, USB Charging enabled; no USB legacy or VT-d options shown | |
 | CPU | Intel Core i5-8300H (Coffee Lake-H, 4 cores / 8 threads), 2.3 GHz, turbo ~3.9 GHz | TSC 2304 MHz, invariant |
 | Memory | 16 GB | arena of 32 MiB at ~0x6078_9000 |
