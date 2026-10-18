@@ -208,6 +208,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   InputPoller input(keyboard, tracker, boot.tsc_hz);
   uint64_t next_tick = x86::Rdtsc();
   uint64_t ticks = 0;
+  uint64_t volume_shown_until = 0;
   uint64_t frames = 0;
   uint64_t present_cycles = 0;
   Log("boot ok: game running\n");
@@ -231,6 +232,15 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       }
       if (input.Pressed(Key::kToggleStats)) {
         stats.visible = !stats.visible;
+      }
+      if (input.Pressed(Key::kVolumeUp) || input.Pressed(Key::kVolumeDown) || input.Pressed(Key::kVolumeMute)) {
+        if (input.Pressed(Key::kVolumeMute)) {
+          SetMuted(!Muted());
+        } else {
+          SetMuted(false);
+          SetVolume(Volume() + (input.Pressed(Key::kVolumeUp) ? 10 : -10));
+        }
+        volume_shown_until = ticks + 90;  // 1.5 s
       }
 #if SCROLLER_DEBUG_KEYS
       if (input.Pressed(Key::kDebugCrashOpcode)) {
@@ -260,6 +270,13 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     const uint64_t render_start = x86::Rdtsc();
     game.Render(screen);
     stats.Draw(screen);
+    if (ticks < volume_shown_until) {
+      char text[24];
+      lib::Format(text, sizeof(text), Muted() ? "VOLUME: MUTED" : "VOLUME %d%%", Volume());
+      const int w = gfx::TextWidth(text) + 8;
+      gfx::FillRect(screen, (screen.width - w) / 2, 8, w, gfx::kLineHeight + 4, gfx::Rgb(20, 20, 40));
+      gfx::DrawText(screen, (screen.width - w) / 2 + 4, 10, text, gfx::Rgb(255, 255, 255));
+    }
     const uint64_t render_end = x86::Rdtsc();
     vsync.WaitForFrameStart(&InputPoller::Callback, &input);
     const uint64_t present_start = x86::Rdtsc();
@@ -273,7 +290,8 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
                                .unexpected_irqs = UnexpectedInterrupts(),
                                .keyboard = keyboard.mode(),
                                .sound = SoundStatus(),
-                               .sound_irqs = SoundInterrupts()});
+                               .sound_irqs = SoundInterrupts(),
+                               .last_key = keyboard.last_code()});
   }
 }
 

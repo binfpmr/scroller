@@ -15,6 +15,7 @@ class Keyboard final : public platform::KeyboardSource {
   void Poll(platform::InputTracker& tracker) override;
   bool StartInterrupts(uint8_t vector, uint64_t tsc_hz) override;
   const char* mode() const override;
+  uint16_t last_code() const override { return last_code_; }
 
  private:
   void Decode(uint8_t byte, platform::InputTracker& tracker);
@@ -23,6 +24,7 @@ class Keyboard final : public platform::KeyboardSource {
   Decoder decoder_;
   bool present_ = false;
   bool interrupts_ = false;
+  uint16_t last_code_ = 0;
   uint64_t tsc_hz_ = 0;
   uint64_t byte_waiting_since_ = 0;  // TSC when a byte was first seen in the controller without an interrupt
 };

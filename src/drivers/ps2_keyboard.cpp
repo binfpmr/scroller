@@ -106,7 +106,13 @@ bool Keyboard::Init() {
 void Keyboard::Decode(uint8_t byte, platform::InputTracker& tracker) {
   ScanEvent event;
   platform::Key key;
-  if (decoder_.Feed(byte, &event) && MapKey(event.code, &key)) {
+  if (!decoder_.Feed(byte, &event)) {
+    return;
+  }
+  if (event.down) {
+    last_code_ = event.code;
+  }
+  if (MapKey(event.code, &key)) {
     tracker.OnKey(key, event.down);
   }
 }

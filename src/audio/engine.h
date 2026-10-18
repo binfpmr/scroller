@@ -27,6 +27,12 @@ class Engine {
 
   bool music_playing() const { return music_.song != nullptr; }
 
+  // Volumes in percent (0..100). Music is relative to the effects; master scales everything.
+  void SetMusicVolume(int percent) { music_volume_ = percent < 0 ? 0 : percent > 100 ? 100 : percent; }
+  void SetMasterVolume(int percent) { master_volume_ = percent < 0 ? 0 : percent > 100 ? 100 : percent; }
+  int music_volume() const { return music_volume_; }
+  int master_volume() const { return master_volume_; }
+
  private:
   struct Track {
     const Song* song = nullptr;
@@ -48,6 +54,8 @@ class Engine {
   Track music_;
   Track sounds_[kSoundSlots];
   uint32_t sound_counter_ = 0;
+  int music_volume_ = 100;
+  int master_volume_ = 100;
 };
 
 }  // namespace audio

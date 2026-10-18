@@ -57,7 +57,8 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] Minuet in G (BWV Anh. 114) as background music; jump, land, wall-jump and goal effects
 - [x] Sound Blaster 16 in QEMU (`--sound sb16`): ISA DMA auto-init, IRQ per half buffer
 - [x] Intel HDA (`--sound hda`, default): CORB/RIRB, codec path search, timer-driven refill; verified in QEMU
-- [ ] Real hardware check: sound from the HP Pavilion's speakers / headphones
+- [x] Real hardware check: sound from the HP Pavilion's speakers and headphones (Realtek ALC295)
+- [x] Music at 50 % of the effects; master volume (starts at 50 %) with on-screen indicator
 
 ## M6: USB keyboard
 
@@ -82,7 +83,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## Settled
 
-- Controls: Left/Right move, Up or Space jump, Down ducks, Esc reboots.
+- Controls: Left/Right move, Up or Space jump, Down ducks, Esc reboots, media keys or `=`/`-`/`M` for volume.
 - Art: placeholder sprites drawn as text art in the repo.
 - Levels: plain text, one character per tile; no level editor for now.
 - Toolchain: host GCC with freestanding flags (no cross GCC for now) + GNU as/binutils, clang optional; no NASM. AT&T syntax.

@@ -91,16 +91,18 @@ void Engine::Render(int16_t* out, size_t frames) {
     for (Track& t : sounds_) {
       Advance(t);
     }
-    int32_t mix = 0;
+    int32_t music = 0;
     for (Voice& v : music_voices_) {
-      mix += v.Next();
+      music += v.Next();
     }
+    int32_t effects = 0;
     for (auto& slot : sound_voices_) {
       for (Voice& v : slot) {
-        mix += v.Next();
+        effects += v.Next();
       }
     }
-    mix /= 2;  // headroom: several full-volume voices would clip
+    int32_t mix = music * music_volume_ / 100 + effects;
+    mix = mix * master_volume_ / 200;  // and /2 headroom: several full-volume voices would clip
     out[i] = static_cast<int16_t>(mix > 32767 ? 32767 : mix < -32768 ? -32768 : mix);
   }
 }

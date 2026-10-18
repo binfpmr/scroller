@@ -18,6 +18,12 @@ bool InitSound(const BootInfo& boot, const lib::Pack& pack, lib::Arena& arena);
 void PlaySoundEvents(uint8_t events);
 
 // For the stats overlay, e.g. "SB16 44100 HZ IRQ 5 DMA 5" or "NONE".
+// Master volume in percent (0..100; starts at 50). Muting keeps the volume to restore.
+void SetVolume(int percent);
+int Volume();
+void SetMuted(bool muted);
+bool Muted();
+
 const char* SoundStatus();
 uint64_t SoundInterrupts();
 

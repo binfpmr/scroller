@@ -64,7 +64,7 @@ void StatsOverlay::Update(uint64_t now, const LiveStats& live) {
               "FPS %llu.%llu  RENDER %llu.%02llu  WAIT %llu.%02llu  PRESENT %llu.%02llu MS\n"
               "CPU %s MHZ  TSC %llu MHZ  WC %s  VER %s\n"
               "TIMER IRQ %llu HZ  OTHER IRQS %llu  KBD %s\n"
-              "SOUND %s  %llu IRQ/S",
+              "SOUND %s  %llu IRQ/S  KEY %X",
               static_cast<unsigned long long>(fps10 / 10), static_cast<unsigned long long>(fps10 % 10),
               static_cast<unsigned long long>(render / 100), static_cast<unsigned long long>(render % 100),
               static_cast<unsigned long long>(wait / 100), static_cast<unsigned long long>(wait % 100),
@@ -72,7 +72,7 @@ void StatsOverlay::Update(uint64_t now, const LiveStats& live) {
               static_cast<unsigned long long>(tsc_mhz), live.write_combining, kScrollerVersion,
               static_cast<unsigned long long>((live.timer_ticks - last_timer_ticks_) * tsc_hz_ / elapsed),
               static_cast<unsigned long long>(live.unexpected_irqs), live.keyboard, live.sound,
-              static_cast<unsigned long long>((live.sound_irqs - last_sound_irqs_) * tsc_hz_ / elapsed));
+              static_cast<unsigned long long>((live.sound_irqs - last_sound_irqs_) * tsc_hz_ / elapsed), live.last_key);
   last_timer_ticks_ = live.timer_ticks;
   last_sound_irqs_ = live.sound_irqs;
   if (updates_++ % 5 == 0) {

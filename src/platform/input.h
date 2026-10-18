@@ -15,6 +15,9 @@ enum class Key : uint8_t {
   kToggleStats,          // F1: performance overlay
   kDebugCrashOpcode,     // F9 (Debug builds): invalid opcode, to test crash reports
   kDebugCrashPageFault,  // F10 (Debug builds): page fault
+  kVolumeUp,             // volume-up media key, '=' / '+'
+  kVolumeDown,           // volume-down media key, '-'
+  kVolumeMute,           // mute media key, 'M'
   kCount,
 };
 
@@ -52,6 +55,8 @@ class KeyboardSource {
   virtual bool StartInterrupts(uint8_t /*vector*/, uint64_t /*tsc_hz*/) { return false; }
   // Short description for the stats overlay, e.g. "PS/2 IRQ".
   virtual const char* mode() const = 0;
+  // Last raw key code seen (for finding out what unusual keys send); 0 if unknown.
+  virtual uint16_t last_code() const { return 0; }
 
  protected:
   ~KeyboardSource() = default;

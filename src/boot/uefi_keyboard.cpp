@@ -29,9 +29,23 @@ bool MapKey(const EFI_INPUT_KEY& key, platform::Key* out) {
     default:
       break;
   }
-  if (key.UnicodeChar == u' ') {
-    *out = Key::kJump;
-    return true;
+  switch (key.UnicodeChar) {
+    case u' ':
+      *out = Key::kJump;
+      return true;
+    case u'=':
+    case u'+':
+      *out = Key::kVolumeUp;
+      return true;
+    case u'-':
+      *out = Key::kVolumeDown;
+      return true;
+    case u'm':
+    case u'M':
+      *out = Key::kVolumeMute;
+      return true;
+    default:
+      break;
   }
   return false;
 }

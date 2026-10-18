@@ -17,6 +17,7 @@ struct LiveStats {
   const char* keyboard = "";
   const char* sound = "NONE";
   uint64_t sound_irqs = 0;
+  uint16_t last_key = 0;
 };
 
 class StatsOverlay {
@@ -46,7 +47,7 @@ class StatsOverlay {
   int updates_ = 0;
   uint64_t last_timer_ticks_ = 0;
   uint64_t last_sound_irqs_ = 0;
-  char text_[192] = "";
+  char text_[320] = "";
   char info_[240] = "";
 };
 

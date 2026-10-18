@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -146,4 +147,26 @@ TEST(BarLinesAndCommentsAreIgnored) {
   EXPECT_EQ(p.song.cell(0, 1), 52);
   EXPECT_EQ(p.song.cell(1, 0), audio::Song::kContinue);
   EXPECT_EQ(p.song.cell(1, 1), audio::Song::kRelease);
+}
+
+TEST(MusicAndMasterVolume) {
+  Parsed p("tempo 60\nrows_per_beat 1\ninstrument sq square attack 1\nchannels sq\nA-4\n.\n");
+  auto rms = [&](int music, int master) {
+    audio::Engine e;
+    e.Init(kRate);
+    e.SetMusicVolume(music);
+    e.SetMasterVolume(master);
+    e.PlayMusic(&p.song);
+    const auto s = Render(e, kRate / 4);
+    double sum = 0;
+    for (size_t i = kRate / 20; i < s.size(); ++i) {
+      sum += double(s[i]) * s[i];
+    }
+    return std::sqrt(sum / (s.size() - kRate / 20));
+  };
+  const double full = rms(100, 100);
+  EXPECT_TRUE(full > 1000);
+  EXPECT_TRUE(std::abs(rms(50, 100) / full - 0.5) < 0.02);
+  EXPECT_TRUE(std::abs(rms(100, 30) / full - 0.3) < 0.02);
+  EXPECT_EQ(rms(100, 0), 0.0);
 }

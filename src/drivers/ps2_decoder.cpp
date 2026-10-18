@@ -48,6 +48,18 @@ bool MapKey(uint16_t code, platform::Key* key) {
     case 0x0001:
       *key = Key::kEscape;
       return true;
+    case 0xe030:  // volume up (media key)
+    case 0x000d:  // '=' / '+'
+      *key = Key::kVolumeUp;
+      return true;
+    case 0xe02e:  // volume down
+    case 0x000c:  // '-'
+      *key = Key::kVolumeDown;
+      return true;
+    case 0xe020:  // mute
+    case 0x0032:  // M
+      *key = Key::kVolumeMute;
+      return true;
     case 0x003b:  // F1
       *key = Key::kToggleStats;
       return true;

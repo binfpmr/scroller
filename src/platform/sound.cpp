@@ -30,6 +30,15 @@ audio::Song g_goal;
 bool g_have_effects = false;
 volatile uint64_t g_interrupts = 0;  // buffer refills
 char g_status[48] = "NONE";
+constexpr int kMusicVolume = 50;  // music sits below the effects
+int g_volume = 50;
+bool g_muted = false;
+
+void ApplyVolume() {
+  x86::DisableInterrupts();  // the engine also runs in interrupt handlers
+  g_engine.SetMasterVolume(g_muted ? 0 : g_volume);
+  x86::EnableInterrupts();
+}
 
 // HDA: the timer interrupt keeps the looping buffer kHdaLeadFrames ahead of the play position.
 constexpr uint32_t kHdaLeadFrames = 2048;  // ~43 ms
@@ -83,6 +92,8 @@ bool LoadSong(const lib::Pack& pack, const char* name, lib::Arena& arena, audio:
 }
 
 void LoadSongs(const lib::Pack& pack, lib::Arena& arena) {
+  g_engine.SetMusicVolume(kMusicVolume);
+  g_engine.SetMasterVolume(g_muted ? 0 : g_volume);
   const bool have_music = LoadSong(pack, "music/minuet.txt", arena, &g_music);
   g_have_effects =
       LoadSong(pack, "sounds/jump.txt", arena, &g_jump) && LoadSong(pack, "sounds/land.txt", arena, &g_land) &&
@@ -158,6 +169,17 @@ void PlaySoundEvents(uint8_t events) {
   }
   x86::EnableInterrupts();
 }
+
+void SetVolume(int percent) {
+  g_volume = lib::Clamp(percent, 0, 100);
+  ApplyVolume();
+}
+int Volume() { return g_volume; }
+void SetMuted(bool muted) {
+  g_muted = muted;
+  ApplyVolume();
+}
+bool Muted() { return g_muted; }
 
 const char* SoundStatus() { return g_status; }
 uint64_t SoundInterrupts() { return g_interrupts; }
