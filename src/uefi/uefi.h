@@ -204,6 +204,18 @@ struct EFI_BOOT_SERVICES {
   void* CreateEventEx;
 };
 
+// --- Configuration tables (spec 4.6) ---
+
+struct EFI_CONFIGURATION_TABLE {
+  EFI_GUID VendorGuid;
+  void* VendorTable;
+};
+
+inline constexpr EFI_GUID EFI_ACPI_20_TABLE_GUID = {
+    0x8868e871, 0xe4f1, 0x11d3, {0xbc, 0x22, 0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81}};
+inline constexpr EFI_GUID ACPI_TABLE_GUID = {
+    0xeb9d2d30, 0x2d88, 0x11d3, {0x9a, 0x16, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0x4d}};
+
 // --- System Table (spec 4.3) ---
 
 struct EFI_SYSTEM_TABLE {
@@ -219,7 +231,7 @@ struct EFI_SYSTEM_TABLE {
   EFI_RUNTIME_SERVICES* RuntimeServices;
   EFI_BOOT_SERVICES* BootServices;
   UINTN NumberOfTableEntries;
-  void* ConfigurationTable;
+  EFI_CONFIGURATION_TABLE* ConfigurationTable;
 };
 
 // --- Loaded Image Protocol (spec 9.1) ---

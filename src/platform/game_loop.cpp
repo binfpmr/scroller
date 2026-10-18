@@ -4,6 +4,7 @@
 #include "arch/x86_64/interrupts.h"
 #include "arch/x86_64/io.h"
 #include "arch/x86_64/write_combining.h"
+#include "drivers/acpi.h"
 #include "drivers/debug_log.h"
 #include "drivers/pci.h"
 #include "game/game.h"
@@ -119,6 +120,25 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   const gfx::Viewport viewport = gfx::ComputeViewport(fb.width, fb.height);
   gfx::ClearFramebuffer(fb, gfx::Rgb(0, 0, 0));
   SetPanicContext(&screen, &fb, &viewport, &keyboard, boot.runtime_services);
+
+  acpi::Madt madt;
+  const uint8_t* madt_table = acpi::FindTable(boot.acpi_rsdp, "APIC");
+  const bool have_madt = madt_table != nullptr && acpi::ParseMadt(madt_table, &madt);
+  if (have_madt) {
+    Log("acpi: MADT: %d CPUs, local APIC %llx, %d IOAPIC(s), %d ISA overrides, 8259 %s\n", madt.cpu_count,
+        static_cast<unsigned long long>(madt.local_apic_address), madt.io_apic_count, madt.override_count,
+        madt.has_8259 ? "present" : "absent");
+    for (int i = 0; i < madt.io_apic_count; ++i) {
+      Log("acpi:   IOAPIC id %u at %llx, GSI base %u\n", madt.io_apics[i].id,
+          static_cast<unsigned long long>(madt.io_apics[i].address), madt.io_apics[i].gsi_base);
+    }
+    for (int i = 0; i < madt.override_count; ++i) {
+      Log("acpi:   ISA IRQ %u -> GSI %u flags %x\n", madt.overrides[i].irq, madt.overrides[i].gsi,
+          madt.overrides[i].flags);
+    }
+  } else {
+    Log("acpi: no usable MADT\n");
+  }
   if (boot.owns_machine && !x86::InitInterrupts(arena, &OnException)) {
     Halt("cannot set up interrupt tables");
   }

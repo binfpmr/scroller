@@ -29,6 +29,9 @@ struct BootInfo {
   const void* assets = nullptr;
   size_t assets_size = 0;
 
+  // ACPI root pointer (RSDP) from the UEFI configuration table; null if the firmware has no ACPI tables.
+  const void* acpi_rsdp = nullptr;
+
   // True after ExitBootServices: the game owns the machine (page tables, devices). False in the uefi-input build.
   bool owns_machine = false;
 };

@@ -52,6 +52,33 @@ uint64_t CalibrateTsc(EFI_BOOT_SERVICES* bs) {
   return hz;
 }
 
+bool GuidEquals(const EFI_GUID& a, const EFI_GUID& b) {
+  if (a.Data1 != b.Data1 || a.Data2 != b.Data2 || a.Data3 != b.Data3) {
+    return false;
+  }
+  for (int i = 0; i < 8; ++i) {
+    if (a.Data4[i] != b.Data4[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// ACPI 2.0+ RSDP if present, else the ACPI 1.0 one.
+const void* FindAcpiRsdp(EFI_SYSTEM_TABLE* st) {
+  const void* acpi1 = nullptr;
+  for (UINTN i = 0; i < st->NumberOfTableEntries; ++i) {
+    const EFI_CONFIGURATION_TABLE& t = st->ConfigurationTable[i];
+    if (GuidEquals(t.VendorGuid, EFI_ACPI_20_TABLE_GUID)) {
+      return t.VendorTable;
+    }
+    if (GuidEquals(t.VendorGuid, ACPI_TABLE_GUID)) {
+      acpi1 = t.VendorTable;
+    }
+  }
+  return acpi1;
+}
+
 bool AllocateGameMemory(EFI_BOOT_SERVICES* bs, platform::BootInfo* boot) {
   EFI_PHYSICAL_ADDRESS address = 0;
   const UINTN pages = kGameMemoryBytes / EFI_PAGE_SIZE;
@@ -125,6 +152,8 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
     return EFI_UNSUPPORTED;
   }
   boot.tsc_hz = CalibrateTsc(bs);
+  boot.acpi_rsdp = FindAcpiRsdp(st);
+  Log("acpi: RSDP %p\n", boot.acpi_rsdp);
   void* assets = nullptr;
   if (boot::LoadFile(bs, image, u"\\scroller\\assets.pak", &assets, &boot.assets_size)) {
     boot.assets = assets;
