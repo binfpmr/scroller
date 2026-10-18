@@ -82,8 +82,6 @@ add_executable(scroller
 )
 target_compile_definitions(scroller PRIVATE SCROLLER_UEFI_INPUT=$<BOOL:${SCROLLER_UEFI_INPUT}>)
 add_dependencies(scroller scroller_version)
-# F9/F10 trigger test crashes in Debug builds (exception reporting).
-target_compile_definitions(scroller PRIVATE SCROLLER_DEBUG_KEYS=$<CONFIG:Debug>)
 set_target_properties(scroller PROPERTIES SUFFIX ".elf" LINK_DEPENDS ${SCROLLER_LINKER_SCRIPT})
 target_include_directories(scroller PRIVATE src)
 target_link_options(scroller PRIVATE

@@ -197,7 +197,10 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     char cpu[49];
     x86::CpuBrand(cpu);
     char info[240];
-    lib::Format(info, sizeof(info), "%s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu, has_gpu ? gpu.vendor_id : 0,
+    pci::Device nic;
+    const bool has_nic = pci::FindByClass(0x02, &nic);
+    lib::Format(info, sizeof(info), "%s\nNIC %04x:%04x\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu,
+                has_nic ? nic.vendor_id : 0, has_nic ? nic.device_id : 0, has_gpu ? gpu.vendor_id : 0,
                 has_gpu ? gpu.device_id : 0, gpu.bus, gpu.device, gpu.function, vsync.description(),
                 !vsync.active() && vsync.intel_status()[0] != '\0' ? "\nINTEL " : "",
                 vsync.active() ? "" : vsync.intel_status());
@@ -242,14 +245,6 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
         }
         volume_shown_until = ticks + 90;  // 1.5 s
       }
-#if SCROLLER_DEBUG_KEYS
-      if (input.Pressed(Key::kDebugCrashOpcode)) {
-        asm volatile("ud2");
-      }
-      if (input.Pressed(Key::kDebugCrashPageFault)) {
-        *reinterpret_cast<volatile uint32_t*>(0x7f0000000000ull) = 1;  // not mapped
-      }
-#endif
       game.Update(input);
       PlaySoundEvents(game.TakeEvents());
       next_tick += tick_cycles;

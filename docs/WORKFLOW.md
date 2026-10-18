@@ -78,7 +78,7 @@ addr2line -f -C -e build/uefi/scroller.elf 0x4daa 0x312c 0x1055   # RIP offset, 
 ```
 
 The log prints this command ready to copy (`decode: ...`). Use the `scroller.elf` of the same version (shown on the
-crash screen). In Debug builds F9 and F10 crash on purpose to try it.
+crash screen).
 
 ## Write to a USB stick / disk
 

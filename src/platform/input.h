@@ -12,12 +12,10 @@ enum class Key : uint8_t {
   kDown,
   kJump,  // Space or Up
   kEscape,
-  kToggleStats,          // F1: performance overlay
-  kDebugCrashOpcode,     // F9 (Debug builds): invalid opcode, to test crash reports
-  kDebugCrashPageFault,  // F10 (Debug builds): page fault
-  kVolumeUp,             // volume-up media key, '=' / '+'
-  kVolumeDown,           // volume-down media key, '-'
-  kVolumeMute,           // mute media key, 'M'
+  kToggleStats,  // F1: performance overlay
+  kVolumeUp,     // volume-up media key, '=' / '+'
+  kVolumeDown,   // volume-down media key, '-'
+  kVolumeMute,   // mute media key, 'M'
   kCount,
 };
 

@@ -63,12 +63,6 @@ bool MapKey(uint16_t code, platform::Key* key) {
     case 0x003b:  // F1
       *key = Key::kToggleStats;
       return true;
-    case 0x0043:  // F9
-      *key = Key::kDebugCrashOpcode;
-      return true;
-    case 0x0044:  // F10
-      *key = Key::kDebugCrashPageFault;
-      return true;
     default:
       return false;
   }

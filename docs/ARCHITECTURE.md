@@ -86,7 +86,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 - Local APIC in whatever mode the firmware left: xAPIC (MMIO) or x2APIC (MSRs). IOAPIC inputs stay masked until a
   driver routes one with `platform::RouteIsaIrq` (MADT overrides applied).
 - Crash reports: name, error code, CR2, registers, call chain as image offsets (frame pointers kept), version; the
-  log line `decode: addr2line ...` resolves them against `build/uefi/scroller.elf`. Debug builds: F9 = #UD, F10 = #PF.
+  log line `decode: addr2line ...` resolves them against `build/uefi/scroller.elf`.
 
 ## Sound
 
