@@ -103,17 +103,22 @@ bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level
     return false;
   }
   for (int col = 0; col < width; ++col) {
-    int solid_run = 0;     // solid tiles in a row right above the current one
+    int bottom = height - 1;  // the column's lowest solid tile: the open sky below it is no cave
+    while (bottom >= 0 && !level->IsSolid(col, bottom)) {
+      --bottom;
+    }
+    int solid_run = 0;     // ceiling tiles in a row right above the current one
     bool covered = false;  // somewhere below a ceiling 3+ tiles thick (thin floors below do not end it)
     for (int row = 0; row < height; ++row) {
       const bool solid = level->IsSolid(col, row);
-      if (solid) {
+      // A free-standing pillar (a wall-jump wall, nothing solid left or right of it) is no ceiling.
+      if (solid && (level->IsSolid(col - 1, row) || level->IsSolid(col + 1, row))) {
         ++solid_run;
       } else {
         covered = covered || solid_run >= 3;
         solid_run = 0;
       }
-      cave[row * width + col] = !solid && covered ? 1 : 0;
+      cave[row * width + col] = !solid && covered && row < bottom ? 1 : 0;
     }
   }
   level->cave = cave;

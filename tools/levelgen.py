@@ -372,8 +372,8 @@ def pyramid_level():
         gr.fill(lx, ly, lx + 3, ly, 'X')
     gr.put(g0 + 6, gal_floor - 1, 'C')
     # The Queen's chamber: right from the gallery's foot, a dead end with a jumper.
-    corridor(g1 + 1, g1 + 14, gal_floor)
-    gr.put(g1 + 10, gal_floor - 1, 'j')
+    corridor(g1 + 1, g1 + 13, gal_floor)             # its end stays under 3+ tiles of the stepped face
+    gr.put(g1 + 9, gal_floor - 1, 'j')
     # The King's chamber: left from the gallery's top ledge, with the goal.
     top = ledge_rows[-1] - 1                           # one row above the top ledge
     corridor(g0 - 13, g0 - 1, top, 4)

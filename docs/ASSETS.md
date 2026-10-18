@@ -29,8 +29,9 @@ row): underground (6, 12: from the surface down through tunnels in the rock), sk
 built from legs: runs, climbs, descents, wall-jump shafts, chasms; below them is bottomless), ground (8, 13: hills,
 blocks and bottomless pits), hill climbs (9, 14: steps up a mountain, cliffs climbed in wall-jump chimneys, a
 duck-jump step) and a pyramid labyrinth (10: passages, the Grand Gallery, dead-end chambers, the goal in the King's
-chamber). Empty tiles below a ceiling 3+ tiles thick are drawn dark (caves, the pyramid's inside). Edit the list there and regenerate, or edit a generated file by hand (then it is no
-longer reproducible). Likewise the tunes other than the Minuet come from `tools/songgen.py`.
+chamber). Empty tiles below a ceiling 3+ tiles thick (free-standing 1-tile pillars do not count) and above solid ground
+(not over a bottomless drop) are drawn dark (caves, the pyramid's inside). Edit the list there and regenerate, or edit
+a generated file by hand (then it is no longer reproducible). Likewise the tunes other than the Minuet come from `tools/songgen.py`.
 
 Check a level with the real physics:
 

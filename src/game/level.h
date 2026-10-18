@@ -38,7 +38,8 @@ struct Level {
   EnemySpawn* enemies = nullptr;  // where enemies start (their tiles are empty)
   int enemy_count = 0;
   int ground_rows = 0;      // rows below the ground the player starts on: the background's horizon stands on it
-  uint8_t* cave = nullptr;  // per tile: 1 if empty and somewhere below a ceiling 3+ tiles thick: drawn as a cave
+  uint8_t* cave = nullptr;  // per tile: 1 if empty, somewhere below a ceiling 3+ tiles thick (not a
+                            // 1-tile-wide pillar) and above solid ground: drawn as a cave
 
   bool IsCave(int tx, int ty) const {
     return tx >= 0 && tx < width && ty >= 0 && ty < height && cave[ty * width + tx] != 0;
