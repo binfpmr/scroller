@@ -27,6 +27,7 @@ add_compile_options(
   $<$<COMPILE_LANGUAGE:C,CXX>:-fno-asynchronous-unwind-tables>
   $<$<COMPILE_LANGUAGE:C,CXX>:-fno-unwind-tables>
   $<$<COMPILE_LANGUAGE:C,CXX>:-mno-red-zone>
+  $<$<COMPILE_LANGUAGE:C,CXX>:-fno-omit-frame-pointer>  # backtraces in crash reports
   $<$<COMPILE_LANGUAGE:C,CXX>:-U_FORTIFY_SOURCE>
   $<$<COMPILE_LANGUAGE:C,CXX>:-Wall>
   $<$<COMPILE_LANGUAGE:C,CXX>:-Wextra>
@@ -49,6 +50,8 @@ add_custom_target(scroller_version
 )
 
 add_executable(scroller
+  src/arch/x86_64/interrupt_stubs.S
+  src/arch/x86_64/interrupts.cpp
   src/arch/x86_64/paging.cpp
   src/arch/x86_64/write_combining.cpp
   src/boot/crt0.S
@@ -64,6 +67,7 @@ add_executable(scroller
   src/lib/cxx_support.cpp
   src/lib/mem.c
   src/platform/game_loop.cpp
+  src/platform/panic.cpp
   src/platform/reset.cpp
   src/platform/stats_overlay.cpp
   src/platform/vsync.cpp
@@ -71,6 +75,8 @@ add_executable(scroller
 )
 target_compile_definitions(scroller PRIVATE SCROLLER_UEFI_INPUT=$<BOOL:${SCROLLER_UEFI_INPUT}>)
 add_dependencies(scroller scroller_version)
+# F9/F10 trigger test crashes in Debug builds (exception reporting).
+target_compile_definitions(scroller PRIVATE SCROLLER_DEBUG_KEYS=$<CONFIG:Debug>)
 set_target_properties(scroller PROPERTIES SUFFIX ".elf" LINK_DEPENDS ${SCROLLER_LINKER_SCRIPT})
 target_include_directories(scroller PRIVATE src)
 target_link_options(scroller PRIVATE

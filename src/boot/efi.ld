@@ -43,6 +43,7 @@ SECTIONS
   .reloc : ALIGN(0x1000) {
     KEEP(*(.reloc))
   }
+  __image_end = .;  /* end of what the PE file contains; used to keep crash backtraces inside our code */
 
   /* Required by the static-PIE link, not copied into the PE file. */
   . = ALIGN(0x1000);

@@ -1,6 +1,7 @@
 #include "platform/game_loop.h"
 
 #include "arch/x86_64/cpu.h"
+#include "arch/x86_64/interrupts.h"
 #include "arch/x86_64/io.h"
 #include "arch/x86_64/write_combining.h"
 #include "drivers/debug_log.h"
@@ -13,6 +14,7 @@
 #include "lib/arena.h"
 #include "lib/format.h"
 #include "lib/pack.h"
+#include "platform/panic.h"
 #include "platform/reset.h"
 #include "platform/stats_overlay.h"
 #include "platform/vsync.h"
@@ -116,6 +118,10 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   }
   const gfx::Viewport viewport = gfx::ComputeViewport(fb.width, fb.height);
   gfx::ClearFramebuffer(fb, gfx::Rgb(0, 0, 0));
+  SetPanicContext(&screen, &fb, &viewport, &keyboard, boot.runtime_services);
+  if (boot.owns_machine && !x86::InitInterrupts(arena, &OnException)) {
+    Halt("cannot set up interrupt tables");
+  }
   Log("viewport: scale %d at %d,%d\n", viewport.scale, viewport.x, viewport.y);
 
   const char* error = nullptr;
@@ -187,6 +193,14 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       if (input.Pressed(Key::kToggleStats)) {
         stats.visible = !stats.visible;
       }
+#if SCROLLER_DEBUG_KEYS
+      if (input.Pressed(Key::kDebugCrashOpcode)) {
+        asm volatile("ud2");
+      }
+      if (input.Pressed(Key::kDebugCrashPageFault)) {
+        *reinterpret_cast<volatile uint32_t*>(0x7f0000000000ull) = 1;  // not mapped
+      }
+#endif
       game.Update(input);
       next_tick += tick_cycles;
       ++ticks;

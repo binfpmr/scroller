@@ -12,7 +12,9 @@ enum class Key : uint8_t {
   kDown,
   kJump,  // Space or Up
   kEscape,
-  kToggleStats,  // F1: performance overlay
+  kToggleStats,          // F1: performance overlay
+  kDebugCrashOpcode,     // F9 (Debug builds): invalid opcode, to test crash reports
+  kDebugCrashPageFault,  // F10 (Debug builds): page fault
   kCount,
 };
 
