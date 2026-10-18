@@ -14,6 +14,7 @@ ctest --preset host -R <regex>                           # single test
 scripts/smoke-test.sh [--keys "right:2 shot:x esc ..."]     # headless QEMU boot + key script; read debugcon.log and the PNGs
 scripts/run-qemu.sh [--debug] [--netboot]                # interactive run (user's display), gdb stub with --debug
 tools/devlink.py info|log|shot F.png|keys "..."|reboot   # debug link to the running game (QEMU: localhost; hardware: SCROLLER_TARGET=ip)
+tools/devlink.py gdb   # gdb server on :2345 -> game's stub; gdb -batch -ex 'source tools/gdb/scroller.py' -ex 'target remote :2345' -ex scroller-net-attach ...
 build/host/render_audio <song.txt> <out.wav>             # render a song with the game's synth (to listen/analyse)
 build/host/levelcheck <level.txt>                        # which spots of a level the player can reach (after host build)
 clang-format -i <files>                                  # Google style, 120 columns (.clang-format)
@@ -27,6 +28,8 @@ gdb -batch -x tools/gdb/gdbinit -ex 'break SomeFunction' -ex continue -ex bt -ex
 ```
 
 The debug log (`build/uefi/debugcon.log`) is the main diagnostic; `Log()` writes to it. Screenshots (`smoke.png`) can be viewed directly.
+
+Killing background tools: the pattern must not match the shell running pkill, e.g. `pkill -f 'tools/devlink.py g[d]b'`.
 
 ## Rules that are easy to get wrong
 

@@ -111,6 +111,19 @@ tools/devlink.py poke 0x... 90 90
 tools/devlink.py reboot                  # with network boot first: loads the current build
 ```
 
+**gdb over the network** (real hardware, or QEMU without `--debug`): `tools/devlink.py gdb` is a gdb server on
+localhost:2345 that passes the packets to the game's own stub over the debug link. Connecting stops the game.
+
+```sh
+tools/devlink.py gdb &                                   # uses SCROLLER_TARGET like the other commands
+gdb -ex 'source tools/gdb/scroller.py' -ex 'target remote :2345' -ex scroller-net-attach
+```
+
+`scroller-net-attach` loads `build/uefi/scroller.elf` at the running image's base (and warns if the game runs another
+build). Breakpoints, stepping, Ctrl+C, registers and memory work; a crash stops in gdb; `kill` reboots. While stopped,
+interrupts are off and the sound is silent. No breakpoints in the network code (the stub needs it). VS Code: launch
+configuration "Debug on test PC (network)" (asks for the address; 127.0.0.1 for a QEMU run).
+
 It keeps working on the crash screen, so a crash report can be read with `log --all`. The loop on real hardware:
 rebuild, `tools/devlink.py reboot`, `tools/devlink.py log` / `shot`. In QEMU the port is forwarded from localhost
 (any `tools/qemu.py` run), so the same commands work without `SCROLLER_TARGET`. No authentication: use it on a

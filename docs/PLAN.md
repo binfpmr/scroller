@@ -72,7 +72,33 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] UDP debug protocol + `tools/devlink.py`: log stream, screenshots, key injection, reboot (= load the new build),
       memory peek/poke (verified in QEMU)
 - [x] Debug link on the HP Pavilion: ping, log stream, screenshots, keys, remote reboot into the new build (~30 s)
-- [ ] Optional: GDB remote stub over UDP (`target remote udp:...`)
+- [x] GDB stub over the debug link + `tools/devlink.py gdb` bridge (TCP on localhost:2345 for gdb / VS Code):
+      breakpoints, single steps, registers, memory, Ctrl+C, crashes stop in gdb, kill = reboot (verified in QEMU)
+- [ ] GDB on the HP Pavilion (needs the new build there)
+- [ ] Optional: simplified TCP in `net/` (design below), then gdb connects to the game directly
+
+### Simplified TCP (design, not scheduled)
+
+Goal: gdb (`target remote <ip>:2345`) and maybe a text console without the PC-side bridge. Server side only, one
+connection at a time, LAN only, so most of TCP's machinery can go:
+
+- States: LISTEN -> SYN_RCVD -> ESTABLISHED -> CLOSE_WAIT -> LAST_ACK -> CLOSED, plus FIN_WAIT_1/2 for a close from
+  our side; no TIME_WAIT (the peer actively closes), no simultaneous open. Anything unexpected gets a RST.
+- Receive: in-order segments only (seq == rcv_nxt); anything else is dropped and re-ACKed, the peer retransmits.
+  Fixed receive ring (4 KiB), the window advertised is its free space. ACK every segment at once (no delayed ACK).
+- Send: unacknowledged bytes stay in a send ring (8 KiB) until ACKed; up to 4 segments in flight within the peer's
+  window, no Nagle, no congestion control (a LAN). Retransmit from the oldest unacked byte after 200 ms, doubling up
+  to 3 s; give up after 10 tries (RST, back to LISTEN).
+- Options: send MSS 1460 in the SYN-ACK and respect the peer's MSS; ignore window scale, SACK and timestamps (they
+  are only used when both SYNs carry them, so not echoing them switches them off). Initial sequence number from the TSC.
+- Same polling model as UDP: `Stack::Tick` runs the retransmit timer; works while stopped in the debugger because the
+  stub keeps polling the network.
+- API: `stack.Listen(port, callbacks)`; callbacks for connect, received bytes and close; `TcpSend` returns how many
+  bytes fit in the send ring.
+- Tests: host tests with two stacks and with captured Linux segments (handshake, loss and retransmission, window
+  full, FIN from either side, RST); then QEMU (`hostfwd=tcp`) against real gdb and `nc`.
+- Size: roughly 500 lines plus tests. The gdb stub stays as it is: only its transport changes (bytes over TCP with
+  the usual `$...#cs` framing and acks, instead of whole packets over the debug link).
 
 ## M7: USB keyboard
 

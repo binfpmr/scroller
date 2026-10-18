@@ -115,6 +115,12 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
   (`BootInfo.netboot`), else DHCP. `platform/devlink` is the UDP debug protocol for `tools/devlink.py` (header comment
   in `devlink.h`); it reads the log from the history ring in `drivers/debug_log` (last 32 KiB). The main loop, the
   start-up error screen and the crash screen all poll the network.
+- `platform/gdb_stub`: gdb remote protocol over three debug-link commands (packet, wait for stop, interrupt); the
+  PC-side `tools/devlink.py gdb` turns them into gdb's usual TCP port. The machine stops inside the exception
+  handler (int3 breakpoints written into the code with CR0.WP cleared, trap flag for single steps, an int3 from the
+  main loop for Ctrl+C, any CPU exception while gdb is attached) and polls the network there until gdb resumes; the
+  frame's registers are what gdb reads and writes, and returning from the handler resumes. A design for a small TCP
+  (so gdb could connect directly) is in `docs/PLAN.md`.
 
 ## Freestanding C++ rules
 
