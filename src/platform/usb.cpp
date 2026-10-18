@@ -104,6 +104,8 @@ void InitUsb(const BootInfo& boot, lib::Arena& arena) {
     Log("usb: no usable xHCI controller\n");
     return;
   }
+  const int connected = g_xhci.WaitForPorts(1000);
+  Log("usb: %d of %d ports connected\n", connected, g_xhci.port_count());
   for (int port = 1; port <= g_xhci.port_count() && g_device_count < kMaxDevices; ++port) {
     if (!g_xhci.Port(port).connected) {
       continue;
@@ -119,8 +121,7 @@ void InitUsb(const BootInfo& boot, lib::Arena& arena) {
     ++g_device_count;
     SetUp(d, arena);
   }
-  lib::Format(g_status, sizeof(g_status), "%s  %d DEV  %d KBD", g_xhci.description(), g_device_count,
-              g_keyboards);
+  lib::Format(g_status, sizeof(g_status), "%s  %d DEV  %d KBD", g_xhci.description(), g_device_count, g_keyboards);
 }
 
 void PollUsb(InputTracker& tracker) {

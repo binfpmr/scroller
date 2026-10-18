@@ -257,6 +257,26 @@ bool Controller::Init(const pci::Device& device, lib::Arena& arena, uint64_t tsc
   return noop == 1;
 }
 
+int Controller::WaitForPorts(int max_ms) {
+  uint32_t last = 0;
+  int stable_ms = 0;
+  int connected = 0;
+  for (int ms = 0; ms < max_ms && stable_ms < 100; ms += 10) {
+    uint32_t mask = 0;
+    connected = 0;
+    for (int p = 1; p <= ports_; ++p) {
+      if (Port(p).connected) {
+        mask |= 1u << (p - 1);
+        ++connected;
+      }
+    }
+    stable_ms = mask == last ? stable_ms + 10 : 0;
+    last = mask;
+    Wait(10000, [] { return false; });
+  }
+  return connected;
+}
+
 PortStatus Controller::Port(int port) {
   const uint32_t portsc = Read32(op_, kPortBase + 0x10 * (port - 1));
   return {.connected = (portsc & kPortConnected) != 0,
