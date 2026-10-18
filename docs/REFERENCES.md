@@ -2,28 +2,30 @@
 
 Local copies of manuals go in `refs/` (git-ignored). File names below are suggestions so tooling and notes can refer to them.
 
-## Needed soon
+## In `refs/`
 
-| What | For | Suggested file |
+| What | File | Source |
 |---|---|---|
-| UEFI Specification 2.10 / 2.11 (uefi.org) | GOP, SimpleFileSystem, LoadedImage, memory map, ExitBootServices | `refs/UEFI_Spec_2_10_Aug29.pdf`, `refs/UEFI_Spec_Final_2.11.pdf` |
-| Intel 64 and IA-32 SDM, Volume 3 (System Programming) | GDT/IDT, exceptions, APIC, PAT, TSC | `refs/325384-093-sdm-vol-3abcd.pdf` |
+| UEFI Specification 2.10 / 2.11 | `UEFI_Spec_2_10_Aug29.pdf`, `UEFI_Spec_2_10_A_Aug8.pdf`, `UEFI_Spec_Final_2.11.pdf` | uefi.org |
+| Intel 64 and IA-32 SDM, Volume 3 (system programming: GDT/IDT, APIC, PAT, TSC) | `325384-093-sdm-vol-3abcd.pdf` | intel.com |
+| USB 2.0 specification (chapter 9: device framework, descriptors, standard requests) | `usb20.pdf` (errata and ECNs in `usb_20.zip`) | usb.org, `usb_20_20250603.zip` |
+| USB HID 1.11 (boot protocol: appendix B) | `hid1_11.pdf` | usb.org |
+| HID Usage Tables 1.5 (keyboard page 0x07, consumer page, gamepads) | `hut1_5.pdf` | usb.org |
+| USB Mass Storage Bulk-Only Transport 1.0 | `usbmassbulk_10.pdf` | usb.org |
+| SCSI Command Reference (READ(10), READ CAPACITY, INQUIRY, TEST UNIT READY) | `scsi-commands-seagate.pdf` | seagate.com |
+| NVM Express Base 2.1, NVM Command Set 1.1, PCIe Transport 1.1 | `nvme-base-2.1.pdf`, `nvme-nvm-command-set-1.1.pdf`, `nvme-pcie-transport-1.1.pdf` | nvmexpress.org |
 
-## Needed later
+## Still missing (the sites refuse scripted downloads: download in a browser)
 
-| What | Milestone | Suggested file |
+| What | Save as | Where |
 |---|---|---|
-| ACPI Specification 6.5 | done (MADT); later: power off, more tables | `refs/ACPI_6_5.pdf` |
-| Intel High Definition Audio Specification 1.0a | done (M5) | `refs/hda.pdf` |
-| xHCI Specification 1.2 (Intel) | M7 USB | `refs/xhci-1.2.pdf` |
-| USB 2.0 specification, chapter 9 (device framework, descriptors, standard requests) | M7 | `refs/usb20.pdf` |
-| USB HID 1.11 (boot protocol, appendix B) + HID Usage Tables 1.5 (keyboard page 0x07, gamepads) | M7 | `refs/hid1_11.pdf`, `refs/hut.pdf` |
-| USB Mass Storage Class Bulk-Only Transport 1.0 + SCSI commands (READ(10), READ CAPACITY) | M8 (USB stick) | `refs/usbmassbulk_10.pdf` |
-| NVM Express Base Specification 2.x | M8 option | `refs/nvme.pdf` |
-| PCI Express base (config space, capabilities, MSI) | as needed | `refs/pci.pdf` |
+| xHCI specification 1.2 (or 1.2c) | `refs/xhci-1.2.pdf` | intel.com "Universal Serial Bus Specifications" page |
+| Intel High Definition Audio Specification 1.0a | `refs/hda.pdf` | intel.com (HDA is done; for later codec work) |
+| ACPI Specification 6.5 (or 6.6) | `refs/ACPI_6_5.pdf` | uefi.org/specifications; also readable as HTML at uefi.org/specs/ACPI/6.5 |
 
 Not public and not needed so far: Realtek RTL8168 and ALC295 datasheets (Linux `r8169` and `snd-hda-codec-realtek`
-are the practical references), Intel PCH datasheets (the xHCI specification covers the USB controller).
+are the practical references), Intel PCH datasheets (the xHCI specification covers the USB controller), PCI Express
+base specification (PCI-SIG members only; the OSDev wiki covers configuration space and capabilities).
 
 ## Online
 
