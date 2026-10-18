@@ -20,6 +20,10 @@ void SerialPut(char c) {
   x86::Outb(kCom1, static_cast<uint8_t>(c));
 }
 
+// Not thread safe: a Log from an interrupt handler in the middle of one from the main loop can garble a few bytes.
+char g_history[kHistorySize];
+uint64_t g_history_end = 0;
+
 }  // namespace
 
 void Init() {
@@ -39,7 +43,23 @@ void Write(const char* text, size_t length) {
       SerialPut('\r');
     }
     SerialPut(text[i]);
+    g_history[g_history_end++ % kHistorySize] = text[i];
   }
+}
+
+uint64_t HistoryEnd() { return g_history_end; }
+
+size_t ReadHistory(uint64_t* position, char* out, size_t max) {
+  const uint64_t end = g_history_end;
+  if (end - *position > kHistorySize) {
+    *position = end - kHistorySize;
+  }
+  size_t n = 0;
+  while (n < max && *position + n < end) {
+    out[n] = g_history[(*position + n) % kHistorySize];
+    ++n;
+  }
+  return n;
 }
 
 }  // namespace debug_log

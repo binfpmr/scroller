@@ -15,6 +15,7 @@
 #include "lib/arena.h"
 #include "lib/format.h"
 #include "lib/pack.h"
+#include "platform/devlink.h"
 #include "platform/interrupt_controllers.h"
 #include "platform/network.h"
 #include "platform/panic.h"
@@ -93,6 +94,8 @@ bool LoadSheet(const lib::Pack& pack, const char* name, lib::Arena& arena, gfx::
   gfx::Present(screen, fb, viewport);
   InputTracker tracker;
   for (;;) {
+    PollNetwork();
+    PollDevlink();
     keyboard.Poll(tracker);
     if (tracker.NextTick().Pressed(Key::kEscape)) {
       Reboot(boot.runtime_services);
@@ -196,6 +199,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   vsync.Init(has_gpu ? &gpu : nullptr, boot.tsc_hz, boot.owns_machine ? &arena : nullptr);
 
   InputTracker tracker;
+  InitDevlink(NetworkStack(), boot, &tracker, &screen);
   StatsOverlay stats(boot.tsc_hz);
   {
     char cpu[49];
@@ -241,6 +245,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   for (;;) {
     input.Poll();
     PollNetwork();
+    PollDevlink();
     const uint64_t now = x86::Rdtsc();
     if (now < next_tick) {
       if (TimerHz() != 0) {

@@ -83,6 +83,7 @@ add_executable(scroller
   src/drivers/vga_retrace.cpp
   src/lib/cxx_support.cpp
   src/lib/mem.c
+  src/platform/devlink.cpp
   src/platform/game_loop.cpp
   src/platform/interrupt_controllers.cpp
   src/platform/network.cpp

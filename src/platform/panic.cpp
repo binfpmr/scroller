@@ -9,6 +9,8 @@
 #include "gfx/font.h"
 #include "gfx/present.h"
 #include "lib/format.h"
+#include "platform/devlink.h"
+#include "platform/network.h"
 #include "platform/reset.h"
 #include "scroller_version.h"
 
@@ -124,6 +126,10 @@ void OnException(const x86::InterruptFrame& f) {
   }
   InputTracker tracker;
   for (;;) {
+    // The debug link keeps working (log, screenshot, reboot) unless the fault was in the network code itself; a
+    // second fault stops in the check above.
+    PollNetwork();
+    PollDevlink();
     if (g_keyboard != nullptr) {
       g_keyboard->Poll(tracker);
       if (tracker.NextTick().Pressed(Key::kEscape)) {
