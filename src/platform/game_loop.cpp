@@ -22,6 +22,7 @@
 #include "platform/reset.h"
 #include "platform/sound.h"
 #include "platform/stats_overlay.h"
+#include "platform/usb.h"
 #include "platform/vsync.h"
 
 namespace platform {
@@ -195,6 +196,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   Log("sound: %s\n", SoundStatus());
   if (boot.owns_machine) {
     InitNetwork(boot, arena);  // in the uefi-input build the firmware's network driver still owns the controller
+    InitUsb(boot, arena);
   }
 
   game::Game game;

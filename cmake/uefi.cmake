@@ -81,6 +81,7 @@ add_executable(scroller
   src/drivers/ps2_keyboard.cpp
   src/drivers/rtl8168.cpp
   src/drivers/vga_retrace.cpp
+  src/drivers/xhci.cpp
   src/lib/cxx_support.cpp
   src/lib/mem.c
   src/platform/devlink.cpp
@@ -92,6 +93,7 @@ add_executable(scroller
   src/platform/reset.cpp
   src/platform/sound.cpp
   src/platform/stats_overlay.cpp
+  src/platform/usb.cpp
   src/platform/vsync.cpp
   ${SCROLLER_CORE_SOURCES}
 )

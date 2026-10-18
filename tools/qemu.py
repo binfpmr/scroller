@@ -58,7 +58,8 @@ DEVLINK_PORT = 5555  # UDP port of the game's debug link (see tools/devlink.py)
 
 
 def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, resolution: str,
-                 display: str = "gtk-gl", sound: str = "hda", netboot: bool = False) -> list[str]:
+                 display: str = "gtk-gl", sound: str = "hda", netboot: bool = False,
+                 usb_kbd: bool = False) -> list[str]:
     vars_copy = build / "OVMF_VARS.fd"
     shutil.copyfile(OVMF_VARS, vars_copy)  # fresh NVRAM every run: no stale boot entries
 
@@ -90,6 +91,11 @@ def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, 
         # romfile= drops the network boot ROM: booting from the disk does not wait for it.
         cmd += ["-drive", f"format=raw,file={build / 'scroller.img'}",
                 "-netdev", netdev, "-device", "e1000,netdev=net0,romfile="]
+    # An xHCI controller is always there (the driver must cope with empty ports); --usb-kbd plugs a keyboard into it,
+    # which then receives the window's and the key scripts' keys instead of the PS/2 keyboard.
+    cmd += ["-device", "qemu-xhci,id=xhci"]
+    if usb_kbd:
+        cmd += ["-device", "usb-kbd,bus=xhci.0"]
     if sound != "none":
         # Headless runs have no audio output; smoke tests record with the monitor's wavcapture instead.
         cmd += ["-audiodev", ("none" if headless else "pipewire") + ",id=snd0"]
@@ -193,7 +199,7 @@ def play_keys(qmp: Qmp, script: str, build: Path, log: Path, timeout: float, pro
 def cmd_run(args) -> int:
     os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=args.headless, qmp=None, resolution=args.resolution,
                                  display=args.display, sound=args.sound,
-                                 netboot=args.netboot))
+                                 netboot=args.netboot, usb_kbd=args.usb_kbd))
 
 
 def cmd_debug(args) -> int:
@@ -202,7 +208,7 @@ def cmd_debug(args) -> int:
     print("qemu: starting", flush=True)
     proc = subprocess.Popen(qemu_command(args.build, debug=True, headless=args.headless, qmp=None, resolution=args.resolution,
                                          display=args.display, sound=args.sound,
-                                 netboot=args.netboot))
+                                 netboot=args.netboot, usb_kbd=args.usb_kbd))
     if wait_for_log(log, "waiting for debugger", args.timeout, proc):
         print("qemu: waiting for gdb on :1234", flush=True)
     else:
@@ -218,7 +224,7 @@ def cmd_smoke(args) -> int:
     qmp_path.unlink(missing_ok=True)
 
     proc = subprocess.Popen(qemu_command(args.build, debug=False, headless=True, qmp=qmp_path, resolution=args.resolution,
-                                         sound=args.sound, netboot=args.netboot))
+                                         sound=args.sound, netboot=args.netboot, usb_kbd=args.usb_kbd))
     try:
         booted = wait_for_log(log, args.expect, args.timeout, proc)
         ok = booted
@@ -262,6 +268,8 @@ def main() -> int:
     common.add_argument("--build", type=Path, default=ROOT / "build" / "uefi", help="build directory with scroller.img")
     common.add_argument("--sound", choices=["sb16", "hda", "none"], default="hda",
                         help="sound device (default hda, as on real PCs); smoke tests record it to <build>/audio.wav")
+    common.add_argument("--usb-kbd", action="store_true",
+                        help="plug a USB keyboard into the xHCI controller (it gets the keys instead of PS/2)")
     common.add_argument("--netboot", action="store_true",
                         help="boot over the (emulated) network instead of from scroller.img")
     common.add_argument("--resolution", default="960x720",
