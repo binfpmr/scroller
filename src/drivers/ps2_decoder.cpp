@@ -66,6 +66,9 @@ bool MapKey(uint16_t code, platform::Key* key) {
     case 0x003c:  // F2
       *key = Key::kNextLevel;
       return true;
+    case 0x003d:  // F3
+      *key = Key::kPreviousLevel;
+      return true;
     case 0x0013:  // R
       *key = Key::kReload;
       return true;

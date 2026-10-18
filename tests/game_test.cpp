@@ -122,3 +122,23 @@ TEST(PitsRespawnAtTheLastCheckpoint) {
   g.RestartFromFirstLevel();
   EXPECT_EQ(g.respawn_tx(), 1);
 }
+
+TEST(SkipLevelsForwardAndBack) {
+  std::vector<uint8_t> storage(1 << 20);
+  lib::Arena arena(storage.data(), storage.size());
+  const char* one = "..........\n.P.G......\n##########\n";
+  const char* two = "............\n.P...G......\n############\n";
+  const char* three = "............\n.P....G.....\n############\n";
+  const game::LevelText levels[] = {{one, std::strlen(one)}, {two, std::strlen(two)}, {three, std::strlen(three)}};
+  const test::TestAssets assets;
+  game::Game g;
+  const char* error = nullptr;
+  EXPECT_TRUE(g.Init(arena, levels, 3, assets.assets(), &error));
+  g.SkipToPreviousLevel();
+  EXPECT_EQ(g.level_index(), 2);  // before the first: the last
+  g.SkipToPreviousLevel();
+  EXPECT_EQ(g.level_index(), 1);
+  g.SkipToNextLevel();
+  g.SkipToNextLevel();
+  EXPECT_EQ(g.level_index(), 0);  // after the last: the first
+}

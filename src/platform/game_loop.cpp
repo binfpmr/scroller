@@ -302,6 +302,9 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       if (input.Pressed(Key::kNextLevel)) {
         game.SkipToNextLevel();
       }
+      if (input.Pressed(Key::kPreviousLevel)) {
+        game.SkipToPreviousLevel();
+      }
       if (input.Pressed(Key::kToggleStats)) {
         stats.visible = !stats.visible;
       }

@@ -27,10 +27,10 @@ some C23 and GNU assembly, built with CMake and GCC. It runs in QEMU, from a USB
 | Up or Space | jump (hold for higher) |
 | Down | duck; jump while ducking, or hold Down for 1 s, for a duck-jump |
 | + / - , M | volume, mute |
-| N | music on/off (off at start) |
+| N | music on/off (on at start) |
 | Esc | key help (pauses the game) |
 | F1 | statistics overlay |
-| F2 | skip to the next level |
+| F2 / F3 | next / previous level |
 | Ctrl+Alt+R | reload the current build from the network-boot server |
 | Ctrl+Alt+Delete | reboot |
 

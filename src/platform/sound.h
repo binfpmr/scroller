@@ -26,7 +26,7 @@ void SetVolume(int percent);
 int Volume();
 void SetMuted(bool muted);
 bool Muted();
-// Background music on or off (off by default); the effects stay.
+// Background music on or off (on at start); the effects stay.
 void SetMusicOn(bool on);
 bool MusicOn();
 

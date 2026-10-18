@@ -22,6 +22,7 @@ enum class Key : uint8_t {
   kToggleMusic,  // 'N': background music on/off
   kReload,       // 'R': with Ctrl+Alt, hot reload from the network-boot server
   kNextLevel,    // F2: skip to the next level (development aid)
+  kPreviousLevel,  // F3: back to the previous level
   kCount,
 };
 

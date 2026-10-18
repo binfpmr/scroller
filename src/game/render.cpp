@@ -204,7 +204,7 @@ void DrawHelp(gfx::Surface& screen) {
       {"M", "MUTE"},
       {"N", "MUSIC ON/OFF"},
       {"F1", "STATISTICS"},
-      {"F2", "NEXT LEVEL"},
+      {"F2 / F3", "NEXT / PREVIOUS LEVEL"},
       {"CTRL+ALT+R", "RELOAD (NETWORK BOOT)"},
       {"CTRL+ALT+DEL", "REBOOT"},
       {"ESC", "THIS HELP ON/OFF"},

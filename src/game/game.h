@@ -73,9 +73,15 @@ class Game {
     current_ = 0;
     Restart();
   }
-  // The start of the next level (after the last: the first). A development aid (F2).
+  // The start of the next level (after the last: the first), F2, or the previous one (before the first: the last), F3.
   void SkipToNextLevel() {
+    the_end_ = false;
     current_ = (current_ + 1) % level_count_;
+    Restart();
+  }
+  void SkipToPreviousLevel() {
+    the_end_ = false;
+    current_ = (current_ + level_count_ - 1) % level_count_;
     Restart();
   }
   void Render(gfx::Surface& screen) const;
