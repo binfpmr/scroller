@@ -46,7 +46,9 @@ Killing background tools: the pattern must not match the shell running pkill, e.
 - Hot reload hands the previous image's `BootInfo` to the new one: when `BootInfo` changes, its size usually changes
   too (the game then refuses the reload and the tool reboots); if only its meaning changes, bump `kReloadVersion` in
   `platform/reload.h`. Anything that does DMA into the arena must be stopped in `ExecuteReload`.
-- Assets are plain text under `assets/` (formats: `docs/ASSETS.md`), packed into `assets.pak` and parsed at boot. Every level must have a reachable goal and no dead ends (host tests enforce it via `levelcheck`).
+- Assets are plain text under `assets/` (formats: `docs/ASSETS.md`), packed into `assets.pak` and parsed at boot. Every level must have a reachable goal and no dead ends: the host tests run `levelcheck` on every
+  `assets/levels/*.txt` as its own test (`levelcheck_<name>`; level 1 with `--basic`: plain jumps only). F2 in the game
+  skips to the next level for a quick look.
 
 ## Working loop
 

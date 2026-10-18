@@ -131,7 +131,8 @@ Decided: pure "reach the goal", placeholder text-art style, no title screen.
 - [x] Parallax background: clouds, hills, bushes in layers scrolling slower than the level
 - [x] A different tune per level: short chiptune transcriptions of public-domain Baroque/Classical pieces (Minuet in
       G, Ode to Joy, Eine kleine Nachtmusik, Canon in D, Für Elise)
-- [ ] More levels: long, tall, or both; each with checkpoints
+- [x] More levels: long (3), tall (4), long and tall (5); checkpoints and enemies in levels 2-5 (level 1, the
+      beginner level, has none so far)
 
 ## M9: later
 
