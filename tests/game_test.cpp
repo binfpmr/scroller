@@ -1,5 +1,6 @@
 #include "game/game.h"
 
+#include <cstring>
 #include <vector>
 
 #include "game_test_util.h"
@@ -48,4 +49,30 @@ TEST(RandomPlayKeepsInvariants) {
   // The random walk should have explored a good part of the level.
   EXPECT_TRUE(max_x - min_x > 400);
   EXPECT_TRUE(min_y < 33 * 16 - 64);
+}
+
+// Reaching the goal shows the banner, then the next level starts; after the last one the first comes again.
+TEST(GoalAdvancesToTheNextLevel) {
+  std::vector<uint8_t> storage(1 << 20);
+  lib::Arena arena(storage.data(), storage.size());
+  const char* one = "..........\n.P.G......\n##########\n";
+  const char* two = "............\n.P...G......\n############\n";
+  const game::LevelText levels[] = {{one, std::strlen(one)}, {two, std::strlen(two)}};
+  const test::TestAssets assets;
+  game::Game g;
+  const char* error = nullptr;
+  EXPECT_TRUE(g.Init(arena, levels, 2, assets.assets(), &error));
+  EXPECT_EQ(g.level_count(), 2);
+  for (int expected : {0, 1, 0}) {
+    EXPECT_EQ(g.level_index(), expected);
+    int ticks = 0;
+    while (!g.won() && ticks++ < 600) {
+      g.Update(test::Keys({Key::kRight}));
+    }
+    EXPECT_TRUE(g.won());
+    for (int i = 0; i < game::Game::kWinTicks; ++i) {
+      g.Update({});
+    }
+    EXPECT_TRUE(!g.won());
+  }
 }

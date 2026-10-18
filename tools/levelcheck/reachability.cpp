@@ -54,7 +54,7 @@ struct Move {
   int chain_every = 0;     // if > 0: press jump every this many ticks, steering toward the next wall (wall-jump climb)
 };
 
-std::vector<Move> AllMoves() {
+std::vector<Move> AllMoves(Moves set) {
   std::vector<Move> moves;
   for (int dir : {-1, 1}) {
     for (int run : {4, 10, 20, 40}) {
@@ -72,9 +72,14 @@ std::vector<Move> AllMoves() {
         }
       }
       for (int air_dir : {-1, 0, 1}) {
-        moves.push_back({dir, run, true, 60, air_dir, true});
+        if (set == Moves::kAll) {
+          moves.push_back({dir, run, true, 60, air_dir, true});
+        }
       }
     }
+  }
+  if (set == Moves::kBasic) {
+    return moves;
   }
   // Climb between two walls: keep pressing jump, steering the way the last wall-jump pushed.
   for (int dir : {-1, 1}) {
@@ -161,14 +166,14 @@ bool Reachability::StandsOn(int tx, int ty) const {
   return false;
 }
 
-Reachability Explore(const game::Level& level, size_t max_states) {
+Reachability Explore(const game::Level& level, size_t max_states, Moves set) {
   Reachability result;
   Player start;
   start.Spawn(level.start_x, level.start_y);
   if (!Settle(start, level)) {
     return result;
   }
-  const std::vector<Move> moves = AllMoves();
+  const std::vector<Move> moves = AllMoves(set);
   std::unordered_map<long long, int> index{{Key2(start), 0}};
   result.rest_positions.push_back(start);
   result.moves_to.emplace_back();

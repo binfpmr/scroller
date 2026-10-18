@@ -31,8 +31,6 @@ constexpr int kTicksPerSecond = 60;
 constexpr int kMaxCatchUpTicks = 5;  // after a stall, skip time rather than run many updates at once
 constexpr int kStatsIntervalTicks = 5 * kTicksPerSecond;
 
-constexpr const char* kStartLevel = "levels/level1.txt";
-
 // Keyboard polling for the main loop and the vsync wait. On real hardware every call polls: the i8042 holds one byte
 // at a time and the keyboard sends the next only after it was read, so reading late delays input (it felt sluggish
 // with 1 kHz polling plus a vsync wait of most of the frame). In a VM each port access is a VM exit competing with
@@ -168,9 +166,20 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     Fatal(error, screen, fb, viewport, keyboard, boot);
   }
   Log("assets: %d files, %llu bytes\n", pack.count(), static_cast<unsigned long long>(boot.assets_size));
-  lib::Blob level_text;
-  if (!pack.Find(kStartLevel, &level_text)) {
-    Fatal("level not found in the asset pack", screen, fb, viewport, keyboard, boot);
+  // Levels are played in order: levels/level1.txt, levels/level2.txt, ... (as many as the pack has).
+  game::LevelText levels[game::Game::kMaxLevels];
+  int level_count = 0;
+  while (level_count < game::Game::kMaxLevels) {
+    char name[lib::Pack::kNameSize];
+    lib::Format(name, sizeof(name), "levels/level%d.txt", level_count + 1);
+    lib::Blob blob;
+    if (!pack.Find(name, &blob)) {
+      break;
+    }
+    levels[level_count++] = {blob.data, blob.size};
+  }
+  if (level_count == 0) {
+    Fatal("levels/level1.txt not in the asset pack", screen, fb, viewport, keyboard, boot);
   }
   static gfx::SpriteSheet player_sheet;
   static gfx::SpriteSheet tile_sheet;
@@ -188,11 +197,11 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   }
 
   game::Game game;
-  if (!game.Init(arena, level_text.data, level_text.size, {.player = &player_sheet, .tiles = &tile_sheet}, &error)) {
+  if (!game.Init(arena, levels, level_count, {.player = &player_sheet, .tiles = &tile_sheet}, &error)) {
     Fatal(error, screen, fb, viewport, keyboard, boot);
   }
-  Log("level: %dx%d tiles, start %d,%d\n", game.level().width, game.level().height, game.level().start_x,
-      game.level().start_y);
+  Log("levels: %d, first %dx%d tiles, start %d,%d\n", level_count, game.level().width, game.level().height,
+      game.level().start_x, game.level().start_y);
 
   pci::Device gpu;
   const bool has_gpu = pci::FindByClass(0x03, &gpu);

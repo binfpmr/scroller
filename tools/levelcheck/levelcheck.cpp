@@ -1,22 +1,26 @@
-// levelcheck <level.txt>: prints the level with 'o' on every tile the player can stand on, reachable from 'P'.
+// levelcheck [--basic] <level.txt>: prints the level with 'o' on every tile the player can stand on, reachable from
+// 'P'. --basic: only walking and plain jumps (no duck-jumps or wall-jumps), the moves a beginner level may need.
 #include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "reachability.h"
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::cerr << "usage: levelcheck <level.txt>\n";
+  const bool basic = argc == 3 && std::string(argv[1]) == "--basic";
+  if (argc != 2 && !basic) {
+    std::cerr << "usage: levelcheck [--basic] <level.txt>\n";
     return 2;
   }
-  std::ifstream file(argv[1], std::ios::binary);
+  const char* path = argv[argc - 1];
+  std::ifstream file(path, std::ios::binary);
   std::stringstream text;
   text << file.rdbuf();
   if (!file) {
-    std::cerr << "cannot read " << argv[1] << "\n";
+    std::cerr << "cannot read " << path << "\n";
     return 2;
   }
   const std::string data = text.str();
@@ -25,10 +29,11 @@ int main(int argc, char** argv) {
   game::Level level;
   const char* error = nullptr;
   if (!game::ParseLevel(data.data(), data.size(), arena, &level, &error)) {
-    std::cerr << argv[1] << ": " << error << "\n";
+    std::cerr << path << ": " << error << "\n";
     return 1;
   }
-  const levelcheck::Reachability reach = levelcheck::Explore(level);
+  const levelcheck::Reachability reach =
+      levelcheck::Explore(level, 200000, basic ? levelcheck::Moves::kBasic : levelcheck::Moves::kAll);
   std::cout << levelcheck::RenderMap(level, reach) << reach.rest_positions.size() << " resting positions reachable\n";
   bool has_goal = false;
   for (int i = 0; i < level.width * level.height; ++i) {

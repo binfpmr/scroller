@@ -28,7 +28,10 @@ struct Reachability {
   bool ReachesGoal(const game::Level& level) const;
 };
 
-Reachability Explore(const game::Level& level, size_t max_states = 200000);
+// kBasic: only walking and plain jumps (no duck-jumps, no wall-jumps), for beginner levels.
+enum class Moves { kAll, kBasic };
+
+Reachability Explore(const game::Level& level, size_t max_states = 200000, Moves moves = Moves::kAll);
 
 // The level as text with 'o' in every empty tile the player can stand in, 'x' where they can stand but never reach the
 // goal from (dead end), and 'g' for reachable goals.

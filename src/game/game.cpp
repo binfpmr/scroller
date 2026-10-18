@@ -19,9 +19,9 @@ bool FindFrame(const gfx::SpriteSheet* sheet, const char* sheet_name, const char
 
 }  // namespace
 
-bool Game::Init(lib::Arena& arena, const char* level_text, size_t level_length, const GameAssets& assets,
+bool Game::Init(lib::Arena& arena, const LevelText* levels, int level_count, const GameAssets& assets,
                 const char** error) {
-  static char message[64];
+  static char message[96];
   const gfx::SpriteSheet* p = assets.player;
   const gfx::SpriteSheet* t = assets.tiles;
   const char* pn = "sprites/player.txt";
@@ -41,19 +41,31 @@ bool Game::Init(lib::Arena& arena, const char* level_text, size_t level_length, 
     *error = message;
     return false;
   }
-  if (!ParseLevel(level_text, level_length, arena, &level_, error)) {
+  if (level_count < 1 || level_count > kMaxLevels) {
+    *error = "need 1 to 8 levels";
     return false;
   }
+  for (int i = 0; i < level_count; ++i) {
+    const char* level_error = nullptr;
+    if (!ParseLevel(levels[i].data, levels[i].size, arena, &levels_[i], &level_error)) {
+      lib::Format(message, sizeof(message), "level %d: %s", i + 1, level_error);
+      *error = message;
+      return false;
+    }
+  }
+  level_count_ = level_count;
+  current_ = 0;
   Restart();
   return true;
 }
 
 void Game::Restart() {
   player_ = Player();
-  player_.Spawn(level_.start_x, level_.start_y);
+  player_.Spawn(level().start_x, level().start_y);
   camera_.CenterOn(player_.pixel_x() + Player::kWidth / 2, player_.pixel_y() + Player::kHeight / 2,
-                   level_.pixel_width(), level_.pixel_height());
+                   level().pixel_width(), level().pixel_height());
   win_ticks_ = 0;
+  title_ticks_ = level_count_ > 1 ? kTitleTicks : 0;
 }
 
 bool Game::TouchesGoal() const {
@@ -63,7 +75,7 @@ bool Game::TouchesGoal() const {
   const int bottom = (player_.pixel_y() + Player::kHeight - 1) >> kTileShift;
   for (int ty = top; ty <= bottom; ++ty) {
     for (int tx = left; tx <= right; ++tx) {
-      if (level_.At(tx, ty) == Tile::kGoal) {
+      if (level().At(tx, ty) == Tile::kGoal) {
         return true;
       }
     }
@@ -74,16 +86,20 @@ bool Game::TouchesGoal() const {
 void Game::Update(const platform::InputState& input) {
   ++ticks_;
   if (win_ticks_ > 0) {
-    UpdatePlayer(player_, {}, level_);  // the player comes to rest; input is ignored
+    UpdatePlayer(player_, {}, level());  // the player comes to rest; input is ignored
     if (--win_ticks_ == 0) {
+      current_ = (current_ + 1) % level_count_;
       Restart();
     }
     return;
   }
-  UpdatePlayer(player_, input, level_);
+  if (title_ticks_ > 0) {
+    --title_ticks_;
+  }
+  UpdatePlayer(player_, input, level());
   events_ |= player_.events;
-  camera_.Follow(player_.pixel_x() + Player::kWidth / 2, player_.pixel_y() + Player::kHeight / 2, level_.pixel_width(),
-                 level_.pixel_height());
+  camera_.Follow(player_.pixel_x() + Player::kWidth / 2, player_.pixel_y() + Player::kHeight / 2, level().pixel_width(),
+                 level().pixel_height());
   if (TouchesGoal()) {
     win_ticks_ = kWinTicks;
     events_ |= kEventGoal;
@@ -91,9 +107,13 @@ void Game::Update(const platform::InputState& input) {
 }
 
 void Game::Render(gfx::Surface& screen) const {
-  RenderWorld(screen, level_, camera_, player_, frames_, ticks_);
+  RenderWorld(screen, level(), camera_, player_, frames_, ticks_);
   if (won()) {
-    DrawBanner(screen, "WELL DONE!");
+    DrawBanner(screen, current_ + 1 == level_count_ && level_count_ > 1 ? "ALL DONE!" : "WELL DONE!");
+  } else if (title_ticks_ > 0) {
+    char title[16];
+    lib::Format(title, sizeof(title), "LEVEL %d", current_ + 1);
+    DrawBanner(screen, title);
   }
 }
 
