@@ -209,6 +209,10 @@ int SignalFor(uint64_t vector) {
 }  // namespace
 
 bool GdbStubOnException(x86::InterruptFrame& frame) {
+  if (!g_attached && frame.vector == 1 && g_frame == nullptr) {
+    frame.rflags &= ~kTrapFlag;  // a single step still armed when the debugger left: just carry on
+    return true;
+  }
   if (!g_attached || g_frame != nullptr || NetworkBusy()) {
     return false;  // no debugger, a fault inside the stub, or the network is in use: a normal crash report
   }

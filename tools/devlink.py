@@ -258,16 +258,17 @@ class GdbConnection:
         self.conn = conn
         self.buffer = b""
         self.interrupted = False
+        self.pending: list[bytes] = []  # received and acknowledged, not yet passed on: never dropped
 
-    def read_packets(self, timeout: float) -> list[bytes] | None:
-        """Packets that arrived within `timeout` (acknowledged); None when gdb disconnected."""
+    def read_packets(self, timeout: float) -> bool:
+        """Adds packets that arrive within `timeout` to self.pending (acknowledged). False when gdb disconnected."""
         ready, _, _ = select.select([self.conn], [], [], timeout)
         if ready:
             data = self.conn.recv(4096)
             if not data:
-                return None
+                return False
             self.buffer += data
-        packets = []
+        packets = self.pending
         while self.buffer:
             if self.buffer[0:1] in (b"+", b"-"):
                 self.buffer = self.buffer[1:]
@@ -283,7 +284,7 @@ class GdbConnection:
                 self.conn.sendall(b"+")
             else:
                 self.buffer = self.buffer[1:]  # noise
-        return packets
+        return True
 
     def send(self, payload: bytes) -> None:
         self.conn.sendall(gdb_frame(payload))
@@ -295,7 +296,7 @@ def wait_for_stop(link: Link, gdb: GdbConnection) -> bytes | None:
         status, reply = link.request_status(CMD_GDB_WAIT)
         if status == 0:
             return reply
-        if gdb.read_packets(0.03) is None:
+        if not gdb.read_packets(0.03):  # packets arriving meanwhile wait in gdb.pending
             return None
         if gdb.interrupted:
             gdb.interrupted = False
@@ -309,7 +310,10 @@ def gdb_bridge(link: Link, port: int) -> None:
     server.listen(1)
     info = link.info()
     # For scroller-net-attach (tools/gdb/scroller.py) when started from VS Code without SCROLLER_TARGET.
-    (Path(__file__).resolve().parent.parent / "build" / "gdb-bridge-target").write_text(link.address[0] + "\n")
+    try:
+        (Path(__file__).resolve().parent.parent / "build" / "gdb-bridge-target").write_text(link.address[0] + "\n")
+    except OSError:
+        pass  # no build directory: scroller-net-attach then needs the address
     print(f"gdb bridge: target {link.address[0]} (version {info.get('version')}, image base {info.get('image_base')})")
     print(f"gdb bridge: listening on localhost:{port}", flush=True)
     while True:
@@ -317,36 +321,53 @@ def gdb_bridge(link: Link, port: int) -> None:
         conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         gdb = GdbConnection(conn)
         print("gdb bridge: gdb connected, stopping the game", flush=True)
-        link.request(CMD_GDB_STOP)
-        if wait_for_stop(link, gdb) is None:
+        try:
+            link.request(CMD_GDB_STOP)
+            stopped = wait_for_stop(link, gdb) is not None
+        except DevlinkError as e:
+            print(f"gdb bridge: {e}", flush=True)
+            stopped = False
+        if not stopped:
             conn.close()
             continue
+        detached = False
         try:
-            serve_gdb(link, gdb)
-        except (ConnectionError, OSError) as e:
+            detached = serve_gdb(link, gdb)
+        except (ConnectionError, OSError, DevlinkError) as e:
             print(f"gdb bridge: connection lost ({e})", flush=True)
         conn.close()
+        if not detached:
+            # gdb went away without detaching: remove its breakpoints and let the game run, as a detach would.
+            try:
+                link.request(CMD_GDB_STOP)
+                while link.request_status(CMD_GDB_WAIT)[0] != 0:
+                    time.sleep(0.03)
+                link.request(CMD_GDB, b"D", same_sequence=True)
+                print("gdb bridge: detached the game for gdb", flush=True)
+            except DevlinkError as e:
+                print(f"gdb bridge: could not detach ({e})", flush=True)
         print("gdb bridge: gdb disconnected", flush=True)
 
 
-def serve_gdb(link: Link, gdb: GdbConnection) -> None:
+def serve_gdb(link: Link, gdb: GdbConnection) -> bool:
+    """Relays until gdb leaves. True if the game was detached (or killed) properly."""
     while True:
-        packets = gdb.read_packets(0.5)
-        if packets is None:
-            return
-        for packet in packets:
+        if not gdb.pending and not gdb.read_packets(0.5):
+            return False
+        while gdb.pending:
+            packet = gdb.pending.pop(0)
             reply = link.request(CMD_GDB, packet, same_sequence=True)
             if packet == b"k":
-                return  # the target reboots; gdb expects no reply
+                return True  # the target reboots; gdb expects no reply
             if packet[:1] in (b"c", b"s"):
                 stop = wait_for_stop(link, gdb)
                 if stop is None:
-                    return
+                    return False
                 gdb.send(stop)
                 continue
             gdb.send(reply)
             if packet[:1] == b"D":
-                return
+                return True
 
 
 def discover() -> None:

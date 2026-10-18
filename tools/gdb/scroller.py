@@ -40,6 +40,10 @@ class ScrollerAttach(gdb.Command):
 
 ScrollerAttach()
 
+# The first packet of a session waits until the game has stopped; over Wi-Fi that can take longer than gdb's default
+# 2 s, and a timed-out first packet leaves gdb guessing the architecture (i386) for the whole session.
+gdb.execute("set remotetimeout 10")
+
 
 class ScrollerNetAttach(gdb.Command):
     """Load scroller symbols at the image base of the game on the debug link: scroller-net-attach [target]"""
