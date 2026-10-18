@@ -18,6 +18,7 @@ class Driver final : public nic::Driver {
   bool Send(const uint8_t* frame, size_t length) override;
   size_t Receive(const uint8_t** frame) override;
   int LinkSpeed() override;
+  void Stop() override;
 
  private:
   struct Descriptor {

@@ -201,6 +201,16 @@ void PauseSound() {
   }
 }
 
+void StopSound() {
+  x86::DisableInterrupts();
+  if (g_hda.buffer() != nullptr) {
+    g_hda.Stop();
+  }
+  if (g_buffer != nullptr) {
+    sb16::Stop();
+  }
+}
+
 void ResumeSound() {
   if (g_hda.buffer() != nullptr) {
     // The position counter missed wrap-arounds meanwhile; carry on from wherever the hardware is now.

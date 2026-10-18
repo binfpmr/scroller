@@ -220,7 +220,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   vsync.Init(has_gpu ? &gpu : nullptr, boot.tsc_hz, boot.owns_machine ? &arena : nullptr);
 
   InputTracker tracker;
-  InitDevlink(NetworkStack(), boot, &tracker, &screen);
+  InitDevlink(NetworkStack(), boot, &tracker, &screen, &arena);
   StatsOverlay stats(boot.tsc_hz);
   {
     char cpu[49];

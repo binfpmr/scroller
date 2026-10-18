@@ -277,6 +277,11 @@ int Controller::WaitForPorts(int max_ms) {
   return connected;
 }
 
+void Controller::Halt() {
+  Write32(op_, kUsbCmd, Read32(op_, kUsbCmd) & ~kCmdRun);
+  Wait(20000, [&] { return (Read32(op_, kUsbSts) & kStsHalted) != 0; });
+}
+
 PortStatus Controller::Port(int port) {
   const uint32_t portsc = Read32(op_, kPortBase + 0x10 * (port - 1));
   return {.connected = (portsc & kPortConnected) != 0,

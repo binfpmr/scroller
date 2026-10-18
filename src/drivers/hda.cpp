@@ -334,6 +334,15 @@ bool Controller::SetUpCodec(int codec) {
   return true;
 }
 
+void Controller::Stop() {
+  if (mmio_ == nullptr) {
+    return;
+  }
+  SetReg<uint8_t>(mmio_ + stream_offset_, kSdCtl, 0);  // stream run off
+  SetReg<uint8_t>(mmio_, kCorbCtl, 0);
+  SetReg<uint8_t>(mmio_, kRirbCtl, 0);
+}
+
 void Controller::Start() {
   last_position_ = 0;
   wraps_ = 0;

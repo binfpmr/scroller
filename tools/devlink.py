@@ -9,6 +9,8 @@
     tools/devlink.py [--target HOST] poke ADDR HEXBYTES    write memory
     tools/devlink.py [--target HOST] reboot [--cold]       reboot, warm by default (a network-booted PC loads the
                                                           current build)
+    tools/devlink.py [--target HOST] reload [FILE]        start a new build without rebooting (~1 s; default
+                                                          build/uefi/scroller.efi); reboots if it is incompatible
     tools/devlink.py [--target HOST] gdb [--port 2345]    gdb server on localhost for gdb / VS Code (see below)
     tools/devlink.py discover                              broadcast INFO; lists every game on the LAN
 
@@ -41,8 +43,11 @@ MAX_READ = 1024
 
 CMD_INFO, CMD_READ, CMD_WRITE, CMD_KEY, CMD_REBOOT, CMD_SUBSCRIBE, CMD_LOG = 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x80
 CMD_GDB, CMD_GDB_WAIT, CMD_GDB_STOP = 0x07, 0x08, 0x09
+CMD_RELOAD_BEGIN, CMD_RELOAD_DATA, CMD_RELOAD_RUN = 0x0A, 0x0B, 0x0C
+STATUS_RELOAD_REFUSED = 5
 STATUS_RUNNING = 4
-STATUS_TEXT = {1: "address not mapped", 2: "malformed request", 3: "unknown command", STATUS_RUNNING: "running"}
+STATUS_TEXT = {1: "address not mapped", 2: "malformed request", 3: "unknown command", STATUS_RUNNING: "running",
+               STATUS_RELOAD_REFUSED: "reload refused"}
 
 # platform::Key values (src/platform/input.h).
 KEYS = {"left": 0, "right": 1, "down": 2, "jump": 3, "up": 3, "esc": 4, "f1": 5, "volup": 6, "voldown": 7,
@@ -248,6 +253,47 @@ def stream_log(link: Link, from_start: bool) -> None:
         last_ping = time.monotonic()
 
 
+def wait_for_new_boot(link: Link, old_boot_id: str | None, timeout: float) -> dict[str, str] | None:
+    """Polls INFO until the boot id changes; returns the new info, or None after `timeout` seconds."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            info = link.info()
+            if info.get("boot_id") != old_boot_id:
+                return info
+        except DevlinkError:
+            pass
+        time.sleep(0.2)
+    return None
+
+
+def reload(link: Link, path: str) -> int:
+    data = Path(path).read_bytes()
+    start = time.monotonic()
+    old = link.info()
+    link.request(CMD_RELOAD_BEGIN, struct.pack("<I", len(data)))
+    link.pipelined([(CMD_RELOAD_DATA, struct.pack("<I", offset) + data[offset:offset + MAX_READ])
+                    for offset in range(0, len(data), MAX_READ)])
+    status, reply = 0, b""
+    try:
+        link.request(CMD_RELOAD_RUN, struct.pack("<II", len(data), zlib.crc32(data)))
+    except DevlinkStatus as e:
+        status = e.status
+    if status != 0:
+        # The reason is in the game's log (devlink: reload refused: ...).
+        print(f"reload refused by {old.get('version')} ({STATUS_TEXT.get(status, status)}); rebooting instead")
+        link.request(CMD_REBOOT, b"\0")
+        info = wait_for_new_boot(link, old.get("boot_id"), 120)
+    else:
+        info = wait_for_new_boot(link, old.get("boot_id"), 15)
+    if info is None:
+        print("devlink: the game did not come back", file=sys.stderr)
+        return 1
+    print(f"{old.get('version')} -> {info.get('version')} in {time.monotonic() - start:.1f} s"
+          f"{'' if status == 0 else ' (rebooted)'}")
+    return 0
+
+
 def gdb_frame(payload: bytes) -> bytes:
     return b"$" + payload + b"#" + f"{sum(payload) & 0xFF:02x}".encode()
 
@@ -412,6 +458,9 @@ def main() -> int:
     poke.add_argument("hex")
     reboot = sub.add_parser("reboot")
     reboot.add_argument("--cold", action="store_true", help="cold reset (full power-on self test)")
+    reload_cmd = sub.add_parser("reload")
+    reload_cmd.add_argument("file", nargs="?",
+                            default=str(Path(__file__).resolve().parent.parent / "build" / "uefi" / "scroller.efi"))
     gdb = sub.add_parser("gdb")
     gdb.add_argument("--port", type=int, default=2345)
     sub.add_parser("discover")
@@ -439,6 +488,8 @@ def main() -> int:
                 print(f"{args.address + offset:016x}  {row.hex(' '):47}  {text}")
         elif args.command == "poke":
             link.write(args.address, bytes.fromhex(args.hex))
+        elif args.command == "reload":
+            return reload(link, args.file)
         elif args.command == "gdb":
             gdb_bridge(link, args.port)
         elif args.command == "reboot":

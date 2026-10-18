@@ -20,6 +20,8 @@ class Controller {
   bool Init(const pci::Device& device, lib::Arena& arena);
   // Starts the stream; fill buffer() first.
   void Start();
+  // Stops the stream and the command rings' DMA (before a hot reload hands the memory to a new image).
+  void Stop();
 
   int16_t* buffer() { return buffer_; }  // interleaved left/right, kBufferFrames frames
   // Absolute number of frames played since Start (follows the hardware position, including wrap-arounds). Call at

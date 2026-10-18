@@ -31,6 +31,8 @@ bool MusicOn();
 // then carry on from the hardware's current position. Interrupts must be off for both.
 void PauseSound();
 void ResumeSound();
+// Stops the device's DMA for good (before a hot reload). Leaves interrupts off.
+void StopSound();
 
 const char* SoundStatus();
 uint64_t SoundInterrupts();

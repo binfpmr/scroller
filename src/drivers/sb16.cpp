@@ -107,4 +107,8 @@ bool Start(const Config& config, uint64_t buffer_physical, uint32_t half_frames,
 
 void AcknowledgeInterrupt() { x86::Inb(kAck16); }
 
+void Stop() {
+  WriteDsp(0xd9);  // exit 16-bit auto-init DMA
+}
+
 }  // namespace sb16

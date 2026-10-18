@@ -9,6 +9,7 @@
 #include "lib/mem.h"
 #include "platform/boot_info.h"
 #include "platform/game_loop.h"
+#include "platform/reload.h"
 #include "scroller_version.h"
 #include "uefi/uefi.h"
 
@@ -182,6 +183,19 @@ bool ExitBootServices(EFI_HANDLE image, EFI_BOOT_SERVICES* bs, platform::BootInf
 
 extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
   debug_log::Init();
+  {
+    // Hot reload (platform/reload): no firmware any more; take the previous image's BootInfo and start the game.
+    platform::BootInfo reloaded;
+    if (platform::AcceptReload(image, st, &reloaded)) {
+      x86::DisableInterrupts();
+      Log("scroller %s: hot reload\n", kScrollerVersion);
+      reloaded.assets = scroller_assets_begin;
+      reloaded.assets_size = static_cast<size_t>(scroller_assets_end - scroller_assets_begin);
+      ps2::Keyboard keyboard;
+      keyboard.Init();
+      platform::RunGame(reloaded, keyboard);
+    }
+  }
   Log("scroller %s: efi_main\n", kScrollerVersion);
 
   EFI_BOOT_SERVICES* bs = st->BootServices;

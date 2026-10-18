@@ -15,12 +15,17 @@
 //                   sequence number gets the cached reply
 //   0x08 GDB_WAIT   -> status 0 and the stop reply if the machine is stopped, status 4 while it runs
 //   0x09 GDB_STOP   -> empty; the machine stops at the next main loop iteration (gdb's Ctrl+C)
+//   0x0A RELOAD_BEGIN u32 size                              -> empty; status 1 if too large (platform/reload)
+//   0x0B RELOAD_DATA  u32 offset, bytes                     -> empty
+//   0x0C RELOAD_RUN   u32 size, u32 crc32                   -> empty, then the new image starts; status 5 and a
+//                                                              message if it is refused (the tool reboots instead)
 //   0x80 LOG        (target -> subscriber, unsolicited)     u64 position, text
 #pragma once
 
 #include <stdint.h>
 
 #include "gfx/surface.h"
+#include "lib/arena.h"
 #include "net/stack.h"
 #include "platform/boot_info.h"
 #include "platform/input.h"
@@ -31,7 +36,9 @@ inline constexpr uint16_t kDevlinkPort = 5555;
 inline constexpr uint32_t kMaxRead = 1024;
 
 // Binds the port. `tracker` receives injected keys; `screen` is reported by INFO.
-void InitDevlink(net::Stack* stack, const BootInfo& boot, InputTracker* tracker, const gfx::Surface* screen);
+// `arena` provides the upload buffer for a hot reload (allocated on the first one).
+void InitDevlink(net::Stack* stack, const BootInfo& boot, InputTracker* tracker, const gfx::Surface* screen,
+                 lib::Arena* arena);
 
 // Streams new log output to the subscriber and carries out a requested reboot. Call after PollNetwork.
 void PollDevlink();

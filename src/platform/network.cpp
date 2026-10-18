@@ -107,6 +107,12 @@ void PollNetwork() {
 
 bool NetworkBusy() { return g_busy; }
 
+void StopNetwork() {
+  if (g_nic != nullptr) {
+    g_nic->Stop();
+  }
+}
+
 net::Stack* NetworkStack() { return g_nic != nullptr ? &g_stack : nullptr; }
 
 const char* NetworkStatus() {

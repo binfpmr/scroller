@@ -21,6 +21,7 @@ class Driver final : public nic::Driver {
   int LinkSpeed() override;
   void Describe(char* out, size_t size) override;
   bool Restart() override;
+  void Stop() override;
 
  private:
   struct Descriptor {

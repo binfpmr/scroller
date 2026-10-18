@@ -15,6 +15,8 @@ void InitUsb(const BootInfo& boot, lib::Arena& arena);
 
 // Key reports from USB keyboards (polled, from the main loop's input polling).
 void PollUsb(InputTracker& tracker);
+// Halts the controller (before a hot reload).
+void StopUsb();
 // Last newly pressed key's HID usage ID (for the overlay), 0 if none yet.
 uint8_t UsbLastKey();
 

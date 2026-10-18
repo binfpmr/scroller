@@ -151,6 +151,12 @@ void PollUsb(InputTracker& tracker) {
 
 uint8_t UsbLastKey() { return g_last_usage; }
 
+void StopUsb() {
+  if (g_have_xhci) {
+    g_xhci.Halt();
+  }
+}
+
 const char* UsbStatus() { return g_status; }
 
 }  // namespace platform

@@ -5,7 +5,9 @@
 #include "drivers/debug_log.h"
 #include "lib/format.h"
 #include "lib/mem.h"
+#include "lib/pe.h"
 #include "platform/gdb_stub.h"
+#include "platform/reload.h"
 #include "platform/reset.h"
 #include "scroller_version.h"
 
@@ -28,6 +30,9 @@ enum Command : uint8_t {
   kGdbPacket = 0x07,
   kGdbWait = 0x08,
   kGdbInterrupt = 0x09,
+  kReloadBegin = 0x0a,
+  kReloadData = 0x0b,
+  kReloadRun = 0x0c,
   kLog = 0x80,
 };
 
@@ -49,7 +54,14 @@ struct State {
   uint32_t gdb_sequence = 0;
   size_t gdb_reply_length = 0;
   char gdb_reply[1024];
+  // Hot reload upload.
+  lib::Arena* arena = nullptr;
+  uint8_t* upload = nullptr;
+  uint32_t upload_size = 0;
+  bool reload = false;
 };
+
+constexpr uint32_t kMaxUpload = 3 * 1024 * 1024;
 
 State g_state;
 
@@ -177,6 +189,46 @@ void OnDatagram(void*, const net::UdpDatagram& d) {
       GdbStubRequestStop();
       Reply(d, 0, nullptr, 0);
       break;
+    case kReloadBegin: {
+      const uint32_t size = body_length >= 4 ? Get32(body) : 0;
+      if (g_state.upload == nullptr && g_state.arena != nullptr) {
+        g_state.upload = static_cast<uint8_t*>(g_state.arena->Allocate(kMaxUpload, 4096));
+      }
+      if (g_state.upload == nullptr || size == 0 || size > kMaxUpload) {
+        Reply(d, 1, nullptr, 0);
+        break;
+      }
+      g_state.upload_size = size;
+      Log("devlink: receiving a %u-byte image\n", size);
+      Reply(d, 0, nullptr, 0);
+      break;
+    }
+    case kReloadData: {
+      const uint32_t offset = body_length >= 4 ? Get32(body) : 0xffffffffu;
+      const size_t length = body_length >= 4 ? body_length - 4 : 0;
+      if (g_state.upload == nullptr || offset > g_state.upload_size || length > g_state.upload_size - offset) {
+        Reply(d, 2, nullptr, 0);
+        break;
+      }
+      lib::Copy(g_state.upload + offset, body + 4, length);
+      Reply(d, 0, nullptr, 0);
+      break;
+    }
+    case kReloadRun: {
+      const char* error = nullptr;
+      if (g_state.upload == nullptr || body_length < 8 || Get32(body) != g_state.upload_size) {
+        error = "no complete upload";
+      } else if (lib::Crc32(g_state.upload, g_state.upload_size) != Get32(body + 4)) {
+        error = "checksum mismatch";
+      } else if (PrepareReload(*g_state.boot, g_state.upload, g_state.upload_size, &error)) {
+        Reply(d, 0, nullptr, 0);
+        g_state.reload = true;  // from PollDevlink, after the reply is out
+        break;
+      }
+      Log("devlink: reload refused: %s\n", error);
+      Reply(d, 5, error, __builtin_strlen(error));
+      break;
+    }
     default:
       Reply(d, 3, nullptr, 0);
       break;
@@ -185,7 +237,8 @@ void OnDatagram(void*, const net::UdpDatagram& d) {
 
 }  // namespace
 
-void InitDevlink(net::Stack* stack, const BootInfo& boot, InputTracker* tracker, const gfx::Surface* screen) {
+void InitDevlink(net::Stack* stack, const BootInfo& boot, InputTracker* tracker, const gfx::Surface* screen,
+                 lib::Arena* arena) {
   if (stack == nullptr) {
     return;
   }
@@ -193,6 +246,7 @@ void InitDevlink(net::Stack* stack, const BootInfo& boot, InputTracker* tracker,
   g_state.boot = &boot;
   g_state.tracker = tracker;
   g_state.screen = screen;
+  g_state.arena = arena;
   g_state.boot_id = x86::Rdtsc();
   stack->Bind(kDevlinkPort, &OnDatagram, nullptr);
   Log("devlink: UDP port %u\n", kDevlinkPort);
@@ -201,6 +255,9 @@ void InitDevlink(net::Stack* stack, const BootInfo& boot, InputTracker* tracker,
 void PollDevlink() {
   if (g_state.stack == nullptr) {
     return;
+  }
+  if (g_state.reload) {
+    ExecuteReload(*g_state.boot);
   }
   if (g_state.reboot) {
     Reboot(g_state.boot->runtime_services, g_state.cold_reboot);

@@ -125,6 +125,8 @@ void Driver::Setup() {
   mmio::Write<uint8_t>(mmio_, kCfg9346, kCfg9346Lock);
 }
 
+void Driver::Stop() { mmio::Write<uint8_t>(mmio_, kChipCmd, 0); }
+
 bool Driver::Restart() {
   ++restarts_;
   Setup();

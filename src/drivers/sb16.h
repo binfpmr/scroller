@@ -19,6 +19,9 @@ bool Probe(Config* config);
 // signed 16-bit mono samples, looping forever. Fill both halves first.
 bool Start(const Config& config, uint64_t buffer_physical, uint32_t half_frames, uint32_t sample_rate);
 
+// Ends auto-init playback (before a hot reload).
+void Stop();
+
 // In the interrupt handler: acknowledges the DSP interrupt.
 void AcknowledgeInterrupt();
 

@@ -90,6 +90,7 @@ add_executable(scroller
   src/platform/interrupt_controllers.cpp
   src/platform/network.cpp
   src/platform/panic.cpp
+  src/platform/reload.cpp
   src/platform/reset.cpp
   src/platform/sound.cpp
   src/platform/stats_overlay.cpp

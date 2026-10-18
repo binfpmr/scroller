@@ -103,6 +103,9 @@ class Controller {
   // the event's slot ID.
   int Command(const Trb& trb, uint8_t* slot_id = nullptr);
 
+  // Halts the controller (no more DMA into rings and buffers), before a hot reload.
+  void Halt();
+
   const char* description() const { return description_; }
 
  private:

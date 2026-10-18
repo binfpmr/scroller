@@ -18,6 +18,8 @@ class Driver : public net::Link {
   virtual size_t Receive(const uint8_t** frame) = 0;
   // Link speed in Mbit/s, 0 while the cable is unplugged or negotiation is still running.
   virtual int LinkSpeed() = 0;
+  // Stops sending and receiving (no more DMA into our buffers), before a hot reload.
+  virtual void Stop() = 0;
   // Resets the controller and sets it up again (recovery when receiving has stalled). False if the driver has no
   // need for that.
   virtual bool Restart() { return false; }

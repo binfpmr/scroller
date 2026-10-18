@@ -175,6 +175,11 @@ size_t Driver::Receive(const uint8_t** frame) {
   }
 }
 
+void Driver::Stop() {
+  Write(mmio_, kRctl, 0);
+  Write(mmio_, kTctl, 0);
+}
+
 int Driver::LinkSpeed() {
   const uint32_t status = Read(mmio_, kStatus);
   if ((status & 2) == 0) {
