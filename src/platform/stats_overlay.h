@@ -52,7 +52,7 @@ class StatsOverlay {
   uint64_t last_timer_ticks_ = 0;
   uint64_t last_sound_irqs_ = 0;
   char text_[480] = "";
-  char info_[320] = "";
+  char info_[400] = "";
 };
 
 }  // namespace platform

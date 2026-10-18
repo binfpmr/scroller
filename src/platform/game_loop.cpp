@@ -46,6 +46,7 @@ class InputPoller {
     const uint64_t now = x86::Rdtsc();
     if (now >= next_) {
       keyboard_.Poll(tracker_);
+      PollUsb(tracker_);
       PollNetwork();  // also during the vsync wait, so a burst of frames cannot overflow the receive ring
       next_ = now + interval_;
     }
@@ -97,6 +98,7 @@ bool LoadSheet(const lib::Pack& pack, const char* name, lib::Arena& arena, gfx::
     PollNetwork();
     PollDevlink();
     keyboard.Poll(tracker);
+    PollUsb(tracker);
     const InputState input = tracker.NextTick();
     if (input.Pressed(Key::kEscape) || input.RebootRequested()) {  // nothing else to do here: Esc is enough
       Reboot(boot.runtime_services);
@@ -237,10 +239,10 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
                                              : "NET",
                           found[i].bus, found[i].device, found[i].function);
     }
-    char info[320];
-    lib::Format(info, sizeof(info), "%s\n%s%s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu, netboot,
-                nic_count == 0 ? "\nNIC NONE" : nics, has_gpu ? gpu.vendor_id : 0, has_gpu ? gpu.device_id : 0, gpu.bus,
-                gpu.device, gpu.function, vsync.description(),
+    char info[400];
+    lib::Format(info, sizeof(info), "%s\n%s%s\nUSB %s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu, netboot,
+                nic_count == 0 ? "\nNIC NONE" : nics, UsbStatus(), has_gpu ? gpu.vendor_id : 0,
+                has_gpu ? gpu.device_id : 0, gpu.bus, gpu.device, gpu.function, vsync.description(),
                 !vsync.active() && vsync.intel_status()[0] != '\0' ? "\nINTEL " : "",
                 vsync.active() ? "" : vsync.intel_status());
     Log("hw: %s\n", info);

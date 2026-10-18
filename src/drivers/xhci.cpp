@@ -11,8 +11,8 @@ namespace xhci {
 namespace {
 
 // Capability registers.
-constexpr uint32_t kCapLength = 0x00, kHcsParams1 = 0x04, kHcsParams2 = 0x08, kHccParams1 = 0x10,
-                   kDbOff = 0x14, kRtsOff = 0x18;
+constexpr uint32_t kCapLength = 0x00, kHcsParams1 = 0x04, kHcsParams2 = 0x08, kHccParams1 = 0x10, kDbOff = 0x14,
+                   kRtsOff = 0x18;
 // Operational registers.
 constexpr uint32_t kUsbCmd = 0x00, kUsbSts = 0x04, kCrcr = 0x18, kDcbaap = 0x30, kConfig = 0x38, kPortBase = 0x400;
 constexpr uint32_t kCmdRun = 1u << 0, kCmdReset = 1u << 1;
@@ -29,7 +29,13 @@ constexpr uint32_t kExtLegacy = 1, kExtProtocol = 2;
 constexpr uint32_t kLegacyBiosOwned = 1u << 16, kLegacyOsOwned = 1u << 24;
 
 // TRB types.
-constexpr uint32_t kTrbLink = 6, kTrbNoOp = 23, kTrbCommandCompletion = 33, kTrbPortStatusChange = 34;
+constexpr uint32_t kTrbNormal = 1, kTrbSetup = 2, kTrbData = 3, kTrbStatus = 4, kTrbLink = 6, kTrbEnableSlot = 9,
+                   kTrbAddressDevice = 11, kTrbConfigureEndpoint = 12, kTrbEvaluateContext = 13, kTrbNoOp = 23,
+                   kTrbTransferEvent = 32, kTrbCommandCompletion = 33, kTrbPortStatusChange = 34;
+constexpr uint32_t kTrbIoc = 1u << 5, kTrbIsp = 1u << 2, kTrbIdt = 1u << 6, kTrbDirIn = 1u << 16;
+// Endpoint types in endpoint contexts.
+constexpr uint32_t kEpControl = 4, kEpInterruptIn = 7;
+constexpr int kContexts = 32;  // slot + 31 endpoints
 constexpr uint32_t kLinkToggleCycle = 1u << 1;
 
 constexpr int kEventRingSize = 64;
@@ -295,6 +301,15 @@ void Controller::HandleOtherEvent(const Trb& event) {
   if (TrbType(event) == kTrbPortStatusChange) {
     return;  // ports are looked at directly
   }
+  if (TrbType(event) == kTrbTransferEvent) {
+    if (queued_count_ < kQueuedTransfers) {
+      queued_[queued_count_++] = {.slot = static_cast<int>(event.control >> 24),
+                                  .endpoint = static_cast<int>((event.control >> 16) & 0x1f),
+                                  .code = static_cast<int>(event.status >> 24),
+                                  .remaining = event.status & 0xffffff};
+    }
+    return;
+  }
   Log("xhci: unexpected event type %u, code %u\n", TrbType(event), event.status >> 24);
 }
 
@@ -316,6 +331,194 @@ int Controller::Command(const Trb& trb, uint8_t* slot_id) {
     return false;
   });
   return code;
+}
+
+namespace {
+
+void Put32(uint8_t* context, int dword, uint32_t v) { lib::Copy(context + 4 * dword, &v, 4); }
+uint32_t Get32(const uint8_t* context, int dword) {
+  uint32_t v;
+  lib::Copy(&v, context + 4 * dword, 4);
+  return v;
+}
+
+uint16_t DefaultMaxPacket(Speed speed) {
+  switch (speed) {
+    case Speed::kHigh:
+      return 64;
+    case Speed::kSuper:
+    case Speed::kSuperPlus:
+      return 512;
+    default:
+      return 8;  // low and full speed: 8 is valid for every device; the real size is read right after addressing
+  }
+}
+
+}  // namespace
+
+bool Controller::AddressDevice(int port, Device* device, lib::Arena& arena) {
+  const int context_bytes = context64_ ? 64 : 32;
+  device->port = port;
+  device->speed = Port(port).speed;
+  device->ep0_max_packet = DefaultMaxPacket(device->speed);
+  device->input_context = static_cast<uint8_t*>(arena.Allocate(context_bytes * (kContexts + 1), 64));
+  device->output_context = static_cast<uint8_t*>(arena.Allocate(context_bytes * kContexts, 64));
+  device->buffer = static_cast<uint8_t*>(arena.Allocate(4096, 4096));
+  if (device->input_context == nullptr || device->output_context == nullptr || device->buffer == nullptr ||
+      !device->ep0.Init(arena)) {
+    return false;
+  }
+  lib::Fill(device->input_context, 0, context_bytes * (kContexts + 1));
+  lib::Fill(device->output_context, 0, context_bytes * kContexts);
+
+  uint8_t slot = 0;
+  int code = Command({.parameter = 0, .status = 0, .control = kTrbEnableSlot << 10}, &slot);
+  if (code != kCompletionSuccess || slot == 0 || slot > lib::Min(max_slots_, 32)) {
+    Log("xhci: port %d: Enable Slot failed (code %d)\n", port, code);
+    return false;
+  }
+  device->slot = slot;
+  dcbaa_[slot] = reinterpret_cast<uint64_t>(device->output_context);
+
+  // Input context: add the slot and endpoint 0.
+  uint8_t* control = Context(device->input_context, 0);
+  Put32(control, 1, (1u << 0) | (1u << 1));
+  uint8_t* slot_context = Context(device->input_context, 1);
+  Put32(slot_context, 0, (1u << 27) | (static_cast<uint32_t>(device->speed) << 20));  // 1 context entry, no route
+  Put32(slot_context, 1, static_cast<uint32_t>(port) << 16);
+  uint8_t* ep0 = Context(device->input_context, 2);
+  Put32(ep0, 1, (3u << 1) | (kEpControl << 3) | (static_cast<uint32_t>(device->ep0_max_packet) << 16));
+  Put32(ep0, 2, static_cast<uint32_t>(device->ep0.address()) | 1);  // dequeue cycle state 1
+  Put32(ep0, 3, static_cast<uint32_t>(device->ep0.address() >> 32));
+  Put32(ep0, 4, 8);  // average TRB length
+  code = Command({.parameter = reinterpret_cast<uint64_t>(device->input_context),
+                  .status = 0,
+                  .control = kTrbAddressDevice << 10 | static_cast<uint32_t>(slot) << 24});
+  if (code != kCompletionSuccess) {
+    Log("xhci: port %d: Address Device failed (code %d)\n", port, code);
+    return false;
+  }
+
+  // The first 8 bytes of the device descriptor hold bMaxPacketSize0; update endpoint 0 if it differs.
+  code = ControlTransfer(*device, kRequestIn, 6, 0x0100, 0, 8);
+  if (code != kCompletionSuccess && code != kCompletionShortPacket) {
+    Log("xhci: port %d: device descriptor failed (code %d)\n", port, code);
+    return false;
+  }
+  const uint16_t max_packet =
+      device->speed >= Speed::kSuper ? static_cast<uint16_t>(1u << device->buffer[7]) : device->buffer[7];
+  if (max_packet != device->ep0_max_packet && max_packet >= 8) {
+    device->ep0_max_packet = max_packet;
+    Put32(control, 1, 1u << 1);  // evaluate endpoint 0 only
+    Put32(ep0, 1, (3u << 1) | (kEpControl << 3) | (static_cast<uint32_t>(max_packet) << 16));
+    code = Command({.parameter = reinterpret_cast<uint64_t>(device->input_context),
+                    .status = 0,
+                    .control = kTrbEvaluateContext << 10 | static_cast<uint32_t>(slot) << 24});
+    if (code != kCompletionSuccess) {
+      Log("xhci: port %d: Evaluate Context failed (code %d)\n", port, code);
+      return false;
+    }
+  }
+  return true;
+}
+
+int Controller::ControlTransfer(Device& device, uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
+                                uint16_t length) {
+  const bool in = (request_type & kRequestIn) != 0;
+  const uint64_t setup = request_type | static_cast<uint64_t>(request) << 8 | static_cast<uint64_t>(value) << 16 |
+                         static_cast<uint64_t>(index) << 32 | static_cast<uint64_t>(length) << 48;
+  const uint32_t transfer_type = length == 0 ? 0 : in ? 3 : 2;
+  device.ep0.Push({.parameter = setup, .status = 8, .control = kTrbSetup << 10 | kTrbIdt | transfer_type << 16});
+  if (length > 0) {
+    device.ep0.Push({.parameter = reinterpret_cast<uint64_t>(device.buffer),
+                     .status = length,
+                     .control = kTrbData << 10 | (in ? kTrbDirIn : 0)});
+  }
+  // The status stage goes the other way than the data (IN when there is no data).
+  const uint64_t status_at = device.ep0.Push(
+      {.parameter = 0, .status = 0, .control = kTrbStatus << 10 | kTrbIoc | ((length > 0 && in) ? 0 : kTrbDirIn)});
+  doorbells_[device.slot] = 1;  // endpoint 0 (DCI 1)
+  int code = 0;
+  Wait(500000, [&] {
+    for (Event e = NextEvent(); e.valid; e = NextEvent()) {
+      const bool ours = TrbType(e.trb) == kTrbTransferEvent && static_cast<int>(e.trb.control >> 24) == device.slot &&
+                        ((e.trb.control >> 16) & 0x1f) == 1;
+      if (!ours) {
+        HandleOtherEvent(e.trb);
+        continue;
+      }
+      code = static_cast<int>(e.trb.status >> 24);
+      if (e.trb.parameter == status_at || (code != kCompletionSuccess && code != kCompletionShortPacket)) {
+        return true;  // done, or an error on an earlier stage (no status stage event follows)
+      }
+    }
+    return false;
+  });
+  return code;
+}
+
+bool Controller::ConfigureInterruptIn(Device& device, uint8_t endpoint_address, uint16_t max_packet, uint8_t interval,
+                                      Ring& ring) {
+  const int dci = (endpoint_address & 0xf) * 2 + 1;
+  // Interval as 2^n * 125 us: low/full speed give frames (1 ms), high/super speed already an exponent + 1.
+  int exponent = 3;
+  if (device.speed == Speed::kLow || device.speed == Speed::kFull) {
+    while (exponent < 10 && (1 << (exponent + 1)) <= interval * 8) {
+      ++exponent;
+    }
+  } else {
+    exponent = lib::Clamp(interval - 1, 0, 15);
+  }
+  const int context_bytes = context64_ ? 64 : 32;
+  lib::Fill(device.input_context, 0, context_bytes * (kContexts + 1));
+  uint8_t* control = Context(device.input_context, 0);
+  Put32(control, 1, (1u << 0) | (1u << dci));
+  // Slot context: as the controller has it, with enough context entries for the new endpoint.
+  uint8_t* slot_context = Context(device.input_context, 1);
+  lib::Copy(slot_context, Context(device.output_context, 0), context_bytes);
+  const uint32_t entries = lib::Max<uint32_t>((Get32(slot_context, 0) >> 27) & 0x1f, static_cast<uint32_t>(dci));
+  Put32(slot_context, 0, (Get32(slot_context, 0) & 0x07ffffffu) | entries << 27);
+  Put32(slot_context, 3, 0);  // device address and slot state are output-only
+  uint8_t* ep = Context(device.input_context, 1 + dci);
+  Put32(ep, 0, static_cast<uint32_t>(exponent) << 16);
+  Put32(ep, 1, (3u << 1) | (kEpInterruptIn << 3) | (static_cast<uint32_t>(max_packet) << 16));
+  Put32(ep, 2, static_cast<uint32_t>(ring.address()) | 1);
+  Put32(ep, 3, static_cast<uint32_t>(ring.address() >> 32));
+  Put32(ep, 4, max_packet | static_cast<uint32_t>(max_packet) << 16);  // average TRB length, max ESIT payload
+  const int code = Command({.parameter = reinterpret_cast<uint64_t>(device.input_context),
+                            .status = 0,
+                            .control = kTrbConfigureEndpoint << 10 | static_cast<uint32_t>(device.slot) << 24});
+  if (code != kCompletionSuccess) {
+    Log("xhci: slot %d: Configure Endpoint %02x failed (code %d)\n", device.slot, endpoint_address, code);
+  }
+  return code == kCompletionSuccess;
+}
+
+void Controller::QueueIn(Device& device, int endpoint, Ring& ring, void* buffer, uint32_t length) {
+  ring.Push({.parameter = reinterpret_cast<uint64_t>(buffer),
+             .status = length,
+             .control = kTrbNormal << 10 | kTrbIoc | kTrbIsp});
+  doorbells_[device.slot] = static_cast<uint32_t>(endpoint);
+}
+
+bool Controller::PollTransfer(TransferEvent* event) {
+  if (queued_count_ == 0) {
+    for (Event e = NextEvent(); e.valid; e = NextEvent()) {
+      HandleOtherEvent(e.trb);
+      if (queued_count_ > 0) {
+        break;
+      }
+    }
+  }
+  if (queued_count_ == 0) {
+    return false;
+  }
+  *event = queued_[0];
+  for (int i = 1; i < queued_count_; ++i) {
+    queued_[i - 1] = queued_[i];
+  }
+  --queued_count_;
+  return true;
 }
 
 }  // namespace xhci

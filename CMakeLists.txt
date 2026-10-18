@@ -24,7 +24,9 @@ set(SCROLLER_CORE_SOURCES
   src/audio/song.cpp
   src/audio/synth.cpp
   src/drivers/acpi.cpp
+  src/drivers/hid_keyboard.cpp
   src/drivers/ps2_decoder.cpp
+  src/drivers/usb_descriptors.cpp
   src/game/camera.cpp
   src/game/game.cpp
   src/game/level.cpp
