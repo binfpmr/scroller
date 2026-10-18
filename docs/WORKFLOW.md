@@ -80,6 +80,20 @@ addr2line -f -C -e build/uefi/scroller.elf 0x4daa 0x312c 0x1055   # RIP offset, 
 The log prints this command ready to copy (`decode: ...`). Use the `scroller.elf` of the same version (shown on the
 crash screen).
 
+## Network boot (test PC without USB sticks)
+
+The test PC boots the current build straight from this PC over Ethernet (UEFI PXE):
+
+```sh
+scripts/netboot-server.sh proxy wlp1s0             # test PC wired to the same LAN/router as this PC
+scripts/netboot-server.sh direct enx00e04cdc42a1   # cable from this PC's USB Ethernet adapter to the test PC
+```
+
+It runs dnsmasq in the foreground (sudo; Ctrl+C stops) and serves `build/uefi/scroller.efi`; rebuild, then reboot
+the test PC (Esc in the game) to get the new build. On the test PC: Secure Boot off, network/PXE IPv4 boot enabled
+and first in the boot order (or picked from the boot menu). F1 shows `NETBOOT <ip> FROM <server>` when it worked.
+In QEMU: `scripts/run-qemu.sh --netboot` (QEMU's own DHCP/TFTP server, no dnsmasq needed).
+
 ## Write to a USB stick / disk
 
 **Double-check the device name; `dd` will overwrite whatever you point it at.**

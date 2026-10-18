@@ -15,4 +15,4 @@ cmake --preset uefi && cmake --build --preset uefi
 scripts/run-qemu.sh
 ```
 
-Status: M3 done (sprites, level 1 with a goal, assets loaded from the boot volume); runs on real hardware (HP Pavilion). M4 done (interrupts, crash reports, APIC timer, IRQ keyboard; verified on the HP Pavilion); M5 sound in QEMU (chiptune engine, Minuet in G, effects; HDA and SB16).
+Status: M3 done (sprites, level 1 with a goal, assets loaded from the boot volume); runs on real hardware (HP Pavilion). M4 done (interrupts, crash reports, APIC timer, IRQ keyboard; verified on the HP Pavilion); M5 done (chiptune engine, Minuet in G, effects; HDA verified on the laptop). M6: network boot and a debug link over Ethernet.

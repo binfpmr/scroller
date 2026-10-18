@@ -60,20 +60,32 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] Real hardware check: sound from the HP Pavilion's speakers and headphones (Realtek ALC295)
 - [x] Music at 50 % of the effects; master volume (starts at 50 %) with on-screen indicator
 
-## M6: USB keyboard
+## M6: network development loop (hardware-in-the-loop without USB sticks)
 
-- [ ] PCI enumeration
+- [x] Assets linked into the image (no file system needed)
+- [x] Network boot (PXE) in QEMU (`tools/qemu.py --netboot`); PXE addresses passed in `BootInfo`
+- [x] `scripts/netboot-server.sh` (dnsmasq: `proxy` next to the router's DHCP, or `direct` cable)
+- [ ] Network boot on the HP Pavilion (needs a human: cable, BIOS boot order)
+- [ ] NIC driver for the HP Pavilion's controller (ID from the F1 overlay) and e1000 for QEMU, behind one interface
+- [ ] Minimal ARP/IPv4/UDP (addresses from the PXE boot)
+- [ ] UDP debug protocol + `tools/devlink.py`: log stream, screenshots, key injection, reboot (= load the new build),
+      memory peek/poke
+- [ ] Optional: GDB remote stub over UDP (`target remote udp:...`)
+
+## M7: USB keyboard
+
+- [x] PCI enumeration
 - [ ] xHCI controller init, device enumeration
 - [ ] HID boot-protocol keyboard -> same `InputState`
 - [ ] Develop in QEMU with `-device qemu-xhci -device usb-kbd`, then real hardware
 
-## M7: runtime disk access
+## M8: runtime disk access
 
 - [ ] Read a raw data partition via AHCI (QEMU default on q35)
 - [ ] NVMe (QEMU `-device nvme`) for modern PCs
 - [ ] Optional: saves (write support); USB mass storage is out of scope unless needed
 
-## M8: polish
+## M9: polish
 
 - [x] Write-combining framebuffer via PAT (pulled forward: real hardware ran at a few FPS)
 - [x] On-screen performance overlay (F1, hidden by default), 5x7 bitmap font
