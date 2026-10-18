@@ -340,3 +340,35 @@ TEST(SoundEvents) {
   UpdatePlayer(p, test::Keys({}, {Key::kJump}), t.level);
   EXPECT_EQ(p.events, game::kEventWallJump);
 }
+
+TEST(DuckingStartsWithASoundEvent) {
+  test::TestLevel t(kTall);
+  Player p = SpawnAtStart(t.level);
+  Run(p, t.level, {}, 5);
+  UpdatePlayer(p, test::Keys({Key::kDown}), t.level);
+  EXPECT_EQ(p.events, game::kEventDuck);
+  UpdatePlayer(p, test::Keys({Key::kDown}), t.level);
+  EXPECT_EQ(p.events, 0);  // only when it starts
+}
+
+TEST(HoldingDownTwoSecondsDuckJumpsByItself) {
+  test::TestLevel t(kTall);
+  const int duck_jump = JumpHeightAfterDuck(t.level, 0);
+  Player p = SpawnAtStart(t.level);
+  Run(p, t.level, {}, 5);
+  const int floor_y = p.pixel_y();
+  Run(p, t.level, test::Keys({Key::kDown}), game::PlayerTuning::kDuckAutoJumpTicks - 1);
+  EXPECT_TRUE(p.on_ground);  // not yet
+  UpdatePlayer(p, test::Keys({Key::kDown}), t.level);
+  EXPECT_EQ(p.events & game::kEventJump, game::kEventJump);
+  const int top = Run(p, t.level, test::Keys({Key::kDown}), 100);  // Down still held, jump never pressed
+  EXPECT_EQ(floor_y - top, duck_jump);                             // as high as a held duck-jump
+  EXPECT_TRUE(p.on_ground);
+
+  // Still holding Down after landing: no second jump until Down is released.
+  Run(p, t.level, test::Keys({Key::kDown}), game::PlayerTuning::kDuckAutoJumpTicks + 20);
+  EXPECT_TRUE(p.on_ground);
+  Run(p, t.level, {}, 1);
+  Run(p, t.level, test::Keys({Key::kDown}), game::PlayerTuning::kDuckAutoJumpTicks + 1);
+  EXPECT_TRUE(!p.on_ground);
+}

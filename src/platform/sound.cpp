@@ -25,6 +25,7 @@ audio::Engine g_engine;
 audio::Song g_music;
 audio::Song g_jump;
 audio::Song g_land;
+audio::Song g_duck;
 audio::Song g_wall_jump;
 audio::Song g_goal;
 bool g_have_effects = false;
@@ -99,7 +100,8 @@ void LoadSongs(const lib::Pack& pack, lib::Arena& arena) {
   const bool have_music = LoadSong(pack, "music/minuet.txt", arena, &g_music);
   g_have_effects =
       LoadSong(pack, "sounds/jump.txt", arena, &g_jump) && LoadSong(pack, "sounds/land.txt", arena, &g_land) &&
-      LoadSong(pack, "sounds/walljump.txt", arena, &g_wall_jump) && LoadSong(pack, "sounds/goal.txt", arena, &g_goal);
+      LoadSong(pack, "sounds/duck.txt", arena, &g_duck) && LoadSong(pack, "sounds/walljump.txt", arena, &g_wall_jump) &&
+      LoadSong(pack, "sounds/goal.txt", arena, &g_goal);
   if (have_music) {
     g_engine.PlayMusic(&g_music);
   }
@@ -168,6 +170,8 @@ void PlaySoundEvents(uint8_t events) {
   }
   if (events & game::kEventLand) {
     g_engine.PlaySound(&g_land);
+  } else if (events & game::kEventDuck) {
+    g_engine.PlaySound(&g_duck);
   }
   x86::EnableInterrupts();
 }

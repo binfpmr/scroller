@@ -28,6 +28,9 @@ struct PlayerTuning {
   // with kJumpSpeed * sqrt(1.5): 50% more height.
   static constexpr Fixed kDuckJumpSpeed = Fixed::FromRatio(7348, 1000);
   static constexpr int kDuckJumpWindowTicks = 10;
+  // Holding Down this long on the ground does the duck-jump by itself (full height, as if jump stayed held); Down
+  // must be released before it happens again.
+  static constexpr int kDuckAutoJumpTicks = 120;
 
   // Wall-jump: jumping in the air while touching a side wall, or up to kWallCoyoteTicks after, starts a full jump
   // from zero horizontal speed. Until the top of that jump the input is overridden as if jump and the direction away
@@ -40,6 +43,7 @@ enum PlayerEvent : uint8_t {
   kEventJump = 1 << 0,
   kEventWallJump = 1 << 1,
   kEventLand = 1 << 2,  // touched down after falling faster than 2 px per tick
+  kEventDuck = 1 << 3,  // started ducking (getting ready for a duck-jump)
 };
 
 struct Player {
@@ -57,9 +61,12 @@ struct Player {
   int ticks_since_jump_pressed = PlayerTuning::kJumpBufferTicks + 1;
   int ticks_since_duck = PlayerTuning::kDuckJumpWindowTicks + 1;
   int ticks_since_wall = PlayerTuning::kWallCoyoteTicks + 1;
-  int wall_side = 0;           // -1 wall on the left, +1 on the right (last wall touched in the air)
-  int wall_jump_away_dir = 0;  // non-zero while a wall-jump overrides the input
-  uint8_t events = 0;          // PlayerEvent bits from the last update
+  int wall_side = 0;            // -1 wall on the left, +1 on the right (last wall touched in the air)
+  int wall_jump_away_dir = 0;   // non-zero while a wall-jump overrides the input
+  int duck_ticks = 0;           // how long Down has been held on the ground
+  bool auto_jump_armed = true;  // false after an automatic duck-jump until Down is released
+  bool auto_jumping = false;    // rising from an automatic duck-jump: counts as jump held
+  uint8_t events = 0;           // PlayerEvent bits from the last update
 
   int pixel_x() const { return x.Floor(); }
   int pixel_y() const { return y.Floor(); }

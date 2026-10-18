@@ -98,8 +98,17 @@ void UpdatePlayer(Player& p, const platform::InputState& input, const Level& lev
   const bool was_on_ground = p.on_ground;
   const bool wall_jumping = p.wall_jump_away_dir != 0;
 
+  const bool was_ducking = p.ducking;
   p.ducking = p.on_ground && input.Held(Key::kDown);
   p.ticks_since_duck = p.ducking ? 0 : lib::Min(p.ticks_since_duck + 1, 1000);
+  if (p.ducking && !was_ducking) {
+    p.events |= kEventDuck;
+  }
+  p.duck_ticks = p.ducking ? p.duck_ticks + 1 : 0;
+  if (!input.Held(Key::kDown)) {
+    p.auto_jump_armed = true;
+  }
+  const bool auto_jump = p.auto_jump_armed && p.duck_ticks >= T::kDuckAutoJumpTicks;
 
   // Horizontal: accelerate toward the held direction, turn around with acceleration plus friction.
   const int dir =
@@ -130,14 +139,19 @@ void UpdatePlayer(Player& p, const platform::InputState& input, const Level& lev
   // Jump with buffering and coyote time; releasing the button early cuts the jump short.
   p.ticks_since_jump_pressed = input.Pressed(Key::kJump) ? 0 : lib::Min(p.ticks_since_jump_pressed + 1, 1000);
   p.ticks_since_ground = p.on_ground ? 0 : lib::Min(p.ticks_since_ground + 1, 1000);
-  const bool jump_requested = p.ticks_since_jump_pressed <= T::kJumpBufferTicks;
+  const bool jump_requested = p.ticks_since_jump_pressed <= T::kJumpBufferTicks || auto_jump;
   if (jump_requested && p.ticks_since_ground <= T::kCoyoteTicks) {
+    if (auto_jump) {
+      p.auto_jump_armed = false;
+      p.auto_jumping = true;
+    }
     p.vy = p.ticks_since_duck <= T::kDuckJumpWindowTicks ? -T::kDuckJumpSpeed : -T::kJumpSpeed;
     p.events |= kEventJump;
     p.ticks_since_jump_pressed = T::kJumpBufferTicks + 1;
     p.ticks_since_ground = T::kCoyoteTicks + 1;
     p.ticks_since_duck = T::kDuckJumpWindowTicks + 1;
     p.ducking = false;
+    p.duck_ticks = 0;
   } else if (jump_requested && p.ticks_since_wall <= T::kWallCoyoteTicks) {
     p.vy = -T::kJumpSpeed;
     p.vx = Fixed();  // as if from standstill
@@ -147,7 +161,7 @@ void UpdatePlayer(Player& p, const platform::InputState& input, const Level& lev
     p.ticks_since_jump_pressed = T::kJumpBufferTicks + 1;
     p.ticks_since_wall = T::kWallCoyoteTicks + 1;
   }
-  const bool jump_held = input.Held(Key::kJump) || p.wall_jump_away_dir != 0;
+  const bool jump_held = input.Held(Key::kJump) || p.wall_jump_away_dir != 0 || p.auto_jumping;
   if (!jump_held && p.vy < -T::kJumpCutSpeed) {
     p.vy = -T::kJumpCutSpeed;
   }
@@ -161,6 +175,7 @@ void UpdatePlayer(Player& p, const platform::InputState& input, const Level& lev
   }
   if (p.on_ground || p.vy >= Fixed()) {
     p.wall_jump_away_dir = 0;  // a wall-jump controls the rise only
+    p.auto_jumping = false;
   }
 }
 

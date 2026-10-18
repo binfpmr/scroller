@@ -1,0 +1,7 @@
+# Duck: a very soft short low blip (getting ready for a duck-jump).
+tempo 600
+rows_per_beat 4
+instrument tick triangle attack 1 decay 30 sustain 0 volume 18
+channels tick
+C-4
+---
