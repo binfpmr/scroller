@@ -72,6 +72,11 @@ class Game {
     current_ = 0;
     Restart();
   }
+  // The start of the next level (after the last: the first). A development aid (F2).
+  void SkipToNextLevel() {
+    current_ = (current_ + 1) % level_count_;
+    Restart();
+  }
   void Render(gfx::Surface& screen) const;
 
   const Level& level() const { return levels_[current_]; }

@@ -21,6 +21,7 @@ enum class Key : uint8_t {
   kDelete,       // Delete (or keypad Del)
   kToggleMusic,  // 'N': background music on/off
   kReload,       // 'R': with Ctrl+Alt, hot reload from the network-boot server
+  kNextLevel,    // F2: skip to the next level (development aid)
   kCount,
 };
 

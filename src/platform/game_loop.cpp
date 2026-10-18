@@ -296,6 +296,9 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       if (input.Pressed(Key::kEscape)) {
         game.RestartFromFirstLevel();
       }
+      if (input.Pressed(Key::kNextLevel)) {
+        game.SkipToNextLevel();
+      }
       if (input.Pressed(Key::kToggleStats)) {
         stats.visible = !stats.visible;
       }

@@ -23,7 +23,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] PS/2 keyboard polling -> `InputState` (held / pressed / released per key)
 - [x] 60 Hz fixed-step loop; test pattern that scrolls with arrow keys
 - [x] `SCROLLER_UEFI_INPUT` fallback build for real-HW trials (preset `uefi-input`)
-- [x] Esc reboots (`ResetSystem`, with fallbacks); later: Esc back to level 1, Ctrl+Alt+Delete reboots, Ctrl+Alt+R hot-reloads from the network-boot server
+- [x] Esc reboots (`ResetSystem`, with fallbacks); later: Esc back to level 1, Ctrl+Alt+Delete reboots, Ctrl+Alt+R hot-reloads from the network-boot server, F2 skips to the next level (development aid)
 - [x] First real hardware test from a USB stick: HP Pavilion laptop, `uefi` image (built-in keyboard works over PS/2)
 
 ## M2: platformer core
@@ -154,7 +154,7 @@ Decided: pure "reach the goal", placeholder text-art style, no title screen.
 
 ## Settled
 
-- Controls: Left/Right move, Up or Space jump, Down ducks (hold 1 s: duck-jump), Esc back to level 1, Ctrl+Alt+Delete reboots, Ctrl+Alt+R hot-reloads from the network-boot server, media keys or `=`/`-`/`M` for volume, `N` music on/off (off at start).
+- Controls: Left/Right move, Up or Space jump, Down ducks (hold 1 s: duck-jump), Esc back to level 1, Ctrl+Alt+Delete reboots, Ctrl+Alt+R hot-reloads from the network-boot server, F2 skips to the next level (development aid), media keys or `=`/`-`/`M` for volume, `N` music on/off (off at start).
 - Art: placeholder sprites drawn as text art in the repo.
 - Game: reach the goal; falling respawns at the last checkpoint; enemies are only avoided; no title screen.
 - Levels: plain text, one character per tile; no level editor for now.

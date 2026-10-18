@@ -44,6 +44,9 @@ bool MapUsage(uint8_t usage, Key* key) {
     case 0x3a:
       *key = Key::kToggleStats;  // F1
       return true;
+    case 0x3b:
+      *key = Key::kNextLevel;  // F2
+      return true;
     case 0x2e:  // '=' / '+'
     case 0x80:  // volume up
       *key = Key::kVolumeUp;
