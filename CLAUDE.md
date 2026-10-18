@@ -13,6 +13,7 @@ ctest --preset host                                      # all host unit tests
 ctest --preset host -R <regex>                           # single test
 scripts/smoke-test.sh [--keys "right:2 shot:x esc ..."]     # headless QEMU boot + key script; read debugcon.log and the PNGs
 scripts/run-qemu.sh [--debug]                            # interactive run (user's display), gdb stub with --debug
+build/host/render_audio <song.txt> <out.wav>             # render a song with the game's synth (to listen/analyse)
 build/host/levelcheck <level.txt>                        # which spots of a level the player can reach (after host build)
 clang-format -i <files>                                  # Google style, 120 columns (.clang-format)
 ```

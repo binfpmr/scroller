@@ -53,8 +53,11 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## M5: sound
 
-- [ ] Sound Blaster 16 in QEMU (`-device sb16`): DMA playback of a PCM buffer, simple mixer, jump/land effects
-- [ ] Intel HDA for real hardware (QEMU `-device intel-hda -device hda-duplex` to develop)
+- [x] Chiptune engine (square/triangle/saw/noise, ADSR), plain-text tracker songs, `render_audio` host tool
+- [x] Minuet in G (BWV Anh. 114) as background music; jump, land, wall-jump and goal effects
+- [x] Sound Blaster 16 in QEMU (`--sound sb16`): ISA DMA auto-init, IRQ per half buffer
+- [x] Intel HDA (`--sound hda`, default): CORB/RIRB, codec path search, timer-driven refill; verified in QEMU
+- [ ] Real hardware check: sound from the HP Pavilion's speakers / headphones
 
 ## M6: USB keyboard
 

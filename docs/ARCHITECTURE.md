@@ -88,6 +88,18 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 - Crash reports: name, error code, CR2, registers, call chain as image offsets (frame pointers kept), version; the
   log line `decode: addr2line ...` resolves them against `build/uefi/scroller.elf`. Debug builds: F9 = #UD, F10 = #PF.
 
+## Sound
+
+- `src/audio/` (shared core, host-tested): voices (square with duty, triangle, saw, 15-bit LFSR noise) with
+  attack/decay/sustain/release envelopes, integer only; `Song` parses the text tracker format (`docs/ASSETS.md`);
+  `Engine` plays one music song plus two sound-effect slots and mixes to 16-bit mono.
+- `platform/sound` picks a device and feeds the engine: Intel HDA if present (`drivers/hda`: CORB/RIRB commands,
+  widget graph search from speaker/headphone/line-out pins to a DAC, 48 kHz stereo looping buffer refilled from the
+  1 kHz timer interrupt 43 ms ahead of the play position, so no PCI interrupt routing is needed), else a Sound Blaster
+  16 (`drivers/sb16`: ISA DMA auto-init over a page below 16 MiB, refilled from its IRQ). Engine calls from the main
+  loop run with interrupts disabled because rendering happens in interrupt handlers.
+- Game sound events: `Player::events` (jump, wall-jump, land) and the goal, collected by `Game::TakeEvents()`.
+
 ## Freestanding C++ rules
 
 - Compile flags (roughly): `-std=c++23` / `-std=c23`, `-ffreestanding -fpie -fvisibility=hidden -fno-plt -fno-exceptions -fno-rtti -fno-stack-protector -fno-stack-check -fcf-protection=none -fno-asynchronous-unwind-tables -mno-red-zone`.
