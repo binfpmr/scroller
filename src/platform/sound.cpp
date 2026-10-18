@@ -32,7 +32,7 @@ bool g_have_effects = false;
 volatile uint64_t g_interrupts = 0;  // buffer refills
 char g_status[48] = "NONE";
 constexpr int kMusicVolume = 50;  // music sits below the effects
-int g_volume = 10;
+int g_volume = 60;  // master volume on a decibel scale (audio::Engine): 60 % is -20 dB
 bool g_muted = false;
 bool g_music_on = false;  // off by default; N switches it on
 

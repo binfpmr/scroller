@@ -135,6 +135,9 @@ Decided: pure "reach the goal", placeholder text-art style, no title screen.
 ## M9: later
 
 - [ ] Gamepad: USB HID gamepads (report descriptor parsing), then mapping to the same keys
+- [ ] Mouse (USB HID boot mouse; one already enumerates on the HP Pavilion): a left click makes the player walk toward
+      the clicked point's horizontal position and stop there (direction only, no path finding); a right click jumps;
+      a duck-jump by some gesture still to decide (e.g. right button held, or both buttons)
 - [ ] USB hubs
 - [ ] Disk: USB mass storage (bulk-only transport, SCSI READ(10)) on the xHCI driver, to read the stick we booted from
       (only needed for saves or levels outside the image)

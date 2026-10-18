@@ -102,9 +102,21 @@ void Engine::Render(int16_t* out, size_t frames) {
       }
     }
     int32_t mix = music * music_volume_ / 100 + effects;
-    mix = mix * master_volume_ / 200;  // and /2 headroom: several full-volume voices would clip
+    // Rounded: at low volume the samples are small and truncation would bias them. /2 headroom: voices add up.
+    mix = static_cast<int32_t>((static_cast<int64_t>(mix) * master_gain_ + (1 << 16)) >> 17);
     out[i] = static_cast<int16_t>(mix > 32767 ? 32767 : mix < -32768 ? -32768 : mix);
   }
+}
+
+void Engine::SetMasterVolume(int percent) {
+  master_volume_ = percent < 0 ? 0 : percent > 100 ? 100 : percent;
+  // 0.5 dB per percent: gain = 10^(-(100 - percent) * 0.5 / 20), stepped down from full in 16.16 fixed point.
+  constexpr int32_t kStep = 61870;  // 10^(-0.025) * 65536
+  int32_t gain = 65536;
+  for (int p = 100; p > master_volume_; --p) {
+    gain = static_cast<int32_t>((static_cast<int64_t>(gain) * kStep) >> 16);
+  }
+  master_gain_ = master_volume_ == 0 ? 0 : gain;
 }
 
 }  // namespace audio

@@ -98,7 +98,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
   1 kHz timer interrupt 43 ms ahead of the play position, so no PCI interrupt routing is needed), else a Sound Blaster
   16 (`drivers/sb16`: ISA DMA auto-init over a page below 16 MiB, refilled from its IRQ). Engine calls from the main
   loop run with interrupts disabled because rendering happens in interrupt handlers.
-- Volumes: music off at start (`N` toggles it), at 50 % relative to the effects when on, master volume 0..100 % (default 10 %) in software, changed in
+- Volumes: music off at start (`N` toggles it), at 50 % relative to the effects when on, master volume 0..100 % on a decibel scale (5 dB per 10 %, default 60 %) in software, changed in
   steps of 10 % by the volume keys.
 - Game sound events: `Player::events` (jump, wall-jump, land, duck) and the goal, collected by `Game::TakeEvents()`.
 

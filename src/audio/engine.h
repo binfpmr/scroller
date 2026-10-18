@@ -27,9 +27,10 @@ class Engine {
 
   bool music_playing() const { return music_.song != nullptr; }
 
-  // Volumes in percent (0..100). Music is relative to the effects; master scales everything.
+  // Volumes in percent (0..100). Music is relative to the effects (linear); master scales everything on a decibel
+  // scale, like a volume knob: 100 % is full, every 10 % less is 5 dB quieter (50 dB range), 0 % is silent.
   void SetMusicVolume(int percent) { music_volume_ = percent < 0 ? 0 : percent > 100 ? 100 : percent; }
-  void SetMasterVolume(int percent) { master_volume_ = percent < 0 ? 0 : percent > 100 ? 100 : percent; }
+  void SetMasterVolume(int percent);
   int music_volume() const { return music_volume_; }
   int master_volume() const { return master_volume_; }
 
@@ -56,6 +57,7 @@ class Engine {
   uint32_t sound_counter_ = 0;
   int music_volume_ = 100;
   int master_volume_ = 100;
+  int32_t master_gain_ = 65536;  // 16.16 fixed point, from master_volume_
 };
 
 }  // namespace audio

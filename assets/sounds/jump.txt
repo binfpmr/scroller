@@ -1,7 +1,7 @@
 # Jump: quick rising arpeggio.
 tempo 600
 rows_per_beat 4
-instrument blip square duty 25 attack 1 release 20 volume 45
+instrument blip square duty 25 attack 1 release 20 volume 25
 channels blip
 C-5
 E-5

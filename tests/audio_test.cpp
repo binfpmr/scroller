@@ -166,7 +166,15 @@ TEST(MusicAndMasterVolume) {
   };
   const double full = rms(100, 100);
   EXPECT_TRUE(full > 1000);
-  EXPECT_TRUE(std::abs(rms(50, 100) / full - 0.5) < 0.02);
-  EXPECT_TRUE(std::abs(rms(100, 30) / full - 0.3) < 0.02);
+  EXPECT_TRUE(std::abs(rms(50, 100) / full - 0.5) < 0.02);  // music volume: linear
+  // Master volume: 5 dB per 10 %.
+  for (int master : {90, 60, 30, 10}) {
+    const double expected = std::pow(10.0, -(100 - master) * 0.5 / 20);
+    const double ratio = rms(100, master) / full / expected;
+    if (std::abs(ratio - 1) >= 0.03) {
+      std::cerr << "master " << master << ": ratio " << ratio << "\n";
+    }
+    EXPECT_TRUE(std::abs(ratio - 1) < 0.03);
+  }
   EXPECT_EQ(rms(100, 0), 0.0);
 }
