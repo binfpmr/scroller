@@ -10,6 +10,7 @@
 #include "gfx/present.h"
 #include "lib/format.h"
 #include "platform/devlink.h"
+#include "platform/gdb_stub.h"
 #include "platform/network.h"
 #include "platform/reset.h"
 #include "scroller_version.h"
@@ -79,7 +80,10 @@ void SetPanicContext(gfx::Surface* screen, const gfx::Framebuffer* fb, const gfx
   g_runtime_services = runtime_services;
 }
 
-void OnException(const x86::InterruptFrame& f) {
+void OnException(x86::InterruptFrame& f) {
+  if (GdbStubOnException(f)) {
+    return;  // a breakpoint, single step, stop request, or a crash a debugger looked at: resume
+  }
   if (g_panicking) {  // fault while reporting a fault: stop here
     for (;;) {
       asm volatile("cli; hlt");

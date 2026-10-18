@@ -5,6 +5,7 @@
 #include "drivers/debug_log.h"
 #include "lib/format.h"
 #include "lib/mem.h"
+#include "platform/gdb_stub.h"
 #include "platform/reset.h"
 #include "scroller_version.h"
 
@@ -24,6 +25,9 @@ enum Command : uint8_t {
   kKey = 0x04,
   kReboot = 0x05,
   kSubscribe = 0x06,
+  kGdbPacket = 0x07,
+  kGdbWait = 0x08,
+  kGdbInterrupt = 0x09,
   kLog = 0x80,
 };
 
@@ -38,6 +42,12 @@ struct State {
   uint64_t log_position = 0;
   bool reboot = false;
   uint64_t boot_id = 0;  // differs between boots, so the PC notices a reboot
+  // Last GDB packet's sequence number and reply: a retransmitted packet gets the same reply instead of running
+  // again (a repeated "s" would step twice).
+  bool gdb_cached = false;
+  uint32_t gdb_sequence = 0;
+  size_t gdb_reply_length = 0;
+  char gdb_reply[1024];
 };
 
 State g_state;
@@ -51,21 +61,6 @@ uint32_t Get32(const uint8_t* p) {
   uint32_t v = 0;
   lib::Copy(&v, p, 4);
   return v;
-}
-
-bool RangeMapped(uint64_t address, uint64_t length) {
-  if (length == 0) {
-    return true;
-  }
-  if (address + length < address) {
-    return false;
-  }
-  for (uint64_t page = address & ~0xfffull; page < address + length; page += 0x1000) {
-    if (!x86::IsMapped(page)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 void Reply(const net::UdpDatagram& request, uint8_t status, const void* payload, size_t length) {
@@ -110,7 +105,7 @@ void OnDatagram(void*, const net::UdpDatagram& d) {
       }
       const uint64_t address = Get64(body);
       const uint32_t length = Get32(body + 8);
-      if (length > kMaxRead || !RangeMapped(address, length)) {
+      if (length > kMaxRead || !x86::RangeMapped(address, length)) {
         Reply(d, 1, nullptr, 0);
         break;
       }
@@ -124,11 +119,11 @@ void OnDatagram(void*, const net::UdpDatagram& d) {
       }
       const uint64_t address = Get64(body);
       const size_t length = body_length - 8;
-      if (!RangeMapped(address, length)) {
+      if (!x86::RangeMapped(address, length)) {
         Reply(d, 1, nullptr, 0);
         break;
       }
-      lib::Copy(reinterpret_cast<void*>(address), body + 8, length);
+      x86::CopyIgnoringWriteProtect(reinterpret_cast<void*>(address), body + 8, length);
       Reply(d, 0, nullptr, 0);
       break;
     }
@@ -154,6 +149,31 @@ void OnDatagram(void*, const net::UdpDatagram& d) {
       Reply(d, 0, nullptr, 0);
       Log("devlink: log subscriber %u.%u.%u.%u:%u\n", d.source_ip.b[0], d.source_ip.b[1], d.source_ip.b[2],
           d.source_ip.b[3], d.source_port);
+      break;
+    case kGdbPacket: {
+      const uint32_t sequence = Get32(d.data + 4);
+      if (!g_state.gdb_cached || sequence != g_state.gdb_sequence) {
+        const auto* packet = reinterpret_cast<const char*>(body);
+        if (body_length == 1 && packet[0] == 'k') {
+          g_state.reboot = true;  // kill: reboot (gdb expects no reply)
+        }
+        g_state.gdb_reply_length =
+            GdbStubHandlePacket(packet, body_length, g_state.gdb_reply, sizeof(g_state.gdb_reply));
+        g_state.gdb_sequence = sequence;
+        g_state.gdb_cached = true;
+      }
+      Reply(d, 0, g_state.gdb_reply, g_state.gdb_reply_length);
+      break;
+    }
+    case kGdbWait: {
+      char stop[16];
+      const size_t n = GdbStubWait(stop, sizeof(stop));
+      Reply(d, n == 0 ? 4 : 0, stop, n);  // status 4: still running
+      break;
+    }
+    case kGdbInterrupt:
+      GdbStubRequestStop();
+      Reply(d, 0, nullptr, 0);
       break;
     default:
       Reply(d, 3, nullptr, 0);
@@ -183,6 +203,7 @@ void PollDevlink() {
   if (g_state.reboot) {
     Reboot(g_state.boot->runtime_services);
   }
+  GdbStubPoll();
   if (!g_state.subscribed || !g_state.stack->configured()) {
     return;
   }

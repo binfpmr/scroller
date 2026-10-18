@@ -30,8 +30,8 @@ audio::Song g_goal;
 bool g_have_effects = false;
 volatile uint64_t g_interrupts = 0;  // buffer refills
 char g_status[48] = "NONE";
-constexpr int kMusicVolume = 50;  // music sits below the effects
-int g_volume = 50;
+constexpr int kMusicVolume = 40;  // music sits below the effects
+int g_volume = 20;
 bool g_muted = false;
 
 void ApplyVolume() {
@@ -180,6 +180,22 @@ void SetMuted(bool muted) {
   ApplyVolume();
 }
 bool Muted() { return g_muted; }
+
+void PauseSound() {
+  if (g_hda.buffer() != nullptr) {
+    lib::Fill(g_hda.buffer(), 0, hda::Controller::kBufferFrames * 4);
+  }
+  if (g_buffer != nullptr) {
+    lib::Fill(g_buffer, 0, 2 * kHalfFrames * sizeof(int16_t));
+  }
+}
+
+void ResumeSound() {
+  if (g_hda.buffer() != nullptr) {
+    // The position counter missed wrap-arounds meanwhile; carry on from wherever the hardware is now.
+    g_hda_written = g_hda.FramesPlayed();
+  }
+}
 
 const char* SoundStatus() { return g_status; }
 uint64_t SoundInterrupts() { return g_interrupts; }

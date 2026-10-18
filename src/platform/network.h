@@ -16,6 +16,9 @@ void PollNetwork();
 
 net::Stack* NetworkStack();
 
+// True while PollNetwork runs (the debugger must not use the network when it stops the machine in there).
+bool NetworkBusy();
+
 // For the stats overlay, e.g. "ETH 10EC:8168 1000M 192.168.178.40" or "ETH 8086:100E NO LINK".
 const char* NetworkStatus();
 // Driver register state (empty for drivers without one), shown under the NET line.

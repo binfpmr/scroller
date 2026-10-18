@@ -24,6 +24,11 @@ int Volume();
 void SetMuted(bool muted);
 bool Muted();
 
+// For the debugger: while the machine is stopped (interrupts off, nothing refills the looping buffer) play silence,
+// then carry on from the hardware's current position. Interrupts must be off for both.
+void PauseSound();
+void ResumeSound();
+
 const char* SoundStatus();
 uint64_t SoundInterrupts();
 

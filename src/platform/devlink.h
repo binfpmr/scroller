@@ -11,6 +11,10 @@
 //   0x04 KEY        u8 platform::Key, u8 down               -> empty
 //   0x05 REBOOT     -> empty reply, then the machine reboots
 //   0x06 SUBSCRIBE  u8 from_start (1: whole kept history)   -> empty; the log then streams to the sender
+//   0x07 GDB        a gdb packet's payload (between '$' and '#') -> the reply payload (platform/gdb_stub); a repeated
+//                   sequence number gets the cached reply
+//   0x08 GDB_WAIT   -> status 0 and the stop reply if the machine is stopped, status 4 while it runs
+//   0x09 GDB_STOP   -> empty; the machine stops at the next main loop iteration (gdb's Ctrl+C)
 //   0x80 LOG        (target -> subscriber, unsolicited)     u64 position, text
 #pragma once
 

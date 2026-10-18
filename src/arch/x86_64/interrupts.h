@@ -17,8 +17,9 @@ struct InterruptFrame {
 
 using InterruptHandler = void (*)(InterruptFrame& frame);
 
-// CPU exceptions (vectors 0..31) go here; it must not return.
-using ExceptionHandler = void (*)(const InterruptFrame& frame);
+// CPU exceptions (vectors 0..31) go here. Returning resumes at frame.rip with the frame's registers (the gdb stub
+// does that after a breakpoint or a single step); for a fault that would just fault again.
+using ExceptionHandler = void (*)(InterruptFrame& frame);
 
 // Loads a GDT (code 0x08, data 0x10, TSS 0x18) and an IDT with all 256 vectors. Double fault, NMI and machine check
 // run on their own stack (IST), so a stack overflow is still reported. Interrupts stay disabled.

@@ -151,6 +151,7 @@ extern "C" void interrupt_dispatch(x86::InterruptFrame* frame) {
   if (frame->vector < 32) {
     if (x86::g_on_exception != nullptr) {
       x86::g_on_exception(*frame);
+      return;
     }
     Log("exception %llu, no handler\n", static_cast<unsigned long long>(frame->vector));
     for (;;) {

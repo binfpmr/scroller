@@ -85,6 +85,7 @@ add_executable(scroller
   src/lib/mem.c
   src/platform/devlink.cpp
   src/platform/game_loop.cpp
+  src/platform/gdb_stub.cpp
   src/platform/interrupt_controllers.cpp
   src/platform/network.cpp
   src/platform/panic.cpp

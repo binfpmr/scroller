@@ -1,6 +1,7 @@
 #include "arch/x86_64/paging.h"
 
 #include "arch/x86_64/msr.h"
+#include "lib/mem.h"
 
 namespace x86 {
 namespace {
@@ -36,6 +37,33 @@ uint64_t* NextTable(uint64_t* entry, lib::Arena& arena) {
 }
 
 }  // namespace
+
+void CopyIgnoringWriteProtect(void* destination, const void* source, size_t length) {
+  uint64_t flags;
+  asm volatile("pushfq; popq %0; cli" : "=r"(flags)::"memory");
+  const uint64_t cr0 = ReadCr0();
+  WriteCr0(cr0 & ~kCr0WriteProtect);
+  lib::Copy(destination, source, length);
+  WriteCr0(cr0);
+  if ((flags & (1u << 9)) != 0) {
+    asm volatile("sti" ::: "memory");
+  }
+}
+
+bool RangeMapped(uint64_t address, uint64_t length) {
+  if (length == 0) {
+    return true;
+  }
+  if (address + length < address) {
+    return false;
+  }
+  for (uint64_t page = address & ~0xfffull; page < address + length; page += 0x1000) {
+    if (!IsMapped(page)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 bool IsMapped(uint64_t address) {
   if ((ReadCr4() & kCr4La57) != 0) {

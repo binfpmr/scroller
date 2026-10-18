@@ -26,6 +26,7 @@ bool g_from_pxe = false;
 uint64_t g_last_receive_ms = 0;
 uint64_t g_last_link_check_ms = 0;
 uint32_t g_restarts = 0;
+volatile bool g_busy = false;
 uint64_t g_tsc_hz = 0;
 bool g_was_configured = false;
 char g_status[64] = "NONE";
@@ -69,9 +70,10 @@ void InitNetwork(const BootInfo& boot, lib::Arena& arena) {
 }
 
 void PollNetwork() {
-  if (g_nic == nullptr) {
+  if (g_nic == nullptr || g_busy) {
     return;
   }
+  g_busy = true;
   const uint64_t now = NowMs();
   for (int i = 0; i < kFramesPerPoll; ++i) {
     const uint8_t* frame = nullptr;
@@ -100,7 +102,10 @@ void PollNetwork() {
         c.gateway.b[3], g_from_pxe ? "from PXE" : "by DHCP");
   }
   g_was_configured = g_stack.configured();
+  g_busy = false;
 }
+
+bool NetworkBusy() { return g_busy; }
 
 net::Stack* NetworkStack() { return g_nic != nullptr ? &g_stack : nullptr; }
 

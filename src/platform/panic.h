@@ -15,6 +15,6 @@ void SetPanicContext(gfx::Surface* screen, const gfx::Framebuffer* fb, const gfx
                      KeyboardSource* keyboard, EFI_RUNTIME_SERVICES* runtime_services);
 
 // x86::ExceptionHandler for InitInterrupts.
-[[noreturn]] void OnException(const x86::InterruptFrame& frame);
+void OnException(x86::InterruptFrame& frame);
 
 }  // namespace platform
