@@ -11,7 +11,7 @@ enum class Key : uint8_t {
   kRight,
   kDown,
   kJump,         // Space or Up
-  kEscape,       // back to level 1
+  kEscape,       // key help on/off
   kToggleStats,  // F1: performance overlay
   kVolumeUp,     // volume-up media key, '=' / '+'
   kVolumeDown,   // volume-down media key, '-'

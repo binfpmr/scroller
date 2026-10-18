@@ -9,6 +9,7 @@
 #include "drivers/debug_log.h"
 #include "drivers/pci.h"
 #include "game/game.h"
+#include "game/render.h"
 #include "gfx/draw.h"
 #include "gfx/font.h"
 #include "gfx/present.h"
@@ -266,6 +267,8 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   uint64_t ticks = 0;
   uint64_t volume_shown_until = 0;
   bool music_message = false;
+  bool help_visible = false;  // Esc
+  constexpr uint64_t kHelpHintTicks = 6 * kTicksPerSecond;
   int music_level = 0;  // the level whose tune plays (the first one starts with the sound)  // the message shows the
                         // music state instead of the volume
   uint64_t frames = 0;
@@ -294,7 +297,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
         RequestNetworkReload();
       }
       if (input.Pressed(Key::kEscape)) {
-        game.RestartFromFirstLevel();
+        help_visible = !help_visible;
       }
       if (input.Pressed(Key::kNextLevel)) {
         game.SkipToNextLevel();
@@ -317,7 +320,9 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
         volume_shown_until = ticks + 90;
         music_message = true;
       }
-      game.Update(input);
+      if (!help_visible) {
+        game.Update(input);  // the game pauses while the help is shown
+      }
       PlaySoundEvents(game.TakeEvents());
       if (game.level_index() != music_level) {
         music_level = game.level_index();
@@ -340,6 +345,13 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
 
     const uint64_t render_start = x86::Rdtsc();
     game.Render(screen);
+    if (help_visible) {
+      game::DrawHelp(screen);
+    } else if (ticks < kHelpHintTicks) {
+      const char* hint = "ESC: KEYS";
+      gfx::DrawText(screen, screen.width - gfx::TextWidth(hint) - 4, screen.height - gfx::kLineHeight - 2, hint,
+                    gfx::Rgb(255, 255, 255));
+    }
     stats.Draw(screen);
     if (const char* message = DevlinkMessage(); message[0] != '\0') {
       const int w = gfx::TextWidth(message) + 8;

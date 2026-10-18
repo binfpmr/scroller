@@ -184,4 +184,44 @@ void DrawBanner(gfx::Surface& screen, const char* text) {
   gfx::DrawText(screen, x + 8, y + 6, text, Rgb(255, 230, 120));
 }
 
+void DrawHelp(gfx::Surface& screen) {
+  struct Line {
+    const char* keys;
+    const char* what;
+  };
+  static constexpr Line kLines[] = {
+      {"LEFT / RIGHT", "RUN"},
+      {"UP / SPACE", "JUMP (HOLD: HIGHER)"},
+      {"DOWN", "DUCK"},
+      {"DOWN, THEN JUMP", "DUCK-JUMP (HIGHER)"},
+      {"HOLD DOWN 1 S", "DUCK-JUMP BY ITSELF"},
+      {"JUMP AT A WALL", "WALL-JUMP"},
+      {"+ / -", "VOLUME"},
+      {"M", "MUTE"},
+      {"N", "MUSIC ON/OFF"},
+      {"F1", "STATISTICS"},
+      {"F2", "NEXT LEVEL"},
+      {"CTRL+ALT+R", "RELOAD (NETWORK BOOT)"},
+      {"CTRL+ALT+DEL", "REBOOT"},
+      {"ESC", "THIS HELP ON/OFF"},
+  };
+  constexpr int kLineCount = sizeof(kLines) / sizeof(kLines[0]);
+  constexpr int kKeyColumn = 16 * gfx::kCharAdvance;
+  int what_width = 0;
+  for (const Line& l : kLines) {
+    what_width = lib::Max(what_width, gfx::TextWidth(l.what));
+  }
+  const int w = kKeyColumn + what_width + 16;
+  const int h = (kLineCount + 2) * gfx::kLineHeight + 12;
+  const int x = (screen.width - w) / 2;
+  const int y = (screen.height - h) / 2;
+  gfx::FillRect(screen, x, y, w, h, Rgb(20, 20, 40));
+  gfx::DrawText(screen, x + 8, y + 6, "KEYS", Rgb(255, 230, 120));
+  for (int i = 0; i < kLineCount; ++i) {
+    const int ly = y + 6 + (i + 2) * gfx::kLineHeight;
+    gfx::DrawText(screen, x + 8, ly, kLines[i].keys, Rgb(255, 230, 120));
+    gfx::DrawText(screen, x + 8 + kKeyColumn, ly, kLines[i].what, Rgb(255, 255, 255));
+  }
+}
+
 }  // namespace game

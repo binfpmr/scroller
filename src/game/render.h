@@ -20,6 +20,9 @@ void RenderWorld(gfx::Surface& screen, const Level& level, const Camera& camera,
 // Text centred on the screen on a dark box.
 void DrawBanner(gfx::Surface& screen, const char* text);
 
+// The key help (Esc): a panel with every key and what it does.
+void DrawHelp(gfx::Surface& screen);
+
 // The player frame for the current state and time (exposed for tests).
 const gfx::Sprite* PlayerFrame(const Player& player, const Frames& frames, uint32_t ticks);
 
