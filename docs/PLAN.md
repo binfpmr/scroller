@@ -77,7 +77,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] GDB on the HP Pavilion (three sessions in a row: breakpoint, variables, next, stepi, detach)
 - [x] Hot reload over the debug link (`tools/devlink.py reload`: ~1.2 s in QEMU, ~0.9 s on the HP Pavilion). Reboots
       are warm by default, but on the Pavilion warm and cold both stop at the false fan error (90B)
-- [ ] Optional: simplified TCP in `net/` (design below), then gdb connects to the game directly
+- [ ] Optional: simplified TCP in `net/` (design below; planned in M9), then gdb connects to the game directly
 
 ### Simplified TCP (design, not scheduled)
 
@@ -110,30 +110,49 @@ connection at a time, LAN only, so most of TCP's machinery can go:
       HP Pavilion: xHCI `8086:A36D`, camera and Bluetooth enumerate)
 - [x] HID boot-protocol keyboard (interrupt IN endpoint, 8-byte reports) -> same `InputState`, next to PS/2
 - [x] QEMU: `tools/qemu.py --usb-kbd` (qemu-xhci + usb-kbd)
-- [ ] HP Pavilion with an external USB keyboard (needs a human)
+- [x] HP Pavilion with an external USB keyboard (Logitech `046D:C31C`; a Dell mouse enumerates too)
+
+### M7b: USB tidy-up (next)
+
 - [ ] Remove the `uefi-input` build
-- [ ] Later: hubs, HID gamepads (report descriptor parsing)
+- [ ] Hot-plug: devices plugged in or out while the game runs (port status change events, Disable Slot)
+- [ ] USB keyboards on the crash and start-up error screens
+- [ ] No stale interrupt after a hot reload (mask and drain interrupt sources before the jump)
 
-## M8: disk access (re-scoped)
+## M8: game content
 
-The assets are inside the image, so a disk is only needed for saves or levels loaded separately.
+Decided: pure "reach the goal", placeholder text-art style, no title screen.
 
-- [ ] USB mass storage (bulk-only transport, SCSI READ(10)) on the xHCI driver: read the stick we booted from
-- [ ] Optional, later: NVMe for internal drives (QEMU `-device nvme`)
-- [ ] Optional: saves (write support)
+- [ ] Falling out of the level (bottomless pits, the only hazard) respawns at the last checkpoint
+- [ ] Checkpoints (a new tile; touching one makes it the respawn point)
+- [ ] Enemies to avoid, never defeated: walkers (turn at walls and ledges), jumpers (hop in place or along),
+      flyers (fly back and forth or in a pattern); touching one respawns at the checkpoint. levelcheck must keep
+      working (enemies only make it harder, so reachability stays a check on the geometry)
+- [ ] Parallax background: clouds, hills, bushes in layers scrolling slower than the level
+- [ ] A different tune per level: short chiptune transcriptions of public-domain Baroque/Classical pieces
+- [ ] More levels: long, tall, or both; each with checkpoints
 
-## M9: polish
+## M9: later
+
+- [ ] Gamepad: USB HID gamepads (report descriptor parsing), then mapping to the same keys
+- [ ] USB hubs
+- [ ] Disk: USB mass storage (bulk-only transport, SCSI READ(10)) on the xHCI driver, to read the stick we booted from
+      (only needed for saves or levels outside the image)
+- [ ] Optional: NVMe for internal drives (QEMU `-device nvme`), saves (write support)
+- [ ] Optional: simplified TCP (design in M6), then gdb connects to the game directly
+
+### Done earlier (polish)
 
 - [x] Write-combining framebuffer via PAT (pulled forward: real hardware ran at a few FPS)
 - [x] On-screen performance overlay (F1, hidden by default), 5x7 bitmap font
 - [x] Vsync: Intel display pipe scanline counter (verified on HP Pavilion), VGA retrace bit fallback
 - [x] Git version shown at boot and in the overlay; local `scripts/flash-usb.sh` (not in git)
-- [ ] Parallax background, more enemies/levels, title screen
 
 ## Settled
 
 - Controls: Left/Right move, Up or Space jump, Down ducks (hold 1 s: duck-jump), Esc back to level 1, Ctrl+Alt+Delete reboots, Ctrl+Alt+R hot-reloads from the network-boot server, media keys or `=`/`-`/`M` for volume, `N` music on/off (off at start).
 - Art: placeholder sprites drawn as text art in the repo.
+- Game: reach the goal; falling respawns at the last checkpoint; enemies are only avoided; no title screen.
 - Levels: plain text, one character per tile; no level editor for now.
 - Toolchain: host GCC with freestanding flags (no cross GCC for now) + GNU as/binutils, clang optional; no NASM. AT&T syntax.
 
