@@ -133,7 +133,8 @@ Decided: pure "reach the goal", placeholder text-art style, no title screen.
       G, Jesu Joy of Man's Desiring, Eine kleine Nachtmusik, Canon in D, Prelude in C, Toccata in D minor)
 - [x] More levels: long (3), tall (4), long and tall (5); checkpoints and enemies in levels 2-5 (level 1, the
       beginner level, has none so far)
-- [x] 15 levels: 6-15 generated (`tools/levelgen.py`); after the last one THE END, a key goes back to level 1
+- [x] 15 levels: 6-15 generated (`tools/levelgen.py`) in alternating styles: underground, sky, ground, hill climb,
+      pyramid labyrinth; after the last one THE END, a key goes back to level 1
 
 ## M10 (future): cooperative network play
 

@@ -9,7 +9,8 @@ some C23 and GNU assembly, built with CMake and GCC. It runs in QEMU, from a USB
 
 ## The game
 
-- 15 levels: long, tall, or both; scrolling in all four directions; after the last one, THE END.
+- 15 levels: on the ground, underground, in the sky, up mountains and through a pyramid labyrinth; long, tall, or
+  both; scrolling in all four directions; after the last one, THE END.
 - Running, jumping with variable height, duck-jumps (50 % higher), wall-jumps.
 - Bottomless pits and checkpoints; walkers, jumpers and birds to avoid (they cannot be defeated).
 - Parallax background (clouds, hills, bushes); 320x240 pixel art, scaled to the screen with sharp pixels.

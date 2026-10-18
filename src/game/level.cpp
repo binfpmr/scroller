@@ -96,17 +96,27 @@ bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level
   level->tiles = tiles;
   level->enemies = enemies;
   level->enemy_count = enemy_count;
-  level->ground_rows = 0;
-  for (int row = height - 1; row >= 0; --row) {
-    int solid = 0;
-    for (int col = 0; col < width; ++col) {
-      solid += level->IsSolid(col, row) ? 1 : 0;
-    }
-    if (solid * 2 < width) {
-      break;
-    }
-    ++level->ground_rows;
+  level->ground_rows = height - 1 - level->start_y;
+  uint8_t* cave = arena.AllocateArray<uint8_t>(static_cast<size_t>(width) * height);
+  if (cave == nullptr) {
+    *error = "out of memory for the level";
+    return false;
   }
+  for (int col = 0; col < width; ++col) {
+    int solid_run = 0;     // solid tiles in a row right above the current one
+    bool covered = false;  // somewhere below a ceiling 3+ tiles thick (thin floors below do not end it)
+    for (int row = 0; row < height; ++row) {
+      const bool solid = level->IsSolid(col, row);
+      if (solid) {
+        ++solid_run;
+      } else {
+        covered = covered || solid_run >= 3;
+        solid_run = 0;
+      }
+      cave[row * width + col] = !solid && covered ? 1 : 0;
+    }
+  }
+  level->cave = cave;
   return true;
 }
 

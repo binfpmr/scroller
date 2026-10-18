@@ -106,6 +106,10 @@ void DrawTiles(gfx::Surface& screen, const Level& level, const Camera& camera, c
   const int last_ty = (camera.y + screen.height - 1) >> kTileShift;
   for (int ty = first_ty; ty <= last_ty; ++ty) {
     for (int tx = first_tx; tx <= last_tx; ++tx) {
+      if (level.IsCave(tx, ty)) {  // under a thick ceiling: dark earth instead of the sky
+        gfx::FillRect(screen, tx * kTileSize - camera.x, ty * kTileSize - camera.y, kTileSize, kTileSize,
+                      Rgb(52, 40, 36));  // then the tile itself (a flag, a goal) as usual
+      }
       const gfx::Sprite* sprite = nullptr;
       switch (level.At(tx, ty)) {
         case Tile::kGround:
