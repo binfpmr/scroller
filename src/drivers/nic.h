@@ -8,7 +8,7 @@
 
 namespace nic {
 
-inline constexpr int kRxRing = 32;
+inline constexpr int kRxRing = 64;
 inline constexpr int kTxRing = 32;
 inline constexpr size_t kBufferSize = 2048;  // per descriptor; a frame always fits in one
 
@@ -18,6 +18,12 @@ class Driver : public net::Link {
   virtual size_t Receive(const uint8_t** frame) = 0;
   // Link speed in Mbit/s, 0 while the cable is unplugged or negotiation is still running.
   virtual int LinkSpeed() = 0;
+  // Register state for the F1 overlay when bringing up a driver on new hardware; empty if there is nothing to show.
+  virtual void Describe(char* out, size_t size) {
+    if (size > 0) {
+      out[0] = '\0';
+    }
+  }
 
   const net::Mac& mac() const { return mac_; }
 

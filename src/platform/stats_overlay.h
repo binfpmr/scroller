@@ -19,6 +19,7 @@ struct LiveStats {
   uint64_t sound_irqs = 0;
   uint16_t last_key = 0;
   const char* network = "NONE";
+  const char* network_detail = "";
   uint64_t frames_received = 0;
   uint64_t frames_sent = 0;
 };

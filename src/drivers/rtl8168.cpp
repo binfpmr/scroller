@@ -3,6 +3,7 @@
 #include "arch/x86_64/paging.h"
 #include "drivers/debug_log.h"
 #include "drivers/mmio.h"
+#include "lib/format.h"
 #include "lib/mem.h"
 
 namespace rtl8168 {
@@ -25,6 +26,8 @@ constexpr uint16_t kCPlusRxVlan = 1u << 6, kCPlusRxChecksum = 1u << 5;
 constexpr uint32_t kDescOwn = 1u << 31, kDescRingEnd = 1u << 30, kDescFirst = 1u << 29, kDescLast = 1u << 28;
 constexpr uint32_t kRxError = 1u << 21;  // error summary
 constexpr uint32_t kRxMaxFrame = 1536;
+// Interrupt status bits (polled; acknowledged by writing them back).
+constexpr uint16_t kIntrRxDescUnavailable = 0x10, kIntrRxFifoOverflow = 0x40;
 
 constexpr uint16_t kDeviceIds[] = {0x8168, 0x8161, 0x8169, 0x8136};
 
@@ -70,11 +73,6 @@ bool Driver::Init(const pci::Device& device, lib::Arena& arena) {
     Log("rtl8168: out of memory\n");
     return false;
   }
-  for (int i = 0; i < nic::kRxRing; ++i) {
-    rx_[i].address = reinterpret_cast<uint64_t>(rx_buffers_ + i * nic::kBufferSize);
-    rx_[i].opts2 = 0;
-    GiveRx(i);
-  }
   for (int i = 0; i < nic::kTxRing; ++i) {
     tx_[i].address = reinterpret_cast<uint64_t>(tx_buffers_ + i * nic::kBufferSize);
     tx_[i].opts2 = 0;
@@ -87,23 +85,39 @@ bool Driver::Init(const pci::Device& device, lib::Arena& arena) {
   mmio::Write<uint16_t>(mmio_, kRxMaxSize, kRxMaxFrame);
   mmio::Write<uint8_t>(mmio_, kMaxTxPacketSize, 0x3f);  // in 128-byte units
   const uint64_t tx_address = reinterpret_cast<uint64_t>(tx_);
-  const uint64_t rx_address = reinterpret_cast<uint64_t>(rx_);
   mmio::Write<uint32_t>(mmio_, kTxDescHigh, static_cast<uint32_t>(tx_address >> 32));
   mmio::Write<uint32_t>(mmio_, kTxDescLow, static_cast<uint32_t>(tx_address));
-  mmio::Write<uint32_t>(mmio_, kRxDescHigh, static_cast<uint32_t>(rx_address >> 32));
-  mmio::Write<uint32_t>(mmio_, kRxDescLow, static_cast<uint32_t>(rx_address));
-  mmio::Write<uint8_t>(mmio_, kChipCmd, kCmdRxEnable | kCmdTxEnable);
+  mmio::Write<uint8_t>(mmio_, kChipCmd, kCmdTxEnable);
+  StartRx();
   mmio::Write<uint32_t>(mmio_, kRxConfig, kRxConfigValue);
   mmio::Write<uint32_t>(mmio_, kTxConfig, kTxConfigValue);
   mmio::Write<uint32_t>(mmio_, kMar0, 0);  // no multicast groups
   mmio::Write<uint32_t>(mmio_, kMar0 + 4, 0);
   mmio::Write<uint8_t>(mmio_, kCfg9346, kCfg9346Lock);
 
-  const uint32_t version = mmio::Read<uint32_t>(mmio_, kTxConfig);  // chip version in bits 30:20 (read-only)
+  version_ = (mmio::Read<uint32_t>(mmio_, kTxConfig) >> 20) & 0x7cf;  // chip version, bits 30:26 and 23:20
   Log("rtl8168: %04x:%04x version %03x MAC %02x:%02x:%02x:%02x:%02x:%02x PHY %02x\n", device.vendor_id,
-      device.device_id, (version >> 20) & 0x7cf, mac_.b[0], mac_.b[1], mac_.b[2], mac_.b[3], mac_.b[4], mac_.b[5],
+      device.device_id, version_, mac_.b[0], mac_.b[1], mac_.b[2], mac_.b[3], mac_.b[4], mac_.b[5],
       mmio::Read<uint8_t>(mmio_, kPhyStatus));
   return true;
+}
+
+// Receive ring setup, also used to recover from a receive FIFO overflow (some chip versions stop receiving after one).
+void Driver::StartRx() {
+  const uint8_t command = mmio::Read<uint8_t>(mmio_, kChipCmd);
+  mmio::Write<uint8_t>(mmio_, kChipCmd, command & ~kCmdRxEnable);
+  for (int i = 0; i < nic::kRxRing; ++i) {
+    rx_[i].address = reinterpret_cast<uint64_t>(rx_buffers_ + i * nic::kBufferSize);
+    rx_[i].opts2 = 0;
+    GiveRx(i);
+  }
+  rx_next_ = 0;
+  rx_held_ = -1;
+  const uint64_t rx_address = reinterpret_cast<uint64_t>(rx_);
+  mmio::Write<uint32_t>(mmio_, kRxDescHigh, static_cast<uint32_t>(rx_address >> 32));
+  mmio::Write<uint32_t>(mmio_, kRxDescLow, static_cast<uint32_t>(rx_address));
+  mmio::Write<uint8_t>(mmio_, kChipCmd, (command & ~kCmdReset) | kCmdRxEnable);
+  mmio::Write<uint32_t>(mmio_, kRxConfig, kRxConfigValue);
 }
 
 void Driver::GiveRx(int index) {
@@ -134,6 +148,17 @@ size_t Driver::Receive(const uint8_t** frame) {
     const int index = rx_next_;
     const uint32_t opts1 = rx_[index].opts1;
     if ((opts1 & kDescOwn) != 0) {
+      // Ring empty. Acknowledge status bits like an interrupt handler would. If the ring ran full meanwhile, start
+      // the receiver over: every descriptor is ours to give back now, and some chip versions stop after an overflow.
+      const uint16_t status = mmio::Read<uint16_t>(mmio_, kIntrStatus);
+      if (status != 0) {
+        seen_status_ |= status;
+        mmio::Write<uint16_t>(mmio_, kIntrStatus, status);
+        if ((status & (kIntrRxDescUnavailable | kIntrRxFifoOverflow)) != 0) {
+          ++rx_restarts_;
+          StartRx();
+        }
+      }
       return 0;
     }
     asm volatile("" ::: "memory");  // descriptor before buffer
@@ -155,6 +180,12 @@ int Driver::LinkSpeed() {
     return 0;
   }
   return (phy & 0x10) != 0 ? 1000 : (phy & 0x08) != 0 ? 100 : 10;
+}
+
+void Driver::Describe(char* out, size_t size) {
+  lib::Format(out, size, "RTL VER %03x CMD %02x ISR %04x SEEN %04x RXI %d RESTARTS %u", version_,
+              mmio::Read<uint8_t>(mmio_, kChipCmd), mmio::Read<uint16_t>(mmio_, kIntrStatus), seen_status_, rx_next_,
+              rx_restarts_);
 }
 
 }  // namespace rtl8168

@@ -65,7 +65,7 @@ void StatsOverlay::Update(uint64_t now, const LiveStats& live) {
               "CPU %s MHZ  TSC %llu MHZ  WC %s  VER %s\n"
               "TIMER IRQ %llu HZ  OTHER IRQS %llu  KBD %s\n"
               "SOUND %s  %llu IRQ/S  KEY %X\n"
-              "NET %s  RX %llu  TX %llu",
+              "NET %s  RX %llu  TX %llu%s%s",
               static_cast<unsigned long long>(fps10 / 10), static_cast<unsigned long long>(fps10 % 10),
               static_cast<unsigned long long>(render / 100), static_cast<unsigned long long>(render % 100),
               static_cast<unsigned long long>(wait / 100), static_cast<unsigned long long>(wait % 100),
@@ -75,7 +75,8 @@ void StatsOverlay::Update(uint64_t now, const LiveStats& live) {
               static_cast<unsigned long long>(live.unexpected_irqs), live.keyboard, live.sound,
               static_cast<unsigned long long>((live.sound_irqs - last_sound_irqs_) * tsc_hz_ / elapsed), live.last_key,
               live.network, static_cast<unsigned long long>(live.frames_received),
-              static_cast<unsigned long long>(live.frames_sent));
+              static_cast<unsigned long long>(live.frames_sent), live.network_detail[0] != '\0' ? "\n" : "",
+              live.network_detail);
   last_timer_ticks_ = live.timer_ticks;
   last_sound_irqs_ = live.sound_irqs;
   if (updates_++ % 5 == 0) {
@@ -89,6 +90,18 @@ void StatsOverlay::Update(uint64_t now, const LiveStats& live) {
   present_cycles_ = 0;
 }
 
+namespace {
+
+int CountLines(const char* text) {
+  int lines = text[0] != '\0' ? 1 : 0;
+  for (const char* c = text; *c != '\0'; ++c) {
+    lines += *c == '\n' ? 1 : 0;
+  }
+  return lines;
+}
+
+}  // namespace
+
 void StatsOverlay::SetInfo(const char* info) { lib::Format(info_, sizeof(info_), "%s", info); }
 
 void StatsOverlay::Draw(gfx::Surface& screen) const {
@@ -96,13 +109,11 @@ void StatsOverlay::Draw(gfx::Surface& screen) const {
     return;
   }
   const int width = lib::Max(gfx::TextWidth(text_), gfx::TextWidth(info_)) + 4;
-  int lines = 4;
-  for (const char* c = info_; *c != '\0'; ++c) {
-    lines += (c == info_ || *c == '\n') ? 1 : 0;
-  }
+  const int text_lines = CountLines(text_);
+  const int lines = text_lines + CountLines(info_);
   gfx::FillRect(screen, 0, 0, width, lines * gfx::kLineHeight + 2, gfx::Rgb(0, 0, 0));
   gfx::DrawText(screen, 2, 2, text_, gfx::Rgb(255, 255, 255));
-  gfx::DrawText(screen, 2, 2 + 4 * gfx::kLineHeight, info_, gfx::Rgb(180, 220, 255));
+  gfx::DrawText(screen, 2, 2 + text_lines * gfx::kLineHeight, info_, gfx::Rgb(180, 220, 255));
 }
 
 }  // namespace platform

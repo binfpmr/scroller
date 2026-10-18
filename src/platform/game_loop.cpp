@@ -47,6 +47,7 @@ class InputPoller {
     const uint64_t now = x86::Rdtsc();
     if (now >= next_) {
       keyboard_.Poll(tracker_);
+      PollNetwork();  // also during the vsync wait, so a burst of frames cannot overflow the receive ring
       next_ = now + interval_;
     }
   }
@@ -244,7 +245,6 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
 
   for (;;) {
     input.Poll();
-    PollNetwork();
     PollDevlink();
     const uint64_t now = x86::Rdtsc();
     if (now < next_tick) {
@@ -317,6 +317,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
                                .sound_irqs = SoundInterrupts(),
                                .last_key = keyboard.last_code(),
                                .network = NetworkStatus(),
+                               .network_detail = NetworkDetail(),
                                .frames_received = net != nullptr ? net->frames_received() : 0,
                                .frames_sent = net != nullptr ? net->frames_sent() : 0});
   }

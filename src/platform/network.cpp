@@ -22,6 +22,7 @@ bool g_from_pxe = false;
 uint64_t g_tsc_hz = 0;
 bool g_was_configured = false;
 char g_status[64] = "NONE";
+char g_detail[80] = "";
 
 uint64_t NowMs() { return x86::Rdtsc() / (g_tsc_hz / 1000); }
 
@@ -99,6 +100,14 @@ const char* NetworkStatus() {
     lib::Format(g_status + used, sizeof(g_status) - used, "%dM %u.%u.%u.%u", speed, ip.b[0], ip.b[1], ip.b[2], ip.b[3]);
   }
   return g_status;
+}
+
+const char* NetworkDetail() {
+  if (g_nic == nullptr) {
+    return "";
+  }
+  g_nic->Describe(g_detail, sizeof(g_detail));
+  return g_detail;
 }
 
 }  // namespace platform

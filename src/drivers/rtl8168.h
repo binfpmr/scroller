@@ -19,6 +19,7 @@ class Driver final : public nic::Driver {
   bool Send(const uint8_t* frame, size_t length) override;
   size_t Receive(const uint8_t** frame) override;
   int LinkSpeed() override;
+  void Describe(char* out, size_t size) override;
 
  private:
   struct Descriptor {
@@ -29,6 +30,11 @@ class Driver final : public nic::Driver {
   static_assert(sizeof(Descriptor) == 16);
 
   void GiveRx(int index);
+  void StartRx();  // (re)initialises the receive ring and enables the receiver
+
+  uint32_t version_ = 0;
+  uint16_t seen_status_ = 0;  // every interrupt status bit seen since boot
+  uint32_t rx_restarts_ = 0;
 
   volatile uint8_t* mmio_ = nullptr;
   volatile Descriptor* rx_ = nullptr;
