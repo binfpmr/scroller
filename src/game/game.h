@@ -55,11 +55,11 @@ class Game {
  public:
   static constexpr int kWinTicks = 180;    // "well done" shown this long before the next level starts
   static constexpr int kTitleTicks = 120;  // "level N" shown this long when a level starts
-  static constexpr int kMaxLevels = 8;
+  static constexpr int kMaxLevels = 16;
 
   // Parses the levels into memory from `arena` and looks up all sprite frames. The game starts with the first level;
-  // reaching a goal moves on to the next, after the last back to the first. On error returns false with a message in
-  // *error (static storage, valid until the next call).
+  // reaching a goal moves on to the next; after the last (of several) comes THE END. On error returns false with a
+  // message in *error (static storage, valid until the next call).
   bool Init(lib::Arena& arena, const LevelText* levels, int level_count, const GameAssets& assets, const char** error);
   // A single level.
   bool Init(lib::Arena& arena, const char* level_text, size_t level_length, const GameAssets& assets,
@@ -90,6 +90,8 @@ class Game {
   int respawn_tx() const { return respawn_tx_; }
   int respawn_ty() const { return respawn_ty_; }
   bool won() const { return win_ticks_ > 0; }
+  // After the last level (of several): a black screen with THE END until a key is pressed, then level 1.
+  bool the_end() const { return the_end_; }
 
   // Sound events since the last call (PlayerEvent bits, plus these), then cleared.
   static constexpr uint8_t kEventHit = 1 << 4;         // touched an enemy, respawned
@@ -115,6 +117,7 @@ class Game {
   int level_count_ = 0;
   int current_ = 0;
   int title_ticks_ = 0;
+  bool the_end_ = false;
   int respawn_tx_ = 0;  // where Respawn puts the player: the start or the last checkpoint reached
   int respawn_ty_ = 0;
   Enemy enemies_[Level::kMaxEnemies];

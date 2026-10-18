@@ -63,7 +63,7 @@ TEST(GoalAdvancesToTheNextLevel) {
   const char* error = nullptr;
   EXPECT_TRUE(g.Init(arena, levels, 2, assets.assets(), &error));
   EXPECT_EQ(g.level_count(), 2);
-  for (int expected : {0, 1, 0}) {
+  for (int expected : {0, 1}) {
     EXPECT_EQ(g.level_index(), expected);
     int ticks = 0;
     while (!g.won() && ticks++ < 600) {
@@ -75,6 +75,15 @@ TEST(GoalAdvancesToTheNextLevel) {
     }
     EXPECT_TRUE(!g.won());
   }
+  // After the last level: THE END until a key is pressed (holding one is not enough), then level 1 again.
+  EXPECT_TRUE(g.the_end());
+  for (int i = 0; i < 100; ++i) {
+    g.Update(test::Keys({Key::kRight}));
+  }
+  EXPECT_TRUE(g.the_end());
+  g.Update(test::Keys({}, {Key::kJump}));
+  EXPECT_TRUE(!g.the_end());
+  EXPECT_EQ(g.level_index(), 0);
 }
 
 // Walking off into a pit (below the map is open) respawns at the start; after touching a checkpoint, there.

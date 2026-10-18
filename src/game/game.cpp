@@ -1,6 +1,8 @@
 #include "game/game.h"
 
 #include "game/render.h"
+#include "gfx/draw.h"
+#include "gfx/font.h"
 #include "lib/format.h"
 
 namespace game {
@@ -115,9 +117,21 @@ bool Game::TouchedTile(Tile tile, int* out_tx, int* out_ty) const {
 
 void Game::Update(const platform::InputState& input) {
   ++ticks_;
+  if (the_end_) {
+    if (input.pressed != 0) {
+      the_end_ = false;
+      current_ = 0;
+      Restart();
+    }
+    return;
+  }
   if (win_ticks_ > 0) {
     UpdatePlayer(player_, {}, level());  // the player comes to rest; input is ignored
     if (--win_ticks_ == 0) {
+      if (current_ + 1 == level_count_ && level_count_ > 1) {
+        the_end_ = true;
+        return;
+      }
       current_ = (current_ + 1) % level_count_;
       Restart();
     }
@@ -157,10 +171,17 @@ void Game::Update(const platform::InputState& input) {
 }
 
 void Game::Render(gfx::Surface& screen) const {
+  if (the_end_) {
+    gfx::FillRect(screen, 0, 0, screen.width, screen.height, gfx::Rgb(0, 0, 0));
+    const char* text = "THE END";
+    gfx::DrawText(screen, (screen.width - gfx::TextWidth(text)) / 2, (screen.height - gfx::kLineHeight) / 2, text,
+                  gfx::Rgb(255, 255, 255));
+    return;
+  }
   RenderWorld(screen, level(), camera_, player_, frames_, ticks_, checkpoint_tx_, checkpoint_ty_, enemies_,
               enemy_count_);
   if (won()) {
-    DrawBanner(screen, current_ + 1 == level_count_ && level_count_ > 1 ? "ALL DONE!" : "WELL DONE!");
+    DrawBanner(screen, "WELL DONE!");
   } else if (title_ticks_ > 0) {
     char title[16];
     lib::Format(title, sizeof(title), "LEVEL %d", current_ + 1);
