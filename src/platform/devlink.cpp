@@ -41,6 +41,7 @@ struct State {
   uint16_t subscriber_port = 0;
   uint64_t log_position = 0;
   bool reboot = false;
+  bool cold_reboot = false;
   uint64_t boot_id = 0;  // differs between boots, so the PC notices a reboot
   // Last GDB packet's sequence number and reply: a retransmitted packet gets the same reply instead of running
   // again (a repeated "s" would step twice).
@@ -137,7 +138,8 @@ void OnDatagram(void*, const net::UdpDatagram& d) {
       break;
     }
     case kReboot:
-      Log("devlink: reboot requested\n");
+      g_state.cold_reboot = body_length >= 1 && body[0] != 0;
+      Log("devlink: %s reboot requested\n", g_state.cold_reboot ? "cold" : "warm");
       Reply(d, 0, nullptr, 0);
       g_state.reboot = true;  // from PollDevlink, after the reply is out
       break;
@@ -201,7 +203,7 @@ void PollDevlink() {
     return;
   }
   if (g_state.reboot) {
-    Reboot(g_state.boot->runtime_services);
+    Reboot(g_state.boot->runtime_services, g_state.cold_reboot);
   }
   GdbStubPoll();
   if (!g_state.subscribed || !g_state.stack->configured()) {

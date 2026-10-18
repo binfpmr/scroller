@@ -9,7 +9,7 @@
 //   0x02 READ       u64 address, u32 length (<= kMaxRead)  -> the bytes; status 1 if a page is not mapped
 //   0x03 WRITE      u64 address, bytes                     -> empty; status 1 if a page is not mapped
 //   0x04 KEY        u8 platform::Key, u8 down               -> empty
-//   0x05 REBOOT     -> empty reply, then the machine reboots
+//   0x05 REBOOT     [u8 cold]                              -> empty reply, then the machine reboots (warm unless cold=1)
 //   0x06 SUBSCRIBE  u8 from_start (1: whole kept history)   -> empty; the log then streams to the sender
 //   0x07 GDB        a gdb packet's payload (between '$' and '#') -> the reply payload (platform/gdb_stub); a repeated
 //                   sequence number gets the cached reply

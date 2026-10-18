@@ -5,10 +5,10 @@
 
 namespace platform {
 
-void Reboot(EFI_RUNTIME_SERVICES* runtime_services) {
-  Log("reboot\n");
+void Reboot(EFI_RUNTIME_SERVICES* runtime_services, bool cold) {
+  Log("reboot (%s)\n", cold ? "cold" : "warm");
   if (runtime_services != nullptr) {
-    runtime_services->ResetSystem(EfiResetCold, EFI_SUCCESS, 0, nullptr);
+    runtime_services->ResetSystem(cold ? EfiResetCold : EfiResetWarm, EFI_SUCCESS, 0, nullptr);
   }
 
   Log("ResetSystem returned, trying the keyboard controller\n");

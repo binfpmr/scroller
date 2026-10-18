@@ -7,7 +7,8 @@
     tools/devlink.py [--target HOST] keys "right:2 jump"   key script (see below)
     tools/devlink.py [--target HOST] peek ADDR [LEN]       hex dump of memory
     tools/devlink.py [--target HOST] poke ADDR HEXBYTES    write memory
-    tools/devlink.py [--target HOST] reboot                reboot (a network-booted PC loads the current build)
+    tools/devlink.py [--target HOST] reboot [--cold]       reboot, warm by default (a network-booted PC loads the
+                                                          current build)
     tools/devlink.py [--target HOST] gdb [--port 2345]    gdb server on localhost for gdb / VS Code (see below)
     tools/devlink.py discover                              broadcast INFO; lists every game on the LAN
 
@@ -409,7 +410,8 @@ def main() -> int:
     poke = sub.add_parser("poke")
     poke.add_argument("address", type=lambda s: int(s, 0))
     poke.add_argument("hex")
-    sub.add_parser("reboot")
+    reboot = sub.add_parser("reboot")
+    reboot.add_argument("--cold", action="store_true", help="cold reset (full power-on self test)")
     gdb = sub.add_parser("gdb")
     gdb.add_argument("--port", type=int, default=2345)
     sub.add_parser("discover")
@@ -440,8 +442,8 @@ def main() -> int:
         elif args.command == "gdb":
             gdb_bridge(link, args.port)
         elif args.command == "reboot":
-            link.request(CMD_REBOOT)
-            print("rebooting")
+            link.request(CMD_REBOOT, bytes([1 if args.cold else 0]))
+            print("rebooting (cold)" if args.cold else "rebooting")
     except DevlinkError as e:
         print(f"devlink: {e}", file=sys.stderr)
         return 1
