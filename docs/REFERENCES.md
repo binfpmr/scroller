@@ -1,6 +1,6 @@
 # References
 
-Local copies of manuals go in `refs/` (git-ignored). File names below are suggestions so tooling and notes can refer to them.
+Local copies of manuals go in `refs/` (git-ignored). intel.com and uefi.org refuse scripted downloads; use a browser for those.
 
 ## In `refs/`
 
@@ -13,15 +13,10 @@ Local copies of manuals go in `refs/` (git-ignored). File names below are sugges
 | HID Usage Tables 1.5 (keyboard page 0x07, consumer page, gamepads) | `hut1_5.pdf` | usb.org |
 | USB Mass Storage Bulk-Only Transport 1.0 | `usbmassbulk_10.pdf` | usb.org |
 | SCSI Command Reference (READ(10), READ CAPACITY, INQUIRY, TEST UNIT READY) | `scsi-commands-seagate.pdf` | seagate.com |
+| xHCI specification 1.2c (and 2.0) | `xHCI__Rev1.2c.pdf`, `xHCI__Rev2.0.pdf` | intel.com (browser download) |
+| Intel High Definition Audio Specification 1.0a | `high-definition-audio-specification.pdf` | intel.com (browser download) |
+| ACPI Specification 6.6 | `ACPI_Spec_6.6.pdf` | uefi.org (browser download) |
 | NVM Express Base 2.1, NVM Command Set 1.1, PCIe Transport 1.1 | `nvme-base-2.1.pdf`, `nvme-nvm-command-set-1.1.pdf`, `nvme-pcie-transport-1.1.pdf` | nvmexpress.org |
-
-## Still missing (the sites refuse scripted downloads: download in a browser)
-
-| What | Save as | Where |
-|---|---|---|
-| xHCI specification 1.2 (or 1.2c) | `refs/xhci-1.2.pdf` | intel.com "Universal Serial Bus Specifications" page |
-| Intel High Definition Audio Specification 1.0a | `refs/hda.pdf` | intel.com (HDA is done; for later codec work) |
-| ACPI Specification 6.5 (or 6.6) | `refs/ACPI_6_5.pdf` | uefi.org/specifications; also readable as HTML at uefi.org/specs/ACPI/6.5 |
 
 Not public and not needed so far: Realtek RTL8168 and ALC295 datasheets (Linux `r8169` and `snd-hda-codec-realtek`
 are the practical references), Intel PCH datasheets (the xHCI specification covers the USB controller), PCI Express
