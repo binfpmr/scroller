@@ -57,6 +57,11 @@ class Game {
     return Init(arena, &level, 1, assets, error);
   }
   void Update(const platform::InputState& input);
+  // Back to the start of the first level (Esc).
+  void RestartFromFirstLevel() {
+    current_ = 0;
+    Restart();
+  }
   void Render(gfx::Surface& screen) const;
 
   const Level& level() const { return levels_[current_]; }

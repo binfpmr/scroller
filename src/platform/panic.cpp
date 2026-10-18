@@ -132,7 +132,8 @@ void OnException(const x86::InterruptFrame& f) {
     PollDevlink();
     if (g_keyboard != nullptr) {
       g_keyboard->Poll(tracker);
-      if (tracker.NextTick().Pressed(Key::kEscape)) {
+      const InputState input = tracker.NextTick();
+      if (input.Pressed(Key::kEscape) || input.RebootRequested()) {  // nothing else to do here: Esc is enough
         Reboot(g_runtime_services);
       }
     }

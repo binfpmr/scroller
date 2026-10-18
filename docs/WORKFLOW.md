@@ -47,7 +47,7 @@ be rendered on the host: `build/host/render_audio <song.txt> <out.wav>` (see `do
 Smoke tests can drive the game with a key script (`tools/qemu.py smoke --help`):
 
 ```sh
-scripts/smoke-test.sh --keys "shot:start right:2 down:1 shot:moved esc expect:reboot expect:efi_main"
+scripts/smoke-test.sh --keys "shot:start right:2 down:1 shot:moved +ctrl +alt delete -alt -ctrl expect:reboot expect:efi_main"
 ```
 
 Taps/holds use QEMU key names (`left`, `right`, `up`, `down`, `spc`, `esc`), `+KEY`/`-KEY` press/release separately, `shot:NAME` writes `build/uefi/smoke-NAME.png`, `expect:TEXT` waits for TEXT in the debug log after the previous match. The game logs timing and the camera position every 5 s, which makes scripted checks easy.
@@ -90,7 +90,7 @@ scripts/netboot-server.sh direct enx00e04cdc42a1   # cable from this PC's USB Et
 ```
 
 It runs dnsmasq in the foreground (sudo; Ctrl+C stops) and serves `build/uefi/scroller.efi`; rebuild, then reboot
-the test PC (Esc in the game) to get the new build. On the test PC: Secure Boot off, network/PXE IPv4 boot enabled
+the test PC (Ctrl+Alt+Delete in the game, or `tools/devlink.py reboot`) to get the new build. On the test PC: Secure Boot off, network/PXE IPv4 boot enabled
 and first in the boot order (or picked from the boot menu). F1 shows `NETBOOT <ip> FROM <server>` when it worked.
 In QEMU: `scripts/run-qemu.sh --netboot` (QEMU's own DHCP/TFTP server, no dnsmasq needed).
 

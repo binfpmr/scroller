@@ -69,6 +69,10 @@ TEST(Ps2MapsGameKeys) {
   EXPECT_TRUE(!ps2::MapKey(0x2c, &k));                      // Z: unused
   EXPECT_TRUE(ps2::MapKey(0x39, &k) && k == Key::kJump);
   EXPECT_TRUE(ps2::MapKey(0x01, &k) && k == Key::kEscape);
+  EXPECT_TRUE(ps2::MapKey(0x1d, &k) && k == Key::kCtrl);
+  EXPECT_TRUE(ps2::MapKey(0xe01d, &k) && k == Key::kCtrl);
+  EXPECT_TRUE(ps2::MapKey(0x38, &k) && k == Key::kAlt);
+  EXPECT_TRUE(ps2::MapKey(0xe053, &k) && k == Key::kDelete);
   EXPECT_TRUE(ps2::MapKey(0xe030, &k) && k == Key::kVolumeUp);
   EXPECT_TRUE(ps2::MapKey(0xe02e, &k) && k == Key::kVolumeDown);
   EXPECT_TRUE(ps2::MapKey(0xe020, &k) && k == Key::kVolumeMute);

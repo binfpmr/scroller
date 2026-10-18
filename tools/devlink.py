@@ -14,7 +14,8 @@ The target defaults to $SCROLLER_TARGET, else 127.0.0.1 (QEMU forwards the port,
 use the address the F1 overlay shows on its NET line, or find it with `discover`.
 
 Key scripts: words separated by spaces. KEY taps a key, KEY:SECS holds it, +KEY / -KEY press / release, wait:SECS
-pauses, shot:FILE.png takes a screenshot. Keys: left right down jump (= up) esc f1 volup voldown mute.
+pauses, shot:FILE.png takes a screenshot. Keys: left right down jump (= up) esc f1 volup voldown mute ctrl alt del
+(reboot in the game: "+ctrl +alt del -alt -ctrl", or the reboot command).
 """
 
 import argparse
@@ -35,7 +36,7 @@ STATUS_TEXT = {1: "address not mapped", 2: "malformed request", 3: "unknown comm
 
 # platform::Key values (src/platform/input.h).
 KEYS = {"left": 0, "right": 1, "down": 2, "jump": 3, "up": 3, "esc": 4, "f1": 5, "volup": 6, "voldown": 7,
-        "mute": 8}
+        "mute": 8, "ctrl": 9, "alt": 10, "del": 11}
 
 
 class DevlinkError(Exception):

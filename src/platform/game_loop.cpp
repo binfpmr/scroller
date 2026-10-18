@@ -96,7 +96,8 @@ bool LoadSheet(const lib::Pack& pack, const char* name, lib::Arena& arena, gfx::
     PollNetwork();
     PollDevlink();
     keyboard.Poll(tracker);
-    if (tracker.NextTick().Pressed(Key::kEscape)) {
+    const InputState input = tracker.NextTick();
+    if (input.Pressed(Key::kEscape) || input.RebootRequested()) {  // nothing else to do here: Esc is enough
       Reboot(boot.runtime_services);
     }
     x86::Pause();
@@ -267,8 +268,11 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
 
     for (int step = 0; step < kMaxCatchUpTicks && now >= next_tick; ++step) {
       const InputState input = tracker.NextTick();
-      if (input.Pressed(Key::kEscape)) {
+      if (input.RebootRequested()) {
         Reboot(boot.runtime_services);
+      }
+      if (input.Pressed(Key::kEscape)) {
+        game.RestartFromFirstLevel();
       }
       if (input.Pressed(Key::kToggleStats)) {
         stats.visible = !stats.visible;

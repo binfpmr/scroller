@@ -10,12 +10,15 @@ enum class Key : uint8_t {
   kLeft,
   kRight,
   kDown,
-  kJump,  // Space or Up
-  kEscape,
+  kJump,         // Space or Up
+  kEscape,       // back to level 1
   kToggleStats,  // F1: performance overlay
   kVolumeUp,     // volume-up media key, '=' / '+'
   kVolumeDown,   // volume-down media key, '-'
   kVolumeMute,   // mute media key, 'M'
+  kCtrl,         // left or right Ctrl
+  kAlt,          // left Alt or AltGr
+  kDelete,       // Delete (or keypad Del)
   kCount,
 };
 
@@ -28,6 +31,8 @@ struct InputState {
   bool Held(Key key) const { return (held & Bit(key)) != 0; }
   bool Pressed(Key key) const { return (pressed & Bit(key)) != 0; }
   bool Released(Key key) const { return (released & Bit(key)) != 0; }
+  // Ctrl+Alt+Delete: reboot (a combination, so it is not pressed by accident).
+  bool RebootRequested() const { return Pressed(Key::kDelete) && Held(Key::kCtrl) && Held(Key::kAlt); }
 };
 
 // Two physical keys mapped to the same Key (Space and Up) share one state: releasing either releases the Key.

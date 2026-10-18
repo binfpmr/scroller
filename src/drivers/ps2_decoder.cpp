@@ -63,6 +63,18 @@ bool MapKey(uint16_t code, platform::Key* key) {
     case 0x003b:  // F1
       *key = Key::kToggleStats;
       return true;
+    case 0x001d:  // left Ctrl
+    case 0xe01d:  // right Ctrl
+      *key = Key::kCtrl;
+      return true;
+    case 0x0038:  // left Alt
+    case 0xe038:  // right Alt (AltGr)
+      *key = Key::kAlt;
+      return true;
+    case 0xe053:  // Delete
+    case 0x0053:  // keypad Del
+      *key = Key::kDelete;
+      return true;
     default:
       return false;
   }

@@ -23,7 +23,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] PS/2 keyboard polling -> `InputState` (held / pressed / released per key)
 - [x] 60 Hz fixed-step loop; test pattern that scrolls with arrow keys
 - [x] `SCROLLER_UEFI_INPUT` fallback build for real-HW trials (preset `uefi-input`)
-- [x] Esc reboots (`ResetSystem`, with fallbacks)
+- [x] Esc reboots (`ResetSystem`, with fallbacks); later: Esc back to level 1, Ctrl+Alt+Delete reboots
 - [x] First real hardware test from a USB stick: HP Pavilion laptop, `uefi` image (built-in keyboard works over PS/2)
 
 ## M2: platformer core
@@ -97,7 +97,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 
 ## Settled
 
-- Controls: Left/Right move, Up or Space jump, Down ducks, Esc reboots, media keys or `=`/`-`/`M` for volume.
+- Controls: Left/Right move, Up or Space jump, Down ducks, Esc back to level 1, Ctrl+Alt+Delete reboots, media keys or `=`/`-`/`M` for volume.
 - Art: placeholder sprites drawn as text art in the repo.
 - Levels: plain text, one character per tile; no level editor for now.
 - Toolchain: host GCC with freestanding flags (no cross GCC for now) + GNU as/binutils, clang optional; no NASM. AT&T syntax.
