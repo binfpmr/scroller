@@ -32,6 +32,15 @@ struct BootInfo {
   // One 4 KiB page below 16 MiB for ISA DMA (Sound Blaster); 0 if none could be allocated.
   uint64_t isa_dma_buffer = 0;
 
+  // Set when the image was booted over the network (PXE): the addresses the firmware got from DHCP. The server is
+  // the development PC that served the image.
+  struct NetBoot {
+    bool valid = false;
+    uint8_t ip[4] = {};
+    uint8_t netmask[4] = {};
+    uint8_t server[4] = {};
+  } netboot;
+
   // ACPI root pointer (RSDP) from the UEFI configuration table; null if the firmware has no ACPI tables.
   const void* acpi_rsdp = nullptr;
 

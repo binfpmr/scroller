@@ -55,7 +55,7 @@ def pin_to_one_core_type() -> None:
 
 
 def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, resolution: str,
-                 display: str = "gtk-gl", sound: str = "hda") -> list[str]:
+                 display: str = "gtk-gl", sound: str = "hda", netboot: bool = False) -> list[str]:
     vars_copy = build / "OVMF_VARS.fd"
     shutil.copyfile(OVMF_VARS, vars_copy)  # fresh NVRAM every run: no stale boot entries
 
@@ -70,14 +70,18 @@ def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, 
         "-cpu", "host" if kvm else "max",
         "-drive", f"if=pflash,format=raw,readonly=on,file={OVMF_CODE}",
         "-drive", f"if=pflash,format=raw,file={vars_copy}",
-        "-drive", f"format=raw,file={build / 'scroller.img'}",
         "-chardev", f"file,id=debugcon,path={build / 'debugcon.log'}",
         "-device", f"isa-debugcon,iobase=0xe9,chardev=debugcon,readback={readback}",
-        "-nic", "none",
         # The preferred (EDID) resolution becomes OVMF's default mode, like a native panel of that size.
         "-vga", "none",
         "-device", "VGA,xres={},yres={},edid=on".format(*resolution.split("x")),
     ]
+    if netboot:
+        # No disk: OVMF boots over the network. QEMU's user-mode network has its own DHCP and TFTP server, which
+        # serves scroller.efi from the build directory (like dnsmasq on the development PC for real hardware).
+        cmd += ["-netdev", f"user,id=net0,tftp={build},bootfile=scroller.efi", "-device", "e1000,netdev=net0"]
+    else:
+        cmd += ["-drive", f"format=raw,file={build / 'scroller.img'}", "-nic", "none"]
     if sound != "none":
         # Headless runs have no audio output; smoke tests record with the monitor's wavcapture instead.
         cmd += ["-audiodev", ("none" if headless else "pipewire") + ",id=snd0"]
@@ -180,7 +184,8 @@ def play_keys(qmp: Qmp, script: str, build: Path, log: Path, timeout: float, pro
 
 def cmd_run(args) -> int:
     os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=args.headless, qmp=None, resolution=args.resolution,
-                                 display=args.display, sound=args.sound))
+                                 display=args.display, sound=args.sound,
+                                 netboot=args.netboot))
 
 
 def cmd_debug(args) -> int:
@@ -188,7 +193,8 @@ def cmd_debug(args) -> int:
     log.unlink(missing_ok=True)
     print("qemu: starting", flush=True)
     proc = subprocess.Popen(qemu_command(args.build, debug=True, headless=args.headless, qmp=None, resolution=args.resolution,
-                                         display=args.display, sound=args.sound))
+                                         display=args.display, sound=args.sound,
+                                 netboot=args.netboot))
     if wait_for_log(log, "waiting for debugger", args.timeout, proc):
         print("qemu: waiting for gdb on :1234", flush=True)
     else:
@@ -204,7 +210,7 @@ def cmd_smoke(args) -> int:
     qmp_path.unlink(missing_ok=True)
 
     proc = subprocess.Popen(qemu_command(args.build, debug=False, headless=True, qmp=qmp_path, resolution=args.resolution,
-                                         sound=args.sound))
+                                         sound=args.sound, netboot=args.netboot))
     try:
         booted = wait_for_log(log, args.expect, args.timeout, proc)
         ok = booted
@@ -248,6 +254,8 @@ def main() -> int:
     common.add_argument("--build", type=Path, default=ROOT / "build" / "uefi", help="build directory with scroller.img")
     common.add_argument("--sound", choices=["sb16", "hda", "none"], default="hda",
                         help="sound device (default hda, as on real PCs); smoke tests record it to <build>/audio.wav")
+    common.add_argument("--netboot", action="store_true",
+                        help="boot over the (emulated) network instead of from scroller.img")
     common.add_argument("--resolution", default="960x720",
                         help="display's preferred resolution WxH (default: 960x720, the 320x240 screen at x3)")
     sub = parser.add_subparsers(dest="command", required=True)

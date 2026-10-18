@@ -6,6 +6,7 @@
 #include "boot/video.h"
 #include "drivers/debug_log.h"
 #include "drivers/ps2_keyboard.h"
+#include "lib/mem.h"
 #include "platform/boot_info.h"
 #include "platform/game_loop.h"
 #include "scroller_version.h"
@@ -82,6 +83,28 @@ const void* FindAcpiRsdp(EFI_SYSTEM_TABLE* st) {
   return acpi1;
 }
 
+// If we were booted over the network, the firmware's PXE driver on our boot device knows our address and the
+// server's (from the DHCP acknowledgement, or the PXE proxy offer when a proxy DHCP server answered).
+void FindNetBoot(EFI_BOOT_SERVICES* bs, EFI_LOADED_IMAGE_PROTOCOL* image, platform::BootInfo* boot) {
+  EFI_PXE_BASE_CODE_PROTOCOL* pxe = nullptr;
+  if (image == nullptr ||
+      EFI_ERROR(
+          bs->HandleProtocol(image->DeviceHandle, &EFI_PXE_BASE_CODE_PROTOCOL_GUID, reinterpret_cast<void**>(&pxe))) ||
+      pxe->Mode == nullptr || !pxe->Mode->Started || pxe->Mode->UsingIpv6) {
+    return;
+  }
+  const EFI_PXE_BASE_CODE_MODE& mode = *pxe->Mode;
+  const EFI_PXE_BASE_CODE_DHCPV4_PACKET& from = mode.ProxyOfferReceived ? mode.ProxyOffer.Dhcpv4 : mode.DhcpAck.Dhcpv4;
+  platform::BootInfo::NetBoot& net = boot->netboot;
+  lib::Copy(net.ip, &mode.StationIp, 4);
+  lib::Copy(net.netmask, &mode.SubnetMask, 4);
+  lib::Copy(net.server, from.BootpSiAddr, 4);
+  net.valid = true;
+  Log("netboot: %u.%u.%u.%u/%u.%u.%u.%u, server %u.%u.%u.%u\n", net.ip[0], net.ip[1], net.ip[2], net.ip[3],
+      net.netmask[0], net.netmask[1], net.netmask[2], net.netmask[3], net.server[0], net.server[1], net.server[2],
+      net.server[3]);
+}
+
 bool AllocateGameMemory(EFI_BOOT_SERVICES* bs, platform::BootInfo* boot) {
   EFI_PHYSICAL_ADDRESS address = 0;
   const UINTN pages = kGameMemoryBytes / EFI_PAGE_SIZE;
@@ -156,6 +179,7 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
   }
   boot.tsc_hz = CalibrateTsc(bs);
   boot.acpi_rsdp = FindAcpiRsdp(st);
+  FindNetBoot(bs, loaded_image, &boot);
   EFI_PHYSICAL_ADDRESS dma = 0xffffff;  // ISA DMA reaches only the first 16 MiB
   if (!EFI_ERROR(bs->AllocatePages(AllocateMaxAddress, EfiLoaderData, 1, &dma))) {
     boot.isa_dma_buffer = dma;

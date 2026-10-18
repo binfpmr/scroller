@@ -196,11 +196,17 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   {
     char cpu[49];
     x86::CpuBrand(cpu);
+    char netboot[48] = "LOCAL BOOT";
+    if (boot.netboot.valid) {
+      const auto& n = boot.netboot;
+      lib::Format(netboot, sizeof(netboot), "NETBOOT %u.%u.%u.%u FROM %u.%u.%u.%u", n.ip[0], n.ip[1], n.ip[2], n.ip[3],
+                  n.server[0], n.server[1], n.server[2], n.server[3]);
+    }
     char info[240];
     pci::Device nic;
     const bool has_nic = pci::FindByClass(0x02, &nic);
-    lib::Format(info, sizeof(info), "%s\nNIC %04x:%04x\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu,
-                has_nic ? nic.vendor_id : 0, has_nic ? nic.device_id : 0, has_gpu ? gpu.vendor_id : 0,
+    lib::Format(info, sizeof(info), "%s\nNIC %04x:%04x  %s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu,
+                has_nic ? nic.vendor_id : 0, has_nic ? nic.device_id : 0, netboot, has_gpu ? gpu.vendor_id : 0,
                 has_gpu ? gpu.device_id : 0, gpu.bus, gpu.device, gpu.function, vsync.description(),
                 !vsync.active() && vsync.intel_status()[0] != '\0' ? "\nINTEL " : "",
                 vsync.active() ? "" : vsync.intel_status());

@@ -283,6 +283,86 @@ struct EFI_SIMPLE_FILE_SYSTEM_PROTOCOL {
   EFI_STATUS(EFIAPI* OpenVolume)(EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* This, EFI_FILE_PROTOCOL** Root);
 };
 
+// --- PXE Base Code Protocol (spec 24.3): only what tells us how we were network-booted ---
+
+inline constexpr EFI_GUID EFI_PXE_BASE_CODE_PROTOCOL_GUID = {
+    0x03c4e603, 0xac28, 0x11d3, {0x9a, 0x2d, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0x4d}};
+
+struct EFI_IP_ADDRESS {
+  UINT32 Addr[4];  // a union of IPv4/IPv6 in the spec; IPv4 is the first 4 bytes
+};
+
+struct EFI_PXE_BASE_CODE_DHCPV4_PACKET {
+  UINT8 BootpOpcode;
+  UINT8 BootpHwType;
+  UINT8 BootpHwAddrLen;
+  UINT8 BootpGateHops;
+  UINT32 BootpIdent;
+  UINT16 BootpSeconds;
+  UINT16 BootpFlags;
+  UINT8 BootpCiAddr[4];
+  UINT8 BootpYiAddr[4];
+  UINT8 BootpSiAddr[4];  // next server: where the boot file came from
+  UINT8 BootpGiAddr[4];
+  UINT8 BootpHwAddr[16];
+  UINT8 BootpSrvName[64];
+  UINT8 BootpBootFile[128];
+  UINT32 DhcpMagik;
+  UINT8 DhcpOptions[56];
+};
+
+union EFI_PXE_BASE_CODE_PACKET {
+  UINT8 Raw[1472];
+  EFI_PXE_BASE_CODE_DHCPV4_PACKET Dhcpv4;
+};
+
+// The leading part of the mode structure (the rest is not used).
+struct EFI_PXE_BASE_CODE_MODE {
+  BOOLEAN Started;
+  BOOLEAN Ipv6Available;
+  BOOLEAN Ipv6Supported;
+  BOOLEAN UsingIpv6;
+  BOOLEAN BisSupported;
+  BOOLEAN BisDetected;
+  BOOLEAN AutoArp;
+  BOOLEAN SendGUID;
+  BOOLEAN DhcpDiscoverValid;
+  BOOLEAN DhcpAckReceived;
+  BOOLEAN ProxyOfferReceived;
+  BOOLEAN PxeDiscoverValid;
+  BOOLEAN PxeReplyReceived;
+  BOOLEAN PxeBisReplyReceived;
+  BOOLEAN IcmpErrorReceived;
+  BOOLEAN TftpErrorReceived;
+  BOOLEAN MakeCallbacks;
+  UINT8 TTL;
+  UINT8 ToS;
+  EFI_IP_ADDRESS StationIp;
+  EFI_IP_ADDRESS SubnetMask;
+  EFI_PXE_BASE_CODE_PACKET DhcpDiscover;
+  EFI_PXE_BASE_CODE_PACKET DhcpAck;
+  EFI_PXE_BASE_CODE_PACKET ProxyOffer;
+};
+static_assert(__builtin_offsetof(EFI_PXE_BASE_CODE_MODE, StationIp) == 20);
+static_assert(__builtin_offsetof(EFI_PXE_BASE_CODE_MODE, DhcpAck) == 52 + 1472);
+
+struct EFI_PXE_BASE_CODE_PROTOCOL {
+  UINT64 Revision;
+  void* Start;
+  void* Stop;
+  void* Dhcp;
+  void* Discover;
+  void* Mtftp;
+  void* UdpWrite;
+  void* UdpRead;
+  void* SetIpFilter;
+  void* Arp;
+  void* SetParameters;
+  void* SetStationIp;
+  void* SetPackets;
+  EFI_PXE_BASE_CODE_MODE* Mode;
+};
+
 // --- Graphics Output Protocol (spec 12.9) ---
 
 inline constexpr EFI_GUID EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID = {
