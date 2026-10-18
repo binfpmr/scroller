@@ -9,6 +9,7 @@ Serial numbers and UUIDs are left out on purpose.
 |---|---|---|
 | Model | 15-cx0xxx, system board ID 8478, built 2019 | |
 | Firmware | Insyde H2O, BIOS F.16 (setup: Esc / F10 at power-on, boot menu F9) | Secure Boot off; PXE IPv4 boot works |
+| Setup options | Virtualization Technology enabled, Action Keys Mode enabled, USB Charging enabled; no USB legacy or VT-d options shown | |
 | CPU | Intel Core i5-8300H (Coffee Lake-H, 4 cores / 8 threads), 2.3 GHz, turbo ~3.9 GHz | TSC 2304 MHz, invariant |
 | Memory | 16 GB | arena of 32 MiB at ~0x6078_9000 |
 | Interrupts | ACPI MADT: 8 CPUs, xAPIC, one IOAPIC (GSIs 0..119), 8259 present | LAPIC timer input 1500 kHz after /16 |
@@ -17,7 +18,7 @@ Serial numbers and UUIDs are left out on purpose.
 | Audio | HDA controller `8086:A348`, codec Realtek ALC295 `10EC:0295` | speaker pin 20 and headphone pin 33 -> DAC 2 |
 | Wired network | Realtek RTL8168H `10EC:8168` (chip version 541) at 05:00.0 | `drivers/rtl8168`: set up twice after the firmware (the first setup stops after one ring pass) |
 | Wi-Fi | Realtek RTL8822BE `10EC:B822` at 02:00.0 | not supported (needs firmware blobs, WPA) |
-| Keyboard | internal keyboard on PS/2 (i8042) | IRQ 1; media keys F6-F8 send codes the game does not use yet |
+| Keyboard | internal keyboard on PS/2 (i8042) | IRQ 1. Action Keys Mode: the F-row does its action by default (F1 still arrives as F1, code 3B); F6-F8 (volume) reach the PS/2 port as nothing we see, probably handled by the embedded controller (ACPI events), so they would need ACPI EC support |
 | USB | Intel 300-series PCH xHCI (to be confirmed, expected `8086:A36D`) | M7 |
 
 ## QEMU (development)
