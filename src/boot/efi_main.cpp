@@ -153,6 +153,10 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
   }
   boot.tsc_hz = CalibrateTsc(bs);
   boot.acpi_rsdp = FindAcpiRsdp(st);
+  EFI_PHYSICAL_ADDRESS dma = 0xffffff;  // ISA DMA reaches only the first 16 MiB
+  if (!EFI_ERROR(bs->AllocatePages(AllocateMaxAddress, EfiLoaderData, 1, &dma))) {
+    boot.isa_dma_buffer = dma;
+  }
   Log("acpi: RSDP %p\n", boot.acpi_rsdp);
   void* assets = nullptr;
   if (boot::LoadFile(bs, image, u"\\scroller\\assets.pak", &assets, &boot.assets_size)) {

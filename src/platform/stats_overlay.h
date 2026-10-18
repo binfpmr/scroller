@@ -9,15 +9,24 @@
 
 namespace platform {
 
+// Live state shown on the overlay; counters are running totals (rates are computed per update).
+struct LiveStats {
+  const char* write_combining = "OFF";
+  uint64_t timer_ticks = 0;
+  uint64_t unexpected_irqs = 0;
+  const char* keyboard = "";
+  const char* sound = "NONE";
+  uint64_t sound_irqs = 0;
+};
+
 class StatsOverlay {
  public:
   explicit StatsOverlay(uint64_t tsc_hz);
 
   // Per frame: drawing into the 320x240 surface, waiting for vsync, copying to the framebuffer.
   void AddFrame(uint64_t render_cycles, uint64_t wait_cycles, uint64_t present_cycles);
-  // Recomputes the text once per second; `wc` is "ON" or "OFF" (framebuffer write-combining); `timer_ticks` and
-  // `unexpected_irqs` are running interrupt counts.
-  void Update(uint64_t now, const char* wc, uint64_t timer_ticks, uint64_t unexpected_irqs, const char* keyboard);
+  // Recomputes the text once per second.
+  void Update(uint64_t now, const LiveStats& live);
   void Draw(gfx::Surface& screen) const;
   // Fixed lines shown under the numbers (hardware description), copied.
   void SetInfo(const char* info);
@@ -36,6 +45,7 @@ class StatsOverlay {
   uint64_t last_mperf_ = 0;
   int updates_ = 0;
   uint64_t last_timer_ticks_ = 0;
+  uint64_t last_sound_irqs_ = 0;
   char text_[192] = "";
   char info_[240] = "";
 };

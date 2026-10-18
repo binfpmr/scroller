@@ -55,7 +55,7 @@ def pin_to_one_core_type() -> None:
 
 
 def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, resolution: str,
-                 display: str = "gtk-gl") -> list[str]:
+                 display: str = "gtk-gl", sound: str = "sb16") -> list[str]:
     vars_copy = build / "OVMF_VARS.fd"
     shutil.copyfile(OVMF_VARS, vars_copy)  # fresh NVRAM every run: no stale boot entries
 
@@ -78,6 +78,13 @@ def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, 
         "-vga", "none",
         "-device", "VGA,xres={},yres={},edid=on".format(*resolution.split("x")),
     ]
+    if sound != "none":
+        # Headless runs have no audio output; smoke tests record with the monitor's wavcapture instead.
+        cmd += ["-audiodev", ("none" if headless else "pipewire") + ",id=snd0"]
+        if sound == "sb16":
+            cmd += ["-device", "sb16,audiodev=snd0"]
+        else:
+            cmd += ["-device", "intel-hda", "-device", "hda-output,audiodev=snd0"]
     if headless:
         cmd += ["-display", "none", "-serial", f"file:{build / 'serial.log'}"]
     else:
@@ -173,7 +180,7 @@ def play_keys(qmp: Qmp, script: str, build: Path, log: Path, timeout: float, pro
 
 def cmd_run(args) -> int:
     os.execvp("qemu-system-x86_64", qemu_command(args.build, debug=False, headless=args.headless, qmp=None, resolution=args.resolution,
-                                 display=args.display))
+                                 display=args.display, sound=args.sound))
 
 
 def cmd_debug(args) -> int:
@@ -181,7 +188,7 @@ def cmd_debug(args) -> int:
     log.unlink(missing_ok=True)
     print("qemu: starting", flush=True)
     proc = subprocess.Popen(qemu_command(args.build, debug=True, headless=args.headless, qmp=None, resolution=args.resolution,
-                                         display=args.display))
+                                         display=args.display, sound=args.sound))
     if wait_for_log(log, "waiting for debugger", args.timeout, proc):
         print("qemu: waiting for gdb on :1234", flush=True)
     else:
@@ -196,12 +203,17 @@ def cmd_smoke(args) -> int:
     log.unlink(missing_ok=True)
     qmp_path.unlink(missing_ok=True)
 
-    proc = subprocess.Popen(qemu_command(args.build, debug=False, headless=True, qmp=qmp_path, resolution=args.resolution))
+    proc = subprocess.Popen(qemu_command(args.build, debug=False, headless=True, qmp=qmp_path, resolution=args.resolution,
+                                         sound=args.sound))
     try:
         booted = wait_for_log(log, args.expect, args.timeout, proc)
         ok = booted
         if proc.poll() is None:
             qmp = Qmp(qmp_path)
+            if ok and args.sound != "none":
+                audio = args.build / "audio.wav"
+                audio.unlink(missing_ok=True)
+                qmp.execute("human-monitor-command", **{"command-line": f"wavcapture {audio} snd0 48000 16 2"})
             if ok and args.keys:
                 ok = play_keys(qmp, args.keys, args.build, log, args.timeout, proc)
             if ok:
@@ -234,6 +246,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--build", type=Path, default=ROOT / "build" / "uefi", help="build directory with scroller.img")
+    common.add_argument("--sound", choices=["sb16", "hda", "none"], default="sb16",
+                        help="sound device (default sb16); smoke tests record it to <build>/audio.wav")
     common.add_argument("--resolution", default="960x720",
                         help="display's preferred resolution WxH (default: 960x720, the 320x240 screen at x3)")
     sub = parser.add_subparsers(dest="command", required=True)

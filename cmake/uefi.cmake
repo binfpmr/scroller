@@ -64,6 +64,7 @@ add_executable(scroller
   src/drivers/io_apic.cpp
   src/drivers/local_apic.cpp
   src/drivers/pic.cpp
+  src/drivers/sb16.cpp
   src/drivers/pci.cpp
   src/drivers/ps2_keyboard.cpp
   src/drivers/vga_retrace.cpp
@@ -73,6 +74,7 @@ add_executable(scroller
   src/platform/interrupt_controllers.cpp
   src/platform/panic.cpp
   src/platform/reset.cpp
+  src/platform/sound.cpp
   src/platform/stats_overlay.cpp
   src/platform/vsync.cpp
   ${SCROLLER_CORE_SOURCES}

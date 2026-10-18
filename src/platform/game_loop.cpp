@@ -18,6 +18,7 @@
 #include "platform/interrupt_controllers.h"
 #include "platform/panic.h"
 #include "platform/reset.h"
+#include "platform/sound.h"
 #include "platform/stats_overlay.h"
 #include "platform/vsync.h"
 
@@ -173,6 +174,11 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       !LoadSheet(pack, "sprites/tiles.txt", arena, &tile_sheet, message, sizeof(message))) {
     Fatal(message, screen, fb, viewport, keyboard, boot);
   }
+  if (interrupts) {
+    InitSound(boot, pack, arena);
+  }
+  Log("sound: %s\n", SoundStatus());
+
   game::Game game;
   if (!game.Init(arena, level_text.data, level_text.size, {.player = &player_sheet, .tiles = &tile_sheet}, &error)) {
     Fatal(error, screen, fb, viewport, keyboard, boot);
@@ -235,6 +241,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       }
 #endif
       game.Update(input);
+      PlaySoundEvents(game.TakeEvents());
       next_tick += tick_cycles;
       ++ticks;
       if (ticks % kStatsIntervalTicks == 0) {
@@ -261,7 +268,12 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     present_cycles += present_end - present_start;
     ++frames;
     stats.AddFrame(render_end - render_start, present_start - render_end, present_end - present_start);
-    stats.Update(present_end, write_combining ? "ON" : "OFF", TimerTicks(), UnexpectedInterrupts(), keyboard.mode());
+    stats.Update(present_end, {.write_combining = write_combining ? "ON" : "OFF",
+                               .timer_ticks = TimerTicks(),
+                               .unexpected_irqs = UnexpectedInterrupts(),
+                               .keyboard = keyboard.mode(),
+                               .sound = SoundStatus(),
+                               .sound_irqs = SoundInterrupts()});
   }
 }
 

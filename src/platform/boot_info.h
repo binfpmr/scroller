@@ -29,6 +29,9 @@ struct BootInfo {
   const void* assets = nullptr;
   size_t assets_size = 0;
 
+  // One 4 KiB page below 16 MiB for ISA DMA (Sound Blaster); 0 if none could be allocated.
+  uint64_t isa_dma_buffer = 0;
+
   // ACPI root pointer (RSDP) from the UEFI configuration table; null if the firmware has no ACPI tables.
   const void* acpi_rsdp = nullptr;
 

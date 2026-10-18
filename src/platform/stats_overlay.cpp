@@ -35,8 +35,7 @@ void StatsOverlay::AddFrame(uint64_t render_cycles, uint64_t wait_cycles, uint64
   present_cycles_ += present_cycles;
 }
 
-void StatsOverlay::Update(uint64_t now, const char* wc, uint64_t timer_ticks, uint64_t unexpected_irqs,
-                          const char* keyboard) {
+void StatsOverlay::Update(uint64_t now, const LiveStats& live) {
   if (now - period_start_ < tsc_hz_) {
     return;
   }
@@ -64,15 +63,18 @@ void StatsOverlay::Update(uint64_t now, const char* wc, uint64_t timer_ticks, ui
   lib::Format(text_, sizeof(text_),
               "FPS %llu.%llu  RENDER %llu.%02llu  WAIT %llu.%02llu  PRESENT %llu.%02llu MS\n"
               "CPU %s MHZ  TSC %llu MHZ  WC %s  VER %s\n"
-              "TIMER IRQ %llu HZ  OTHER IRQS %llu  KBD %s",
+              "TIMER IRQ %llu HZ  OTHER IRQS %llu  KBD %s\n"
+              "SOUND %s  %llu IRQ/S",
               static_cast<unsigned long long>(fps10 / 10), static_cast<unsigned long long>(fps10 % 10),
               static_cast<unsigned long long>(render / 100), static_cast<unsigned long long>(render % 100),
               static_cast<unsigned long long>(wait / 100), static_cast<unsigned long long>(wait % 100),
               static_cast<unsigned long long>(present / 100), static_cast<unsigned long long>(present % 100), cpu,
-              static_cast<unsigned long long>(tsc_mhz), wc, kScrollerVersion,
-              static_cast<unsigned long long>((timer_ticks - last_timer_ticks_) * tsc_hz_ / elapsed),
-              static_cast<unsigned long long>(unexpected_irqs), keyboard);
-  last_timer_ticks_ = timer_ticks;
+              static_cast<unsigned long long>(tsc_mhz), live.write_combining, kScrollerVersion,
+              static_cast<unsigned long long>((live.timer_ticks - last_timer_ticks_) * tsc_hz_ / elapsed),
+              static_cast<unsigned long long>(live.unexpected_irqs), live.keyboard, live.sound,
+              static_cast<unsigned long long>((live.sound_irqs - last_sound_irqs_) * tsc_hz_ / elapsed));
+  last_timer_ticks_ = live.timer_ticks;
+  last_sound_irqs_ = live.sound_irqs;
   if (updates_++ % 5 == 0) {
     Log("stats: %s\n", text_);
   }
@@ -91,13 +93,13 @@ void StatsOverlay::Draw(gfx::Surface& screen) const {
     return;
   }
   const int width = lib::Max(gfx::TextWidth(text_), gfx::TextWidth(info_)) + 4;
-  int lines = 3;
+  int lines = 4;
   for (const char* c = info_; *c != '\0'; ++c) {
     lines += (c == info_ || *c == '\n') ? 1 : 0;
   }
   gfx::FillRect(screen, 0, 0, width, lines * gfx::kLineHeight + 2, gfx::Rgb(0, 0, 0));
   gfx::DrawText(screen, 2, 2, text_, gfx::Rgb(255, 255, 255));
-  gfx::DrawText(screen, 2, 2 + 3 * gfx::kLineHeight, info_, gfx::Rgb(180, 220, 255));
+  gfx::DrawText(screen, 2, 2 + 4 * gfx::kLineHeight, info_, gfx::Rgb(180, 220, 255));
 }
 
 }  // namespace platform
