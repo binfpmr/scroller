@@ -20,6 +20,27 @@
         { "text": "source ${workspaceFolder}/tools/gdb/scroller.py" }
       ],
       "postRemoteConnectCommands": [{ "text": "scroller-attach" }]
+    },
+    {
+      // The game's own gdb stub over the network debug link (real hardware, or QEMU without --debug): the task starts
+      // tools/devlink.py gdb (asks for the address), connecting stops the game, scroller-net-attach loads the
+      // symbols at the running image's base. Needs the build that runs on the target (it warns otherwise).
+      "name": "Debug on test PC (network)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/uefi/scroller.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "miDebuggerServerAddress": "localhost:2345",
+      "stopAtConnect": true,
+      "preLaunchTask": "GDB bridge (debug link)",
+      "postDebugTask": "stop GDB bridge",
+      "setupCommands": [
+        { "text": "set confirm off" },
+        { "text": "source ${workspaceFolder}/tools/gdb/scroller.py" }
+      ],
+      "postRemoteConnectCommands": [{ "text": "scroller-net-attach" }]
     }
   ]
 }

@@ -8,10 +8,16 @@
     tools/devlink.py [--target HOST] peek ADDR [LEN]       hex dump of memory
     tools/devlink.py [--target HOST] poke ADDR HEXBYTES    write memory
     tools/devlink.py [--target HOST] reboot                reboot (a network-booted PC loads the current build)
+    tools/devlink.py [--target HOST] gdb [--port 2345]    gdb server on localhost for gdb / VS Code (see below)
     tools/devlink.py discover                              broadcast INFO; lists every game on the LAN
 
 The target defaults to $SCROLLER_TARGET, else 127.0.0.1 (QEMU forwards the port, see tools/qemu.py). On real hardware
 use the address the F1 overlay shows on its NET line, or find it with `discover`.
+
+gdb bridge: listens on localhost:PORT (TCP, the usual gdb remote protocol) and passes the packets to the game's stub
+over the debug link, which retries lost datagrams. Connecting stops the game; in gdb: `target remote :2345`, then
+`scroller-net-attach` (tools/gdb/scroller.py) loads the symbols at the running image's base. VS Code: launch
+configuration "Debug on test PC (network)".
 
 Key scripts: words separated by spaces. KEY taps a key, KEY:SECS holds it, +KEY / -KEY press / release, wait:SECS
 pauses, shot:FILE.png takes a screenshot. Keys: left right down jump (= up) esc f1 volup voldown mute ctrl alt del
@@ -27,12 +33,15 @@ import struct
 import sys
 import time
 import zlib
+from pathlib import Path
 
 PORT = 5555
 MAX_READ = 1024
 
 CMD_INFO, CMD_READ, CMD_WRITE, CMD_KEY, CMD_REBOOT, CMD_SUBSCRIBE, CMD_LOG = 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x80
-STATUS_TEXT = {1: "address not mapped", 2: "malformed request", 3: "unknown command"}
+CMD_GDB, CMD_GDB_WAIT, CMD_GDB_STOP = 0x07, 0x08, 0x09
+STATUS_RUNNING = 4
+STATUS_TEXT = {1: "address not mapped", 2: "malformed request", 3: "unknown command", STATUS_RUNNING: "running"}
 
 # platform::Key values (src/platform/input.h).
 KEYS = {"left": 0, "right": 1, "down": 2, "jump": 3, "up": 3, "esc": 4, "f1": 5, "volup": 6, "voldown": 7,
@@ -41,6 +50,12 @@ KEYS = {"left": 0, "right": 1, "down": 2, "jump": 3, "up": 3, "esc": 4, "f1": 5,
 
 class DevlinkError(Exception):
     pass
+
+
+class DevlinkStatus(DevlinkError):
+    def __init__(self, status: int):
+        super().__init__(STATUS_TEXT.get(status, f"status {status}"))
+        self.status = status
 
 
 class Link:
@@ -73,10 +88,19 @@ class Link:
             return None
         return command, status, sequence, body
 
-    def request(self, command: int, body: bytes = b"") -> bytes:
-        return self.pipelined([(command, body)])[0]
+    def request(self, command: int, body: bytes = b"", same_sequence: bool = False) -> bytes:
+        """same_sequence: retries reuse the sequence number, so the target can recognise a repeat (GDB packets)."""
+        return self.pipelined([(command, body)], same_sequence=same_sequence)[0]
 
-    def pipelined(self, requests: list[tuple[int, bytes]], window: int = 16) -> list[bytes]:
+    def request_status(self, command: int, body: bytes = b"") -> tuple[int, bytes]:
+        """Like request, but returns (status, body) instead of raising for a non-zero status."""
+        try:
+            return 0, self.request(command, body)
+        except DevlinkStatus as e:
+            return e.status, b""
+
+    def pipelined(self, requests: list[tuple[int, bytes]], window: int = 16,
+                  same_sequence: bool = False) -> list[bytes]:
         """Sends requests with up to `window` outstanding, retrying lost ones; returns the reply bodies in order."""
         results: list[bytes | None] = [None] * len(requests)
         outstanding: dict[int, tuple[int, float, int]] = {}  # sequence -> (index, sent time, attempts)
@@ -95,7 +119,7 @@ class Link:
                 if reply and reply[2] in outstanding:
                     index, _, _ = outstanding.pop(reply[2])
                     if reply[1] != 0:
-                        raise DevlinkError(STATUS_TEXT.get(reply[1], f"status {reply[1]}"))
+                        raise DevlinkStatus(reply[1])
                     results[index] = reply[3]
                     done += 1
             now = time.monotonic()
@@ -105,7 +129,7 @@ class Link:
                 if attempts >= self.retries:
                     raise DevlinkError(f"no answer from {self.address[0]}:{PORT}")
                 del outstanding[sequence]
-                new_sequence = self._next_sequence()
+                new_sequence = sequence if same_sequence else self._next_sequence()
                 command, body = requests[index]
                 self.sock.sendto(self._packet(command, new_sequence, body), self.address)
                 outstanding[new_sequence] = (index, now, attempts + 1)
@@ -223,6 +247,108 @@ def stream_log(link: Link, from_start: bool) -> None:
         last_ping = time.monotonic()
 
 
+def gdb_frame(payload: bytes) -> bytes:
+    return b"$" + payload + b"#" + f"{sum(payload) & 0xFF:02x}".encode()
+
+
+class GdbConnection:
+    """One gdb client: parses its packets ('$...#cs', '+'/'-' acks, 0x03 interrupt) from the TCP stream."""
+
+    def __init__(self, conn: socket.socket):
+        self.conn = conn
+        self.buffer = b""
+        self.interrupted = False
+
+    def read_packets(self, timeout: float) -> list[bytes] | None:
+        """Packets that arrived within `timeout` (acknowledged); None when gdb disconnected."""
+        ready, _, _ = select.select([self.conn], [], [], timeout)
+        if ready:
+            data = self.conn.recv(4096)
+            if not data:
+                return None
+            self.buffer += data
+        packets = []
+        while self.buffer:
+            if self.buffer[0:1] in (b"+", b"-"):
+                self.buffer = self.buffer[1:]
+            elif self.buffer[0] == 0x03:
+                self.buffer = self.buffer[1:]
+                self.interrupted = True
+            elif self.buffer[0:1] == b"$":
+                end = self.buffer.find(b"#")
+                if end < 0 or len(self.buffer) < end + 3:
+                    break  # incomplete
+                packets.append(self.buffer[1:end])
+                self.buffer = self.buffer[end + 3:]
+                self.conn.sendall(b"+")
+            else:
+                self.buffer = self.buffer[1:]  # noise
+        return packets
+
+    def send(self, payload: bytes) -> None:
+        self.conn.sendall(gdb_frame(payload))
+
+
+def wait_for_stop(link: Link, gdb: GdbConnection) -> bytes | None:
+    """Polls the target until it stops; forwards gdb's Ctrl+C. Returns the stop reply, None if gdb went away."""
+    while True:
+        status, reply = link.request_status(CMD_GDB_WAIT)
+        if status == 0:
+            return reply
+        if gdb.read_packets(0.03) is None:
+            return None
+        if gdb.interrupted:
+            gdb.interrupted = False
+            link.request(CMD_GDB_STOP)
+
+
+def gdb_bridge(link: Link, port: int) -> None:
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("127.0.0.1", port))
+    server.listen(1)
+    info = link.info()
+    # For scroller-net-attach (tools/gdb/scroller.py) when started from VS Code without SCROLLER_TARGET.
+    (Path(__file__).resolve().parent.parent / "build" / "gdb-bridge-target").write_text(link.address[0] + "\n")
+    print(f"gdb bridge: target {link.address[0]} (version {info.get('version')}, image base {info.get('image_base')})")
+    print(f"gdb bridge: listening on localhost:{port}", flush=True)
+    while True:
+        conn, _ = server.accept()
+        conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        gdb = GdbConnection(conn)
+        print("gdb bridge: gdb connected, stopping the game", flush=True)
+        link.request(CMD_GDB_STOP)
+        if wait_for_stop(link, gdb) is None:
+            conn.close()
+            continue
+        try:
+            serve_gdb(link, gdb)
+        except (ConnectionError, OSError) as e:
+            print(f"gdb bridge: connection lost ({e})", flush=True)
+        conn.close()
+        print("gdb bridge: gdb disconnected", flush=True)
+
+
+def serve_gdb(link: Link, gdb: GdbConnection) -> None:
+    while True:
+        packets = gdb.read_packets(0.5)
+        if packets is None:
+            return
+        for packet in packets:
+            reply = link.request(CMD_GDB, packet, same_sequence=True)
+            if packet == b"k":
+                return  # the target reboots; gdb expects no reply
+            if packet[:1] in (b"c", b"s"):
+                stop = wait_for_stop(link, gdb)
+                if stop is None:
+                    return
+                gdb.send(stop)
+                continue
+            gdb.send(reply)
+            if packet[:1] == b"D":
+                return
+
+
 def discover() -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -263,6 +389,8 @@ def main() -> int:
     poke.add_argument("address", type=lambda s: int(s, 0))
     poke.add_argument("hex")
     sub.add_parser("reboot")
+    gdb = sub.add_parser("gdb")
+    gdb.add_argument("--port", type=int, default=2345)
     sub.add_parser("discover")
     args = parser.parse_args()
 
@@ -288,6 +416,8 @@ def main() -> int:
                 print(f"{args.address + offset:016x}  {row.hex(' '):47}  {text}")
         elif args.command == "poke":
             link.write(args.address, bytes.fromhex(args.hex))
+        elif args.command == "gdb":
+            gdb_bridge(link, args.port)
         elif args.command == "reboot":
             link.request(CMD_REBOOT)
             print("rebooting")

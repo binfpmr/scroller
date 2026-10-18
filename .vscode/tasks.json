@@ -41,11 +41,36 @@
       "problemMatcher": []
     },
     {
+      "label": "GDB bridge (debug link)",
+      "type": "shell",
+      "command": "python3 tools/devlink.py --target ${input:devlinkTarget} gdb",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "devlink",
+        "pattern": { "regexp": "^__never_matches__$" },
+        "background": { "beginsPattern": "^gdb bridge: target", "endsPattern": "^gdb bridge: listening" }
+      }
+    },
+    {
+      "label": "stop GDB bridge",
+      "type": "shell",
+      "command": "pkill -f 'tools/devlink.py .*g[d]b' || true",
+      "problemMatcher": []
+    },
+    {
       "label": "smoke test",
       "type": "shell",
       "command": "scripts/smoke-test.sh",
       "dependsOn": "build",
       "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "devlinkTarget",
+      "type": "promptString",
+      "description": "Address of the machine running the game (F1: NET line; 127.0.0.1 for QEMU)",
+      "default": "127.0.0.1"
     }
   ]
 }
