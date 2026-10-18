@@ -3,6 +3,7 @@
 #include "arch/x86_64/cpu.h"
 #include "arch/x86_64/interrupts.h"
 #include "arch/x86_64/io.h"
+#include "arch/x86_64/paging.h"
 #include "arch/x86_64/write_combining.h"
 #include "drivers/acpi.h"
 #include "drivers/debug_log.h"
@@ -111,6 +112,12 @@ bool LoadSheet(const lib::Pack& pack, const char* name, lib::Arena& arena, gfx::
 
 void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   lib::Arena arena(boot.memory, boot.memory_size);
+  // Page tables we add live outside the arena (a hot reload reuses the arena); fall back to the arena without them.
+  static lib::Arena page_tables;
+  page_tables = boot.page_table_memory != nullptr
+                    ? lib::Arena(boot.page_table_memory, boot.page_table_size, boot.page_table_used)
+                    : lib::Arena(arena.Allocate(256 * 1024, 4096), 256 * 1024);
+  x86::SetPageTableArena(&page_tables);
   gfx::Surface screen{.pixels = arena.AllocateArray<gfx::Color>(gfx::kScreenWidth * gfx::kScreenHeight),
                       .width = gfx::kScreenWidth,
                       .height = gfx::kScreenHeight};
@@ -152,8 +159,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
   } else {
     Log("acpi: no usable MADT\n");
   }
-  const bool interrupts =
-      boot.owns_machine && SetUpInterruptControllers(have_madt ? &madt : nullptr, arena, boot.tsc_hz);
+  const bool interrupts = boot.owns_machine && SetUpInterruptControllers(have_madt ? &madt : nullptr, boot.tsc_hz);
   Log("interrupts: %s\n", interrupts ? "on" : "off");
   if (interrupts) {
     keyboard.StartInterrupts(kKeyboardVector, boot.tsc_hz);

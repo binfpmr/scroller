@@ -17,9 +17,18 @@ void CopyIgnoringWriteProtect(void* destination, const void* source, size_t leng
 // True if every page of [address, address + length) is mapped (an empty range is).
 bool RangeMapped(uint64_t address, uint64_t length);
 
+// Where the page tables we add come from (MapUncached, EnableWriteCombining). Not the game's arena: those tables
+// must outlive a hot reload, which reuses the arena (platform/reload).
+void SetPageTableArena(lib::Arena* arena);
+lib::Arena* PageTableArena();
+
 // Identity-maps [base, base + size) as uncached 2 MiB pages wherever nothing is mapped yet (existing mappings are left
-// alone), allocating page tables from `arena`. For device registers (MMIO) the firmware did not map. Only valid after
-// ExitBootServices. Returns false if a table could not be allocated or 5-level paging is on.
-bool MapUncached(lib::Arena& arena, uint64_t base, uint64_t size);
+// alone), allocating tables from the page table arena. For device registers (MMIO) the firmware did not map. Only
+// valid after ExitBootServices. Returns false if a table could not be allocated or 5-level paging is on.
+bool MapUncached(uint64_t base, uint64_t size);
+
+// Clears the no-execute bit on every level that maps [base, base + size) (for code loaded at run time) and flushes
+// the TLB. Returns false if part of the range is not mapped.
+bool AllowExecute(uint64_t base, uint64_t size);
 
 }  // namespace x86

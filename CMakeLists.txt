@@ -39,6 +39,7 @@ set(SCROLLER_CORE_SOURCES
   src/gfx/viewport.cpp
   src/lib/format.cpp
   src/lib/pack.cpp
+  src/lib/pe.cpp
   src/net/stack.cpp
   src/platform/input.cpp
 )

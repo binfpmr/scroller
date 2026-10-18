@@ -36,7 +36,7 @@ void OnSpurious(x86::InterruptFrame&) {}  // no EOI for spurious interrupts
 
 }  // namespace
 
-bool SetUpInterruptControllers(const acpi::Madt* madt, lib::Arena& arena, uint64_t tsc_hz) {
+bool SetUpInterruptControllers(const acpi::Madt* madt, uint64_t tsc_hz) {
   g_madt = madt;
   for (int v = 0x30; v < 0xff; ++v) {
     x86::SetInterruptHandler(static_cast<uint8_t>(v), &OnUnexpected);
@@ -48,11 +48,11 @@ bool SetUpInterruptControllers(const acpi::Madt* madt, lib::Arena& arena, uint64
   if (madt == nullptr || madt->has_8259) {
     pic::RemapAndMaskAll();
   }
-  if (!lapic::Init(madt != nullptr ? madt->local_apic_address : 0, arena)) {
+  if (!lapic::Init(madt != nullptr ? madt->local_apic_address : 0)) {
     return false;
   }
   for (int i = 0; madt != nullptr && i < madt->io_apic_count; ++i) {
-    if (g_io_apics[g_io_apic_count].Init(madt->io_apics[i].address, madt->io_apics[i].gsi_base, arena)) {
+    if (g_io_apics[g_io_apic_count].Init(madt->io_apics[i].address, madt->io_apics[i].gsi_base)) {
       ++g_io_apic_count;
     }
   }

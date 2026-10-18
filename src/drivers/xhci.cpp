@@ -166,7 +166,7 @@ bool Controller::Reset() {
 bool Controller::Init(const pci::Device& device, lib::Arena& arena, uint64_t tsc_hz) {
   tsc_hz_ = tsc_hz;
   const uint64_t bar = pci::MemoryBar(device, 0);
-  if (bar == 0 || (!x86::IsMapped(bar) && !x86::MapUncached(arena, bar, 0x10000))) {
+  if (bar == 0 || (!x86::IsMapped(bar) && !x86::MapUncached(bar, 0x10000))) {
     Log("xhci: BAR0 unusable\n");
     return false;
   }

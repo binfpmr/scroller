@@ -1,5 +1,7 @@
 #include "arch/x86_64/write_combining.h"
 
+#include "arch/x86_64/paging.h"
+
 #include "arch/x86_64/cpu.h"
 #include "arch/x86_64/msr.h"
 #include "drivers/debug_log.h"
@@ -33,8 +35,9 @@ uint64_t* TableAt(uint64_t entry) { return reinterpret_cast<uint64_t*>(entry & k
 uint64_t WithWc(uint64_t entry, bool large) { return entry | kPwt | kPcd | (large ? kPatLarge : kPat4K); }
 
 // Replaces a large leaf entry (1 GiB or 2 MiB) by a table of 512 entries one level down with the same attributes.
-bool Split(uint64_t* entry, uint64_t page_size, lib::Arena& arena) {
-  auto* table = static_cast<uint64_t*>(arena.Allocate(4096, 4096));
+bool Split(uint64_t* entry, uint64_t page_size) {
+  lib::Arena* tables = PageTableArena();
+  auto* table = tables != nullptr ? static_cast<uint64_t*>(tables->Allocate(4096, 4096)) : nullptr;
   if (table == nullptr) {
     return false;
   }
@@ -60,7 +63,7 @@ struct PendingEntry {
 
 }  // namespace
 
-bool EnableWriteCombining(lib::Arena& arena, uint64_t base, uint64_t size) {
+bool EnableWriteCombining(lib::Arena& scratch, uint64_t base, uint64_t size) {
   if ((Cpuid(1).edx & (1u << 16)) == 0) {
     Log("wc: no PAT support\n");
     return false;
@@ -74,7 +77,7 @@ bool EnableWriteCombining(lib::Arena& arena, uint64_t base, uint64_t size) {
       static_cast<unsigned long long>(Rdmsr(kMsrMtrrDefType)));
 
   constexpr int kMaxEntries = 4096;
-  PendingEntry* entries = arena.AllocateArray<PendingEntry>(kMaxEntries);
+  PendingEntry* entries = scratch.AllocateArray<PendingEntry>(kMaxEntries);
   int count = 0;
   if (entries == nullptr) {
     return false;
@@ -103,7 +106,7 @@ bool EnableWriteCombining(lib::Arena& arena, uint64_t base, uint64_t size) {
       if ((addr & (kSize1G - 1)) == 0 && end - addr >= kSize1G) {
         leaf = pdpte;
         leaf_size = kSize1G;
-      } else if (!Split(pdpte, kSize1G, arena)) {
+      } else if (!Split(pdpte, kSize1G)) {
         ok = false;
         break;
       }
@@ -118,7 +121,7 @@ bool EnableWriteCombining(lib::Arena& arena, uint64_t base, uint64_t size) {
         if ((addr & (kSize2M - 1)) == 0 && end - addr >= kSize2M) {
           leaf = pde;
           leaf_size = kSize2M;
-        } else if (!Split(pde, kSize2M, arena)) {
+        } else if (!Split(pde, kSize2M)) {
           ok = false;
           break;
         }

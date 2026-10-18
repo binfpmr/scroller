@@ -25,8 +25,8 @@ void IoApic::Write(uint32_t reg, uint32_t value) {
   mmio_[4] = value;
 }
 
-bool IoApic::Init(uint64_t address, uint32_t gsi_base, lib::Arena& arena) {
-  if (!x86::IsMapped(address) && !x86::MapUncached(arena, address, 4096)) {
+bool IoApic::Init(uint64_t address, uint32_t gsi_base) {
+  if (!x86::IsMapped(address) && !x86::MapUncached(address, 4096)) {
     Log("ioapic: cannot map %llx\n", static_cast<unsigned long long>(address));
     return false;
   }

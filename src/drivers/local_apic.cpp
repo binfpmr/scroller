@@ -47,7 +47,7 @@ void Write(uint32_t reg, uint32_t value) {
 
 }  // namespace
 
-bool Init(uint64_t mmio_address, lib::Arena& arena) {
+bool Init(uint64_t mmio_address) {
   if ((x86::Cpuid(1).edx & (1u << 9)) == 0) {
     Log("lapic: none\n");
     return false;
@@ -62,7 +62,7 @@ bool Init(uint64_t mmio_address, lib::Arena& arena) {
     if (mmio_address == 0) {
       mmio_address = base & 0x000ffffffffff000ull;
     }
-    if (!x86::IsMapped(mmio_address) && !x86::MapUncached(arena, mmio_address, 4096)) {
+    if (!x86::IsMapped(mmio_address) && !x86::MapUncached(mmio_address, 4096)) {
       Log("lapic: cannot map %llx\n", static_cast<unsigned long long>(mmio_address));
       return false;
     }

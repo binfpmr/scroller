@@ -3,14 +3,12 @@
 
 #include <stdint.h>
 
-#include "lib/arena.h"
-
 namespace ioapic {
 
 class IoApic {
  public:
   // Maps the registers if needed and masks every input. False if the registers cannot be reached.
-  bool Init(uint64_t address, uint32_t gsi_base, lib::Arena& arena);
+  bool Init(uint64_t address, uint32_t gsi_base);
 
   bool Handles(uint32_t gsi) const { return gsi >= gsi_base_ && gsi < gsi_base_ + inputs_; }
   int inputs() const { return static_cast<int>(inputs_); }

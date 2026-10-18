@@ -12,8 +12,9 @@
 
 namespace x86 {
 
-// Prepares the page table entries (splitting large pages with tables from `arena`) and switches the range to WC.
+// Prepares the page table entries (splitting large pages with tables from the page table arena, x86/paging.h; `scratch`
+// only for a temporary list) and switches the range to WC.
 // Returns false (and changes nothing) if the CPU or the page tables are not what we expect.
-bool EnableWriteCombining(lib::Arena& arena, uint64_t base, uint64_t size);
+bool EnableWriteCombining(lib::Arena& scratch, uint64_t base, uint64_t size);
 
 }  // namespace x86

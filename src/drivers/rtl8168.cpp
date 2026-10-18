@@ -50,7 +50,7 @@ bool Supports(const pci::Device& device) {
 bool Driver::Init(const pci::Device& device, lib::Arena& arena) {
   // BAR0 is I/O ports, BAR2 (64-bit) the same registers as memory.
   const uint64_t bar = pci::MemoryBar(device, 2);
-  if (bar == 0 || (!x86::IsMapped(bar) && !x86::MapUncached(arena, bar, 0x1000))) {
+  if (bar == 0 || (!x86::IsMapped(bar) && !x86::MapUncached(bar, 0x1000))) {
     Log("rtl8168: BAR2 unusable\n");
     return false;
   }

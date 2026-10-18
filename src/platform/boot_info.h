@@ -44,6 +44,18 @@ struct BootInfo {
   // ACPI root pointer (RSDP) from the UEFI configuration table; null if the firmware has no ACPI tables.
   const void* acpi_rsdp = nullptr;
 
+  // Page tables we add (x86::SetPageTableArena): outside the game memory, so they survive a hot reload; `used` is
+  // carried over to the next image.
+  void* page_table_memory = nullptr;
+  size_t page_table_size = 0;
+  size_t page_table_used = 0;
+
+  // Hot reload (platform/reload): two slots for new images, used alternately so the running image is never
+  // overwritten, and the stack top new images start on.
+  uint64_t reload_slots[2] = {};
+  size_t reload_slot_size = 0;
+  uint64_t stack_top = 0;
+
   // True after ExitBootServices: the game owns the machine (page tables, devices). False in the uefi-input build.
   bool owns_machine = false;
 };

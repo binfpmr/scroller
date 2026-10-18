@@ -39,7 +39,7 @@ bool Scanline::Init(const pci::Device& gpu, uint64_t tsc_hz, lib::Arena* arena) 
   constexpr uint64_t kMmioSize = 1 << 20;  // display registers live in the first MiB of the 16 MiB BAR
   bool mapped_by_us = false;
   if (!x86::IsMapped(bar + kPipeDsl) || !x86::IsMapped(bar + kPipeDsl + 2 * kPipeStride)) {
-    if (arena == nullptr || !x86::MapUncached(*arena, bar, kMmioSize) || !x86::IsMapped(bar + kPipeDsl) ||
+    if (arena == nullptr || !x86::MapUncached(bar, kMmioSize) || !x86::IsMapped(bar + kPipeDsl) ||
         !x86::IsMapped(bar + kPipeDsl + 2 * kPipeStride)) {
       lib::Format(status_, sizeof(status_), "BAR0 %llx NOT MAPPED", static_cast<unsigned long long>(bar));
       return false;

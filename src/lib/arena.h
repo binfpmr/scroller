@@ -9,7 +9,7 @@ namespace lib {
 class Arena {
  public:
   Arena() = default;
-  Arena(void* base, size_t size) : base_(static_cast<uint8_t*>(base)), size_(size) {}
+  Arena(void* base, size_t size, size_t used = 0) : base_(static_cast<uint8_t*>(base)), size_(size), used_(used) {}
 
   // Returns nullptr when the arena is exhausted. `align` must be a power of two.
   void* Allocate(size_t size, size_t align = 16) {

@@ -4,15 +4,13 @@
 
 #include <stdint.h>
 
-#include "lib/arena.h"
-
 namespace lapic {
 
 inline constexpr uint8_t kSpuriousVector = 0xff;
 
 // Enables the APIC (spurious vector 0xFF). `mmio_address` comes from the MADT; in xAPIC mode it is mapped uncached
 // if the firmware did not map it. Returns false if there is no usable APIC.
-bool Init(uint64_t mmio_address, lib::Arena& arena);
+bool Init(uint64_t mmio_address);
 
 bool x2apic();
 uint32_t Id();

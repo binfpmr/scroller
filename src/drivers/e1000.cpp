@@ -48,7 +48,7 @@ bool Supports(const pci::Device& device) {
 
 bool Driver::Init(const pci::Device& device, lib::Arena& arena) {
   const uint64_t bar = pci::MemoryBar(device, 0);
-  if (bar == 0 || (!x86::IsMapped(bar) && !x86::MapUncached(arena, bar, 0x20000))) {
+  if (bar == 0 || (!x86::IsMapped(bar) && !x86::MapUncached(bar, 0x20000))) {
     Log("e1000: BAR0 unusable\n");
     return false;
   }

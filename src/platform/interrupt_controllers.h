@@ -6,7 +6,6 @@
 
 #include "arch/x86_64/interrupts.h"
 #include "drivers/acpi.h"
-#include "lib/arena.h"
 
 namespace platform {
 
@@ -16,7 +15,7 @@ inline constexpr uint32_t kTimerHz = 1000;
 
 // Requires x86::InitInterrupts. Enables interrupts at the end. False (interrupts left off) if there is no local APIC.
 // `madt` may be null (no ACPI): then the APIC address comes from the CPU and no IOAPIC is used.
-bool SetUpInterruptControllers(const acpi::Madt* madt, lib::Arena& arena, uint64_t tsc_hz);
+bool SetUpInterruptControllers(const acpi::Madt* madt, uint64_t tsc_hz);
 
 // Timer interrupts since setup (1 kHz); 0 if the timer is not running.
 uint64_t TimerTicks();

@@ -16,13 +16,17 @@ constexpr uint64_t kCr0WriteProtect = 1ull << 16;
 constexpr uint64_t kCr4La57 = 1ull << 12;
 constexpr uint64_t kSize2M = 1ull << 21;
 
+lib::Arena* g_page_table_arena = nullptr;
+constexpr uint64_t kNoExecute = 1ull << 63;
+
 uint64_t* TableAt(uint64_t entry) { return reinterpret_cast<uint64_t*>(entry & kAddressMask); }
 
 // Returns the next-level table behind `entry`, creating an empty one if the entry is not present. Null if the entry
 // is a large page (already mapped) or allocation fails.
-uint64_t* NextTable(uint64_t* entry, lib::Arena& arena) {
+uint64_t* NextTable(uint64_t* entry) {
   if ((*entry & kPresent) == 0) {
-    auto* table = static_cast<uint64_t*>(arena.Allocate(4096, 4096));
+    auto* table =
+        g_page_table_arena != nullptr ? static_cast<uint64_t*>(g_page_table_arena->Allocate(4096, 4096)) : nullptr;
     if (table == nullptr) {
       return nullptr;
     }
@@ -37,6 +41,36 @@ uint64_t* NextTable(uint64_t* entry, lib::Arena& arena) {
 }
 
 }  // namespace
+
+void SetPageTableArena(lib::Arena* arena) { g_page_table_arena = arena; }
+lib::Arena* PageTableArena() { return g_page_table_arena; }
+
+bool AllowExecute(uint64_t base, uint64_t size) {
+  if ((ReadCr4() & kCr4La57) != 0) {
+    return false;
+  }
+  const uint64_t cr0 = ReadCr0();
+  WriteCr0(cr0 & ~kCr0WriteProtect);  // firmware may have made its page tables read-only
+  bool mapped = true;
+  for (uint64_t page = base & ~0xfffull; page < base + size && mapped; page += 0x1000) {
+    uint64_t* table = TableAt(ReadCr3());
+    for (int shift = 39; shift >= 12; shift -= 9) {
+      uint64_t& entry = table[(page >> shift) & 511];
+      if ((entry & kPresent) == 0) {
+        mapped = false;
+        break;
+      }
+      entry &= ~kNoExecute;
+      if (shift == 12 || ((shift == 30 || shift == 21) && (entry & kLargePage) != 0)) {
+        break;
+      }
+      table = TableAt(entry);
+    }
+  }
+  WriteCr0(cr0);
+  WriteCr3(ReadCr3());  // flush the TLB
+  return mapped;
+}
 
 void CopyIgnoringWriteProtect(void* destination, const void* source, size_t length) {
   uint64_t flags;
@@ -83,7 +117,7 @@ bool IsMapped(uint64_t address) {
   return true;
 }
 
-bool MapUncached(lib::Arena& arena, uint64_t base, uint64_t size) {
+bool MapUncached(uint64_t base, uint64_t size) {
   if ((ReadCr4() & kCr4La57) != 0) {
     return false;
   }
@@ -95,8 +129,8 @@ bool MapUncached(lib::Arena& arena, uint64_t base, uint64_t size) {
       continue;
     }
     uint64_t* pml4e = &TableAt(ReadCr3())[(addr >> 39) & 511];
-    uint64_t* pdpt = NextTable(pml4e, arena);
-    uint64_t* pd = pdpt != nullptr ? NextTable(&pdpt[(addr >> 30) & 511], arena) : nullptr;
+    uint64_t* pdpt = NextTable(pml4e);
+    uint64_t* pd = pdpt != nullptr ? NextTable(&pdpt[(addr >> 30) & 511]) : nullptr;
     if (pd == nullptr) {
       ok = false;
       break;

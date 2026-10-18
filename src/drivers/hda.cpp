@@ -78,7 +78,7 @@ uint32_t Controller::Command(uint32_t verb) {
 
 bool Controller::Init(const pci::Device& device, lib::Arena& arena) {
   const uint64_t bar = pci::MemoryBar(device, 0);
-  if (bar == 0 || (!x86::IsMapped(bar) && !x86::MapUncached(arena, bar, 0x4000))) {
+  if (bar == 0 || (!x86::IsMapped(bar) && !x86::MapUncached(bar, 0x4000))) {
     Log("hda: BAR0 unusable\n");
     return false;
   }

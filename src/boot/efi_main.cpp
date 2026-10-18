@@ -32,6 +32,8 @@ namespace {
 constexpr bool kUefiInput = SCROLLER_UEFI_INPUT;
 
 constexpr size_t kGameMemoryBytes = 32 * 1024 * 1024;
+constexpr size_t kPageTableBytes = 1024 * 1024;       // our page tables (MMIO mappings, write-combining splits)
+constexpr size_t kReloadSlotBytes = 4 * 1024 * 1024;  // per hot-reload image slot
 
 // tools/qemu.py sets the QEMU debugcon readback value to this in debug mode; real hardware reads 0xFF here.
 constexpr uint8_t kDebugconReadbackDebug = 0xdb;
@@ -119,6 +121,26 @@ bool AllocateGameMemory(EFI_BOOT_SERVICES* bs, platform::BootInfo* boot) {
   return true;
 }
 
+// Memory that outlives the game's arena across hot reloads: our page tables, and two slots to load new images into
+// (EfiLoaderCode, so firmware memory protection does not make them non-executable). Without it a hot reload is refused.
+void AllocateReloadMemory(EFI_BOOT_SERVICES* bs, platform::BootInfo* boot) {
+  EFI_PHYSICAL_ADDRESS tables = 0;
+  if (!EFI_ERROR(bs->AllocatePages(AllocateAnyPages, EfiLoaderData, kPageTableBytes / EFI_PAGE_SIZE, &tables))) {
+    boot->page_table_memory = reinterpret_cast<void*>(tables);
+    boot->page_table_size = kPageTableBytes;
+  }
+  for (uint64_t& slot : boot->reload_slots) {
+    EFI_PHYSICAL_ADDRESS address = 0;
+    if (EFI_ERROR(bs->AllocatePages(AllocateAnyPages, EfiLoaderCode, kReloadSlotBytes / EFI_PAGE_SIZE, &address))) {
+      Log("reload: no memory for the image slots\n");
+      boot->reload_slots[0] = boot->reload_slots[1] = 0;
+      return;
+    }
+    slot = address;
+  }
+  boot->reload_slot_size = kReloadSlotBytes;
+}
+
 // Gets the final memory map and leaves boot services. Between GetMemoryMap and ExitBootServices nothing may allocate
 // (Log only touches I/O ports, so it is fine).
 bool ExitBootServices(EFI_HANDLE image, EFI_BOOT_SERVICES* bs, platform::BootInfo* boot) {
@@ -190,6 +212,8 @@ extern "C" EFI_STATUS EFIAPI efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE* st) {
   if (!AllocateGameMemory(bs, &boot)) {
     return EFI_LOAD_ERROR;
   }
+  AllocateReloadMemory(bs, &boot);
+  boot.stack_top = reinterpret_cast<uint64_t>(__builtin_frame_address(0));
 
   if (kUefiInput) {
     Log("input: UEFI console (boot services stay active)\n");
