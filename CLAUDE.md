@@ -14,6 +14,7 @@ ctest --preset host -R <regex>                           # single test
 scripts/smoke-test.sh [--keys "right:2 shot:x esc ..."]     # headless QEMU boot + key script; read debugcon.log and the PNGs
 scripts/run-qemu.sh [--debug] [--netboot]                # interactive run (user's display), gdb stub with --debug
 tools/devlink.py info|log|shot F.png|keys "..."|reboot   # debug link to the running game (QEMU: localhost; hardware: SCROLLER_TARGET=ip)
+tools/devlink.py reload   # start the freshly built image in the running game without a reboot (QEMU or SCROLLER_TARGET)
 tools/devlink.py gdb   # gdb server on :2345 -> game's stub; gdb -batch -ex 'source tools/gdb/scroller.py' -ex 'target remote :2345' -ex scroller-net-attach ...
 build/host/render_audio <song.txt> <out.wav>             # render a song with the game's synth (to listen/analyse)
 build/host/levelcheck <level.txt>                        # which spots of a level the player can reach (after host build)
@@ -43,6 +44,9 @@ Killing background tools: the pattern must not match the shell running pkill, e.
   uefi-input build (firmware still owns the machine).
 - `game/` and `gfx/` must not include anything from `boot/`, `uefi/`, `arch/`, `drivers/`, so they keep building for the host tests.
 - Game physics uses fixed point (`lib::Fixed`, 24.8), not floats. After changing `PlayerTuning` or a level, run the host tests (they include `levelcheck` reachability).
+- Hot reload hands the previous image's `BootInfo` to the new one: when `BootInfo` changes, its size usually changes
+  too (the game then refuses the reload and the tool reboots); if only its meaning changes, bump `kReloadVersion` in
+  `platform/reload.h`. Anything that does DMA into the arena must be stopped in `ExecuteReload`.
 - Assets are plain text under `assets/` (formats: `docs/ASSETS.md`), packed into `assets.pak` and parsed at boot. Every level must have a reachable goal and no dead ends (host tests enforce it via `levelcheck`).
 
 ## Working loop

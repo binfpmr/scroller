@@ -108,8 +108,15 @@ tools/devlink.py shot out.png            # screenshot of the 320x240 game screen
 tools/devlink.py keys "right:2 jump wait:1 shot:a.png"   # inject keys (left right down jump esc f1 volup voldown mute)
 tools/devlink.py peek 0x... 64           # memory (unmapped pages are refused, MMIO reads are not)
 tools/devlink.py poke 0x... 90 90
-tools/devlink.py reboot                  # with network boot first: loads the current build
+tools/devlink.py reload                  # start the current build without rebooting (~1-2 s)
+tools/devlink.py reboot [--cold]         # warm reboot; with network boot first it loads the current build
 ```
+
+**Hot reload** is the fast loop: `cmake --build --preset uefi && tools/devlink.py reload`. The running game receives
+the new `scroller.efi`, stops its DMA devices and jumps into it; the new build reinitialises every device. It skips
+the firmware, so changes to the UEFI phase (`efi_main` before ExitBootServices: video mode, memory, network boot
+addresses) need a real reboot, and so does a build whose `BootInfo` changed (the game refuses it, the tool reboots
+instead). A warm reboot avoids the HP Pavilion's false fan error (90B) at a cold start, which waits for Enter.
 
 **gdb over the network** (real hardware, or QEMU without `--debug`): `tools/devlink.py gdb` is a gdb server on
 localhost:2345 that passes the packets to the game's own stub over the debug link. Connecting stops the game.

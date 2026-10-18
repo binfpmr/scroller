@@ -115,6 +115,12 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
   (`BootInfo.netboot`), else DHCP. `platform/devlink` is the UDP debug protocol for `tools/devlink.py` (header comment
   in `devlink.h`); it reads the log from the history ring in `drivers/debug_log` (last 32 KiB). The main loop, the
   start-up error screen and the crash screen all poll the network.
+- `platform/reload`: hot reload (`tools/devlink.py reload`). The new image is uploaded over the debug link, loaded by
+  `lib/pe` into one of two slots reserved before ExitBootServices (alternating, so the running code is never
+  overwritten), and called through its normal entry point with a `ReloadHandoff` instead of the system table;
+  `efi_main` recognises it and goes straight to `RunGame`. DMA devices (network, USB, sound) are stopped first,
+  because the new image reuses the game memory; our page tables live in their own region for the same reason.
+  A marker in every image (reload ABI version, handoff size) lets the running game refuse an incompatible build.
 - `platform/gdb_stub`: gdb remote protocol over three debug-link commands (packet, wait for stop, interrupt); the
   PC-side `tools/devlink.py gdb` turns them into gdb's usual TCP port. The machine stops inside the exception
   handler (int3 breakpoints written into the code with CR0.WP cleared, trap flag for single steps, an int3 from the
