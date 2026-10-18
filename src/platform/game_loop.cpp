@@ -202,12 +202,24 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       lib::Format(netboot, sizeof(netboot), "NETBOOT %u.%u.%u.%u FROM %u.%u.%u.%u", n.ip[0], n.ip[1], n.ip[2], n.ip[3],
                   n.server[0], n.server[1], n.server[2], n.server[3]);
     }
-    char info[240];
-    pci::Device nic;
-    const bool has_nic = pci::FindByClass(0x02, &nic);
-    lib::Format(info, sizeof(info), "%s\nNIC %04x:%04x  %s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu,
-                has_nic ? nic.vendor_id : 0, has_nic ? nic.device_id : 0, netboot, has_gpu ? gpu.vendor_id : 0,
-                has_gpu ? gpu.device_id : 0, gpu.bus, gpu.device, gpu.function, vsync.description(),
+    // Every network controller, so the wired one shows up next to Wi-Fi (subclass 0x00 Ethernet, 0x80 other).
+    char nics[128] = "";
+    size_t used = 0;
+    pci::Device found[4];
+    const int nic_count = pci::FindAllByClass(0x02, found, 4);
+    for (int i = 0; i < nic_count && used < sizeof(nics); ++i) {
+      const uint8_t subclass = (found[i].class_code >> 8) & 0xff;
+      used += lib::Format(nics + used, sizeof(nics) - used, "\nNIC %04x:%04x %s AT %02x:%02x.%x", found[i].vendor_id,
+                          found[i].device_id,
+                          subclass == 0x00   ? "ETH"
+                          : subclass == 0x80 ? "WIFI"
+                                             : "NET",
+                          found[i].bus, found[i].device, found[i].function);
+    }
+    char info[320];
+    lib::Format(info, sizeof(info), "%s\n%s%s\nGPU %04x:%04x AT %02x:%02x.%x  VSYNC %s%s%s", cpu, netboot,
+                nic_count == 0 ? "\nNIC NONE" : nics, has_gpu ? gpu.vendor_id : 0, has_gpu ? gpu.device_id : 0, gpu.bus,
+                gpu.device, gpu.function, vsync.description(),
                 !vsync.active() && vsync.intel_status()[0] != '\0' ? "\nINTEL " : "",
                 vsync.active() ? "" : vsync.intel_status());
     Log("hw: %s\n", info);

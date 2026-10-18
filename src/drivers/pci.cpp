@@ -31,37 +31,11 @@ uint64_t MemoryBar(const Device& d, int index) {
   return bar;
 }
 
-bool FindByClass(uint8_t base_class, uint8_t subclass, Device* out) {
-  for (int bus = 0; bus < 256; ++bus) {
-    for (int dev = 0; dev < 32; ++dev) {
-      for (int fn = 0; fn < 8; ++fn) {
-        const uint32_t id = Read32(bus, dev, fn, 0x00);
-        if ((id & 0xffff) == 0xffff) {
-          if (fn == 0) {
-            break;
-          }
-          continue;
-        }
-        const uint32_t class_code = Read32(bus, dev, fn, 0x08) >> 8;
-        if ((class_code >> 16) == base_class && ((class_code >> 8) & 0xff) == subclass) {
-          *out = {.bus = static_cast<uint8_t>(bus),
-                  .device = static_cast<uint8_t>(dev),
-                  .function = static_cast<uint8_t>(fn),
-                  .vendor_id = static_cast<uint16_t>(id & 0xffff),
-                  .device_id = static_cast<uint16_t>(id >> 16),
-                  .class_code = class_code};
-          return true;
-        }
-        if (fn == 0 && (Read32(bus, dev, 0, 0x0c) & 0x00800000) == 0) {
-          break;
-        }
-      }
-    }
-  }
-  return false;
-}
+namespace {
 
-bool FindByClass(uint8_t base_class, Device* out) {
+// Calls `visit(device)` for every function on every bus until it returns false.
+template <typename Visit>
+void Scan(Visit visit) {
   for (int bus = 0; bus < 256; ++bus) {
     for (int dev = 0; dev < 32; ++dev) {
       for (int fn = 0; fn < 8; ++fn) {
@@ -72,15 +46,14 @@ bool FindByClass(uint8_t base_class, Device* out) {
           }
           continue;
         }
-        const uint32_t class_code = Read32(bus, dev, fn, 0x08) >> 8;
-        if ((class_code >> 16) == base_class) {
-          *out = {.bus = static_cast<uint8_t>(bus),
-                  .device = static_cast<uint8_t>(dev),
-                  .function = static_cast<uint8_t>(fn),
-                  .vendor_id = static_cast<uint16_t>(id & 0xffff),
-                  .device_id = static_cast<uint16_t>(id >> 16),
-                  .class_code = class_code};
-          return true;
+        const Device device = {.bus = static_cast<uint8_t>(bus),
+                               .device = static_cast<uint8_t>(dev),
+                               .function = static_cast<uint8_t>(fn),
+                               .vendor_id = static_cast<uint16_t>(id & 0xffff),
+                               .device_id = static_cast<uint16_t>(id >> 16),
+                               .class_code = Read32(bus, dev, fn, 0x08) >> 8};
+        if (!visit(device)) {
+          return;
         }
         const bool multi_function = (Read32(bus, dev, 0, 0x0c) & 0x00800000) != 0;
         if (fn == 0 && !multi_function) {
@@ -89,7 +62,43 @@ bool FindByClass(uint8_t base_class, Device* out) {
       }
     }
   }
-  return false;
+}
+
+}  // namespace
+
+bool FindByClass(uint8_t base_class, uint8_t subclass, Device* out) {
+  bool found = false;
+  Scan([&](const Device& d) {
+    found = (d.class_code >> 8) == ((uint32_t{base_class} << 8) | subclass);
+    if (found) {
+      *out = d;
+    }
+    return !found;
+  });
+  return found;
+}
+
+bool FindByClass(uint8_t base_class, Device* out) {
+  bool found = false;
+  Scan([&](const Device& d) {
+    found = (d.class_code >> 16) == base_class;
+    if (found) {
+      *out = d;
+    }
+    return !found;
+  });
+  return found;
+}
+
+int FindAllByClass(uint8_t base_class, Device* out, int max) {
+  int count = 0;
+  Scan([&](const Device& d) {
+    if ((d.class_code >> 16) == base_class) {
+      out[count++] = d;
+    }
+    return count < max;
+  });
+  return count;
 }
 
 }  // namespace pci
