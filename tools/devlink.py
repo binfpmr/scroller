@@ -7,8 +7,9 @@
     tools/devlink.py [--target HOST] keys "right:2 jump"   key script (see below)
     tools/devlink.py [--target HOST] peek ADDR [LEN]       hex dump of memory
     tools/devlink.py [--target HOST] poke ADDR HEXBYTES    write memory
-    tools/devlink.py [--target HOST] reboot [--cold]       reboot, warm by default (a network-booted PC loads the
-                                                          current build)
+    tools/devlink.py [--target HOST] reboot [--method M]  reboot: warm (UEFI, default), cold (UEFI), soft (chipset
+                                                          0xCF9 CPU reset), kbc (keyboard controller); a
+                                                          network-booted PC loads the current build
     tools/devlink.py [--target HOST] reload [FILE]        start a new build without rebooting (~1 s; default
                                                           build/uefi/scroller.efi); reboots if it is incompatible
     tools/devlink.py [--target HOST] gdb [--port 2345]    gdb server on localhost for gdb / VS Code (see below)
@@ -45,6 +46,7 @@ CMD_INFO, CMD_READ, CMD_WRITE, CMD_KEY, CMD_REBOOT, CMD_SUBSCRIBE, CMD_LOG = 0x0
 CMD_GDB, CMD_GDB_WAIT, CMD_GDB_STOP = 0x07, 0x08, 0x09
 CMD_RELOAD_BEGIN, CMD_RELOAD_DATA, CMD_RELOAD_RUN = 0x0A, 0x0B, 0x0C
 STATUS_RELOAD_REFUSED = 5
+RESET_METHODS = {"warm": 0, "cold": 1, "soft": 2, "kbc": 3}  # platform::ResetMethod
 STATUS_RUNNING = 4
 STATUS_TEXT = {1: "address not mapped", 2: "malformed request", 3: "unknown command", STATUS_RUNNING: "running",
                STATUS_RELOAD_REFUSED: "reload refused"}
@@ -457,7 +459,8 @@ def main() -> int:
     poke.add_argument("address", type=lambda s: int(s, 0))
     poke.add_argument("hex")
     reboot = sub.add_parser("reboot")
-    reboot.add_argument("--cold", action="store_true", help="cold reset (full power-on self test)")
+    reboot.add_argument("--method", choices=list(RESET_METHODS), default="warm")
+    reboot.add_argument("--cold", action="store_const", const="cold", dest="method", help="same as --method cold")
     reload_cmd = sub.add_parser("reload")
     reload_cmd.add_argument("file", nargs="?",
                             default=str(Path(__file__).resolve().parent.parent / "build" / "uefi" / "scroller.efi"))
@@ -493,8 +496,8 @@ def main() -> int:
         elif args.command == "gdb":
             gdb_bridge(link, args.port)
         elif args.command == "reboot":
-            link.request(CMD_REBOOT, bytes([1 if args.cold else 0]))
-            print("rebooting (cold)" if args.cold else "rebooting")
+            link.request(CMD_REBOOT, bytes([RESET_METHODS[args.method]]))
+            print(f"rebooting ({args.method})")
     except DevlinkError as e:
         print(f"devlink: {e}", file=sys.stderr)
         return 1
