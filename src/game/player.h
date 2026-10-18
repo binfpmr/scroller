@@ -35,6 +35,13 @@ struct PlayerTuning {
   static constexpr int kWallCoyoteTicks = 6;
 };
 
+// What happened during the last UpdatePlayer, for sounds (bit mask).
+enum PlayerEvent : uint8_t {
+  kEventJump = 1 << 0,
+  kEventWallJump = 1 << 1,
+  kEventLand = 1 << 2,  // touched down after falling faster than 2 px per tick
+};
+
 struct Player {
   static constexpr int kWidth = 12;  // hitbox in pixels
   static constexpr int kHeight = 14;
@@ -52,6 +59,7 @@ struct Player {
   int ticks_since_wall = PlayerTuning::kWallCoyoteTicks + 1;
   int wall_side = 0;           // -1 wall on the left, +1 on the right (last wall touched in the air)
   int wall_jump_away_dir = 0;  // non-zero while a wall-jump overrides the input
+  uint8_t events = 0;          // PlayerEvent bits from the last update
 
   int pixel_x() const { return x.Floor(); }
   int pixel_y() const { return y.Floor(); }

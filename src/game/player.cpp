@@ -94,6 +94,8 @@ void Player::Spawn(int tx, int ty) {
 }
 
 void UpdatePlayer(Player& p, const platform::InputState& input, const Level& level) {
+  p.events = 0;
+  const bool was_on_ground = p.on_ground;
   const bool wall_jumping = p.wall_jump_away_dir != 0;
 
   p.ducking = p.on_ground && input.Held(Key::kDown);
@@ -131,6 +133,7 @@ void UpdatePlayer(Player& p, const platform::InputState& input, const Level& lev
   const bool jump_requested = p.ticks_since_jump_pressed <= T::kJumpBufferTicks;
   if (jump_requested && p.ticks_since_ground <= T::kCoyoteTicks) {
     p.vy = p.ticks_since_duck <= T::kDuckJumpWindowTicks ? -T::kDuckJumpSpeed : -T::kJumpSpeed;
+    p.events |= kEventJump;
     p.ticks_since_jump_pressed = T::kJumpBufferTicks + 1;
     p.ticks_since_ground = T::kCoyoteTicks + 1;
     p.ticks_since_duck = T::kDuckJumpWindowTicks + 1;
@@ -138,6 +141,7 @@ void UpdatePlayer(Player& p, const platform::InputState& input, const Level& lev
   } else if (jump_requested && p.ticks_since_wall <= T::kWallCoyoteTicks) {
     p.vy = -T::kJumpSpeed;
     p.vx = Fixed();  // as if from standstill
+    p.events |= kEventWallJump;
     p.wall_jump_away_dir = -p.wall_side;
     p.facing_left = p.wall_jump_away_dir < 0;
     p.ticks_since_jump_pressed = T::kJumpBufferTicks + 1;
@@ -149,8 +153,12 @@ void UpdatePlayer(Player& p, const platform::InputState& input, const Level& lev
   }
 
   p.vy = lib::Min(p.vy + T::kGravity, T::kMaxFallSpeed);
+  const Fixed fall_speed = p.vy;
   MoveX(p, level);
   MoveY(p, level);
+  if (p.on_ground && !was_on_ground && fall_speed > Fixed::FromInt(2)) {
+    p.events |= kEventLand;
+  }
   if (p.on_ground || p.vy >= Fixed()) {
     p.wall_jump_away_dir = 0;  // a wall-jump controls the rise only
   }

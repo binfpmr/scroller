@@ -81,10 +81,12 @@ void Game::Update(const platform::InputState& input) {
     return;
   }
   UpdatePlayer(player_, input, level_);
+  events_ |= player_.events;
   camera_.Follow(player_.pixel_x() + Player::kWidth / 2, player_.pixel_y() + Player::kHeight / 2, level_.pixel_width(),
                  level_.pixel_height());
   if (TouchesGoal()) {
     win_ticks_ = kWinTicks;
+    events_ |= kEventGoal;
   }
 }
 

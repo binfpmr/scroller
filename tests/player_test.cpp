@@ -317,3 +317,26 @@ TEST(NoWallJumpAwayFromWalls) {
   UpdatePlayer(p, test::Keys({Key::kJump}, {Key::kJump}), t.level);
   EXPECT_EQ(p.wall_jump_away_dir, 0);
 }
+
+TEST(SoundEvents) {
+  test::TestLevel t(kWall);
+  Player p = SpawnAtStart(t.level);
+  Run(p, t.level, {}, 5);
+  EXPECT_EQ(p.events, 0);
+  UpdatePlayer(p, test::Keys({}, {Key::kJump}), t.level);
+  EXPECT_EQ(p.events, game::kEventJump);
+  bool landed = false;
+  for (int i = 0; i < 120 && !landed; ++i) {
+    UpdatePlayer(p, {}, t.level);
+    landed = (p.events & game::kEventLand) != 0;
+  }
+  EXPECT_TRUE(landed);
+  Run(p, t.level, {}, 10);
+  for (int i = 0; i < 10; ++i) {  // standing and walking do not "land"
+    UpdatePlayer(p, test::Keys({Key::kLeft}), t.level);
+    EXPECT_EQ(p.events, 0);
+  }
+  p = JumpAgainstRightWall(t.level);
+  UpdatePlayer(p, test::Keys({}, {Key::kJump}), t.level);
+  EXPECT_EQ(p.events, game::kEventWallJump);
+}

@@ -49,6 +49,14 @@ class Game {
   const Player& player() const { return player_; }
   const Camera& camera() const { return camera_; }
   bool won() const { return win_ticks_ > 0; }
+
+  // Sound events since the last call (PlayerEvent bits, plus kEventGoal), then cleared.
+  static constexpr uint8_t kEventGoal = 1 << 7;
+  uint8_t TakeEvents() {
+    const uint8_t e = events_;
+    events_ = 0;
+    return e;
+  }
   uint32_t ticks() const { return ticks_; }
 
  private:
@@ -61,6 +69,7 @@ class Game {
   Frames frames_{};
   uint32_t ticks_ = 0;
   int win_ticks_ = 0;
+  uint8_t events_ = 0;
 };
 
 }  // namespace game
