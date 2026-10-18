@@ -76,3 +76,40 @@ TEST(GoalAdvancesToTheNextLevel) {
     EXPECT_TRUE(!g.won());
   }
 }
+
+// Walking off into a pit (below the map is open) respawns at the start; after touching a checkpoint, there.
+TEST(PitsRespawnAtTheLastCheckpoint) {
+  std::vector<uint8_t> storage(1 << 20);
+  lib::Arena arena(storage.data(), storage.size());
+  const char* level =
+      "..............\n"
+      "..............\n"
+      ".P.....C......\n"
+      "#########...##\n";
+  const test::TestAssets assets;
+  game::Game g;
+  const char* error = nullptr;
+  EXPECT_TRUE(g.Init(arena, level, std::strlen(level), assets.assets(), &error));
+  const int start_x = g.player().pixel_x();
+
+  // Run right past the checkpoint and into the pit.
+  bool checkpoint = false, fell = false;
+  for (int i = 0; i < 600 && !fell; ++i) {
+    g.Update(test::Keys({Key::kRight}));
+    const uint8_t events = g.TakeEvents();
+    checkpoint |= (events & game::Game::kEventCheckpoint) != 0;
+    fell = (events & game::Game::kEventFall) != 0;
+  }
+  EXPECT_TRUE(checkpoint && fell);
+  EXPECT_EQ(g.respawn_tx(), 7);
+  EXPECT_EQ(g.player().pixel_x() >> game::kTileShift, 7);  // back at the checkpoint, not the start
+  EXPECT_TRUE(g.player().pixel_x() != start_x);
+
+  // Touching the same checkpoint again is no new event.
+  g.Update({});
+  EXPECT_EQ(g.TakeEvents() & game::Game::kEventCheckpoint, 0);
+
+  // Esc (Restart) forgets the checkpoint.
+  g.RestartFromFirstLevel();
+  EXPECT_EQ(g.respawn_tx(), 1);
+}

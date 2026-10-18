@@ -13,9 +13,10 @@ inline constexpr int kTileShift = 4;
 
 enum class Tile : uint8_t {
   kEmpty,
-  kGround,  // '#': dirt, drawn with grass when open above
-  kStone,   // 'X'
-  kGoal,    // 'G': flag, not solid; touching it finishes the level
+  kGround,      // '#': dirt, drawn with grass when open above
+  kStone,       // 'X'
+  kGoal,        // 'G': flag, not solid; touching it finishes the level
+  kCheckpoint,  // 'C': not solid; touching it makes it the respawn point
 };
 
 struct Level {
@@ -25,12 +26,12 @@ struct Level {
   int start_x = 0;        // player start tile
   int start_y = 0;
 
-  // Outside the map: solid to the left, right and below (walls and floor), empty above.
+  // Outside the map: solid to the left and right (walls), empty above and below (below: a bottomless pit).
   Tile At(int tx, int ty) const {
-    if (tx < 0 || tx >= width || ty >= height) {
+    if (tx < 0 || tx >= width) {
       return Tile::kStone;
     }
-    if (ty < 0) {
+    if (ty < 0 || ty >= height) {
       return Tile::kEmpty;
     }
     return tiles[ty * width + tx];
@@ -44,7 +45,8 @@ struct Level {
 };
 
 // Text format, one line per tile row ('\n' or "\r\n"); shorter lines are padded with empty tiles:
-//   '#' ground (solid)   'X' stone (solid)   'G' goal flag   '.' or ' ' empty   'P' player start (exactly one)
+//   '#' ground (solid)   'X' stone (solid)   'G' goal flag   'C' checkpoint   '.' or ' ' empty
+//   'P' player start (exactly one)
 // On error returns false and points *error at a static message.
 bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level, const char** error);
 

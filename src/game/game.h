@@ -38,6 +38,8 @@ struct Frames {
   const gfx::Sprite* ground;
   const gfx::Sprite* stone;
   const gfx::Sprite* flag;
+  const gfx::Sprite* checkpoint;
+  const gfx::Sprite* checkpoint_on;
 };
 
 class Game {
@@ -69,10 +71,16 @@ class Game {
   int level_count() const { return level_count_; }
   const Player& player() const { return player_; }
   const Camera& camera() const { return camera_; }
+  int respawn_tx() const { return respawn_tx_; }
+  int respawn_ty() const { return respawn_ty_; }
   bool won() const { return win_ticks_ > 0; }
 
-  // Sound events since the last call (PlayerEvent bits, plus kEventGoal), then cleared.
+  // Sound events since the last call (PlayerEvent bits, plus these), then cleared.
+  static constexpr uint8_t kEventFall = 1 << 5;        // fell out of the level, respawned
+  static constexpr uint8_t kEventCheckpoint = 1 << 6;  // reached a new checkpoint
   static constexpr uint8_t kEventGoal = 1 << 7;
+  // Falling this far below the level's bottom edge respawns the player.
+  static constexpr int kFallMargin = 48;
   uint8_t TakeEvents() {
     const uint8_t e = events_;
     events_ = 0;
@@ -81,13 +89,19 @@ class Game {
   uint32_t ticks() const { return ticks_; }
 
  private:
-  void Restart();  // the player back at the current level's start
-  bool TouchesGoal() const;
+  void Restart();  // the player back at the current level's start, checkpoints reset
+  void Respawn();  // the player back at the last checkpoint (or the start)
+  // The first tile of type `tile` the player's box overlaps; false if none.
+  bool TouchedTile(Tile tile, int* tx, int* ty) const;
 
   Level levels_[kMaxLevels];
   int level_count_ = 0;
   int current_ = 0;
   int title_ticks_ = 0;
+  int respawn_tx_ = 0;  // where Respawn puts the player: the start or the last checkpoint reached
+  int respawn_ty_ = 0;
+  int checkpoint_tx_ = -1;  // the checkpoint reached last (drawn green), -1: none
+  int checkpoint_ty_ = -1;
   Player player_;
   Camera camera_;
   Frames frames_{};

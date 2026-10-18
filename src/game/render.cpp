@@ -28,7 +28,8 @@ void DrawSky(gfx::Surface& screen, const Camera& camera, const Level& level) {
   }
 }
 
-void DrawTiles(gfx::Surface& screen, const Level& level, const Camera& camera, const Frames& frames) {
+void DrawTiles(gfx::Surface& screen, const Level& level, const Camera& camera, const Frames& frames, int checkpoint_tx,
+               int checkpoint_ty) {
   const int first_tx = camera.x >> kTileShift;
   const int first_ty = camera.y >> kTileShift;
   const int last_tx = (camera.x + screen.width - 1) >> kTileShift;
@@ -45,6 +46,9 @@ void DrawTiles(gfx::Surface& screen, const Level& level, const Camera& camera, c
           break;
         case Tile::kGoal:
           sprite = frames.flag;
+          break;
+        case Tile::kCheckpoint:
+          sprite = tx == checkpoint_tx && ty == checkpoint_ty ? frames.checkpoint_on : frames.checkpoint;
           break;
         case Tile::kEmpty:
           break;
@@ -72,9 +76,9 @@ const gfx::Sprite* PlayerFrame(const Player& player, const Frames& frames, uint3
 }
 
 void RenderWorld(gfx::Surface& screen, const Level& level, const Camera& camera, const Player& player,
-                 const Frames& frames, uint32_t ticks) {
+                 const Frames& frames, uint32_t ticks, int checkpoint_tx, int checkpoint_ty) {
   DrawSky(screen, camera, level);
-  DrawTiles(screen, level, camera, frames);
+  DrawTiles(screen, level, camera, frames, checkpoint_tx, checkpoint_ty);
   // The 16x16 frame is centred horizontally on the 12x14 hitbox, feet on its bottom edge.
   const gfx::Sprite& sprite = *PlayerFrame(player, frames, ticks);
   const int x = player.pixel_x() + (Player::kWidth - sprite.width) / 2 - camera.x;

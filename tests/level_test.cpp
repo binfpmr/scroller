@@ -28,21 +28,23 @@ TEST(ParsesSizeTilesAndStart) {
   EXPECT_TRUE(level.IsSolid(2, 2));
 }
 
-TEST(OutsideIsWallsAndFloorButOpenAbove) {
+TEST(OutsideIsWallsAndOpenAboveAndBelow) {
   game::Level level;
   const char* error = nullptr;
   EXPECT_TRUE(Parse("P.\n..\n", &level, &error));
   EXPECT_EQ(level.height, 2);  // trailing newline does not add a row
-  EXPECT_TRUE(level.IsSolid(-1, 0) && level.IsSolid(2, 0) && level.IsSolid(0, 2));
+  EXPECT_TRUE(level.IsSolid(-1, 0) && level.IsSolid(2, 0));
   EXPECT_TRUE(!level.IsSolid(0, -1));
+  EXPECT_TRUE(!level.IsSolid(0, 2));  // below the map: a bottomless pit
 }
 
 TEST(ParsesTileKinds) {
   game::Level level;
   const char* error = nullptr;
-  EXPECT_TRUE(Parse("#XG.P", &level, &error));
+  EXPECT_TRUE(Parse("#XG.PC", &level, &error));
   EXPECT_TRUE(level.At(0, 0) == game::Tile::kGround && level.At(1, 0) == game::Tile::kStone);
   EXPECT_TRUE(level.At(2, 0) == game::Tile::kGoal && !level.IsSolid(2, 0));
+  EXPECT_TRUE(level.At(5, 0) == game::Tile::kCheckpoint && !level.IsSolid(5, 0));
   EXPECT_TRUE(level.IsSolid(0, 0) && level.IsSolid(1, 0));
 }
 

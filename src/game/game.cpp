@@ -36,7 +36,9 @@ bool Game::Init(lib::Arena& arena, const LevelText* levels, int level_count, con
       FindFrame(p, pn, "fall", &frames_.fall, message, ms) && FindFrame(p, pn, "duck", &frames_.duck, message, ms) &&
       FindFrame(t, tn, "ground_top", &frames_.ground_top, message, ms) &&
       FindFrame(t, tn, "ground", &frames_.ground, message, ms) &&
-      FindFrame(t, tn, "stone", &frames_.stone, message, ms) && FindFrame(t, tn, "flag", &frames_.flag, message, ms);
+      FindFrame(t, tn, "stone", &frames_.stone, message, ms) && FindFrame(t, tn, "flag", &frames_.flag, message, ms) &&
+      FindFrame(t, tn, "checkpoint", &frames_.checkpoint, message, ms) &&
+      FindFrame(t, tn, "checkpoint_on", &frames_.checkpoint_on, message, ms);
   if (!frames_ok) {
     *error = message;
     return false;
@@ -60,22 +62,31 @@ bool Game::Init(lib::Arena& arena, const LevelText* levels, int level_count, con
 }
 
 void Game::Restart() {
-  player_ = Player();
-  player_.Spawn(level().start_x, level().start_y);
-  camera_.CenterOn(player_.pixel_x() + Player::kWidth / 2, player_.pixel_y() + Player::kHeight / 2,
-                   level().pixel_width(), level().pixel_height());
+  respawn_tx_ = level().start_x;
+  respawn_ty_ = level().start_y;
+  checkpoint_tx_ = checkpoint_ty_ = -1;
+  Respawn();
   win_ticks_ = 0;
   title_ticks_ = level_count_ > 1 ? kTitleTicks : 0;
 }
 
-bool Game::TouchesGoal() const {
+void Game::Respawn() {
+  player_ = Player();
+  player_.Spawn(respawn_tx_, respawn_ty_);
+  camera_.CenterOn(player_.pixel_x() + Player::kWidth / 2, player_.pixel_y() + Player::kHeight / 2,
+                   level().pixel_width(), level().pixel_height());
+}
+
+bool Game::TouchedTile(Tile tile, int* out_tx, int* out_ty) const {
   const int left = player_.pixel_x() >> kTileShift;
   const int right = (player_.pixel_x() + Player::kWidth - 1) >> kTileShift;
   const int top = player_.pixel_y() >> kTileShift;
   const int bottom = (player_.pixel_y() + Player::kHeight - 1) >> kTileShift;
   for (int ty = top; ty <= bottom; ++ty) {
     for (int tx = left; tx <= right; ++tx) {
-      if (level().At(tx, ty) == Tile::kGoal) {
+      if (level().At(tx, ty) == tile) {
+        *out_tx = tx;
+        *out_ty = ty;
         return true;
       }
     }
@@ -100,14 +111,24 @@ void Game::Update(const platform::InputState& input) {
   events_ |= player_.events;
   camera_.Follow(player_.pixel_x() + Player::kWidth / 2, player_.pixel_y() + Player::kHeight / 2, level().pixel_width(),
                  level().pixel_height());
-  if (TouchesGoal()) {
+  int tx = 0, ty = 0;
+  if (TouchedTile(Tile::kCheckpoint, &tx, &ty) && (tx != checkpoint_tx_ || ty != checkpoint_ty_)) {
+    checkpoint_tx_ = respawn_tx_ = tx;
+    checkpoint_ty_ = respawn_ty_ = ty;
+    events_ |= kEventCheckpoint;
+  }
+  if (player_.pixel_y() > level().pixel_height() + kFallMargin) {
+    Respawn();
+    events_ |= kEventFall;
+  }
+  if (TouchedTile(Tile::kGoal, &tx, &ty)) {
     win_ticks_ = kWinTicks;
     events_ |= kEventGoal;
   }
 }
 
 void Game::Render(gfx::Surface& screen) const {
-  RenderWorld(screen, level(), camera_, player_, frames_, ticks_);
+  RenderWorld(screen, level(), camera_, player_, frames_, ticks_, checkpoint_tx_, checkpoint_ty_);
   if (won()) {
     DrawBanner(screen, current_ + 1 == level_count_ && level_count_ > 1 ? "ALL DONE!" : "WELL DONE!");
   } else if (title_ticks_ > 0) {

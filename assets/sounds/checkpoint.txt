@@ -1,0 +1,8 @@
+# Checkpoint: reached a new checkpoint; two bright notes.
+tempo 160
+rows_per_beat 4
+instrument bell triangle attack 1 decay 120 sustain 30 release 80 volume 45
+channels bell
+E-5
+A-5
+---

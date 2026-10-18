@@ -1,0 +1,12 @@
+# Fall: fell out of the level; a falling slide of notes before the respawn.
+tempo 300
+rows_per_beat 4
+instrument slide square duty 50 attack 1 release 30 volume 30
+channels slide
+G-5
+E-5
+C-5
+A-4
+F-4
+D-4
+---

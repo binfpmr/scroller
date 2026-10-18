@@ -13,10 +13,12 @@ One line per tile row, one character per 16x16 tile; shorter lines are padded wi
 | `#` | ground (solid), drawn with grass when the tile above is open |
 | `X` | stone (solid) |
 | `G` | goal flag (not solid); touching it shows WELL DONE and starts the next level |
+| `C` | checkpoint (not solid, stands on the ground like `P`); touching it makes it the respawn point (turns green) |
 | `.` or space | empty |
 | `P` | player start (exactly one) |
 
-Outside the map counts as walls and floor, open above. The game plays `levels/level1.txt`, `levels/level2.txt`, ...
+Outside the map counts as walls left and right, open above, and a bottomless pit below: falling below the map
+respawns the player at the last checkpoint reached (or the start). The game plays `levels/level1.txt`, `levels/level2.txt`, ...
 in order (up to 8, as many as exist), then starts over with level 1; `levels/test.txt` is used by tests only.
 Level 1 is the beginner level: walking and plain jumps must be enough (rises of at most 2 tiles, gaps of at most
 3), which the host tests check with `levelcheck --basic`.
