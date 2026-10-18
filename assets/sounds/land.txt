@@ -1,0 +1,6 @@
+# Landing: short low thud.
+tempo 600
+rows_per_beat 4
+instrument thud noise attack 1 decay 50 sustain 0 volume 35 note C-3
+channels thud
+x

@@ -20,6 +20,9 @@ include_directories(${SCROLLER_GENERATED_DIR})
 
 # Platform-independent code, built both for the target and for the host tests.
 set(SCROLLER_CORE_SOURCES
+  src/audio/engine.cpp
+  src/audio/song.cpp
+  src/audio/synth.cpp
   src/drivers/acpi.cpp
   src/drivers/ps2_decoder.cpp
   src/game/camera.cpp

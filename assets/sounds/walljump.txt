@@ -1,0 +1,9 @@
+# Wall-jump: two quick high notes.
+tempo 600
+rows_per_beat 4
+instrument blip square duty 12 attack 1 release 20 volume 40
+channels blip
+G-5
+D-6
+G-6
+---

@@ -1,0 +1,17 @@
+# Goal: bright arpeggio with a held top note.
+tempo 300
+rows_per_beat 4
+instrument bell square duty 50 attack 2 decay 150 sustain 40 release 300 volume 45
+instrument low triangle attack 2 release 300 volume 70
+channels bell low
+C-5 C-3
+E-5 .
+G-5 .
+C-6 G-3
+E-6 .
+G-6 .
+C-7 C-4
+. .
+. .
+. .
+--- ---
