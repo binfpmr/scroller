@@ -54,6 +54,9 @@ def pin_to_one_core_type() -> None:
         os.sched_setaffinity(0, parse_cpu_list(atom.read_text()))
 
 
+DEVLINK_PORT = 5555  # UDP port of the game's debug link (see tools/devlink.py)
+
+
 def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, resolution: str,
                  display: str = "gtk-gl", sound: str = "hda", netboot: bool = False) -> list[str]:
     vars_copy = build / "OVMF_VARS.fd"
@@ -76,12 +79,17 @@ def qemu_command(build: Path, *, debug: bool, headless: bool, qmp: Path | None, 
         "-vga", "none",
         "-device", "VGA,xres={},yres={},edid=on".format(*resolution.split("x")),
     ]
+    # QEMU's user-mode network: the guest is 10.0.2.15 and reaches this PC as 10.0.2.2; the debug link's UDP port is
+    # forwarded from localhost.
+    netdev = f"user,id=net0,hostfwd=udp:127.0.0.1:{DEVLINK_PORT}-:{DEVLINK_PORT}"
     if netboot:
-        # No disk: OVMF boots over the network. QEMU's user-mode network has its own DHCP and TFTP server, which
-        # serves scroller.efi from the build directory (like dnsmasq on the development PC for real hardware).
-        cmd += ["-netdev", f"user,id=net0,tftp={build},bootfile=scroller.efi", "-device", "e1000,netdev=net0"]
+        # No disk: OVMF boots over the network. The user-mode network has its own DHCP and TFTP server, which serves
+        # scroller.efi from the build directory (like dnsmasq on the development PC for real hardware).
+        cmd += ["-netdev", f"{netdev},tftp={build},bootfile=scroller.efi", "-device", "e1000,netdev=net0"]
     else:
-        cmd += ["-drive", f"format=raw,file={build / 'scroller.img'}", "-nic", "none"]
+        # romfile= drops the network boot ROM: booting from the disk does not wait for it.
+        cmd += ["-drive", f"format=raw,file={build / 'scroller.img'}",
+                "-netdev", netdev, "-device", "e1000,netdev=net0,romfile="]
     if sound != "none":
         # Headless runs have no audio output; smoke tests record with the monitor's wavcapture instead.
         cmd += ["-audiodev", ("none" if headless else "pipewire") + ",id=snd0"]

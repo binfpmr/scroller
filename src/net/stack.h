@@ -133,7 +133,7 @@ class Stack {
   int arp_next_ = 0;  // round-robin replacement
 
   // One datagram waiting for an ARP reply: a complete frame with the destination MAC still to fill in.
-  uint8_t pending_[kMaxFrame];
+  uint8_t pending_[kMaxFrame] = {};
   size_t pending_length_ = 0;
   Ip4 pending_next_hop_;
   uint64_t pending_since_ms_ = 0;
@@ -147,7 +147,7 @@ class Stack {
   Ip4 dhcp_offered_;
   Ip4 dhcp_server_;
 
-  uint8_t tx_[kMaxFrame];
+  uint8_t tx_[kMaxFrame] = {};
   uint64_t frames_received_ = 0;
   uint64_t frames_sent_ = 0;
 };

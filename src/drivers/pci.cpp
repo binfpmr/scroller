@@ -31,6 +31,27 @@ uint64_t MemoryBar(const Device& d, int index) {
   return bar;
 }
 
+void EnableDevice(const Device& d) {
+  const bool has_capabilities = (Read32(d.bus, d.device, d.function, 0x04) & (1u << 20)) != 0;  // status bit 4
+  uint8_t pointer = has_capabilities ? Read32(d.bus, d.device, d.function, 0x34) & 0xfc : 0;
+  for (int guard = 0; pointer != 0 && guard < 48; ++guard) {
+    const uint32_t header = Read32(d.bus, d.device, d.function, pointer);
+    if ((header & 0xff) == 0x01) {  // power management: PMCSR bits 1:0 are the state
+      const uint32_t pmcsr = Read32(d.bus, d.device, d.function, static_cast<uint8_t>(pointer + 4));
+      if ((pmcsr & 3) != 0) {
+        Write32(d.bus, d.device, d.function, static_cast<uint8_t>(pointer + 4), pmcsr & ~3u);
+        for (int i = 0; i < 10000; ++i) {  // D3hot -> D0 takes up to 10 ms
+          x86::Outb(0x80, 0);
+        }
+      }
+      break;
+    }
+    pointer = (header >> 8) & 0xfc;
+  }
+  const uint32_t command = Read32(d.bus, d.device, d.function, 0x04);
+  Write32(d.bus, d.device, d.function, 0x04, (command & 0xffff) | 0x6);  // memory space + bus master
+}
+
 namespace {
 
 // Calls `visit(device)` for every function on every bus until it returns false.

@@ -16,6 +16,7 @@
 #include "lib/format.h"
 #include "lib/pack.h"
 #include "platform/interrupt_controllers.h"
+#include "platform/network.h"
 #include "platform/panic.h"
 #include "platform/reset.h"
 #include "platform/sound.h"
@@ -178,6 +179,9 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     InitSound(boot, pack, arena);
   }
   Log("sound: %s\n", SoundStatus());
+  if (boot.owns_machine) {
+    InitNetwork(boot, arena);  // in the uefi-input build the firmware's network driver still owns the controller
+  }
 
   game::Game game;
   if (!game.Init(arena, level_text.data, level_text.size, {.player = &player_sheet, .tiles = &tile_sheet}, &error)) {
@@ -236,6 +240,7 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
 
   for (;;) {
     input.Poll();
+    PollNetwork();
     const uint64_t now = x86::Rdtsc();
     if (now < next_tick) {
       if (TimerHz() != 0) {
@@ -298,13 +303,17 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     present_cycles += present_end - present_start;
     ++frames;
     stats.AddFrame(render_end - render_start, present_start - render_end, present_end - present_start);
+    const net::Stack* net = NetworkStack();
     stats.Update(present_end, {.write_combining = write_combining ? "ON" : "OFF",
                                .timer_ticks = TimerTicks(),
                                .unexpected_irqs = UnexpectedInterrupts(),
                                .keyboard = keyboard.mode(),
                                .sound = SoundStatus(),
                                .sound_irqs = SoundInterrupts(),
-                               .last_key = keyboard.last_code()});
+                               .last_key = keyboard.last_code(),
+                               .network = NetworkStatus(),
+                               .frames_received = net != nullptr ? net->frames_received() : 0,
+                               .frames_sent = net != nullptr ? net->frames_sent() : 0});
   }
 }
 

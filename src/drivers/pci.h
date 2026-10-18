@@ -26,6 +26,10 @@ uint64_t MemoryBar(const Device& device, int index);
 // First device with base class `base_class` (e.g. 0x03, display controller) on any bus. False if none.
 bool FindByClass(uint8_t base_class, Device* out);
 
+// Puts the device into power state D0 if it has the power management capability, and enables memory decoding and
+// bus mastering (DMA).
+void EnableDevice(const Device& device);
+
 // Up to `max` devices with base class `base_class`, in bus order. Returns how many were found.
 int FindAllByClass(uint8_t base_class, Device* out, int max);
 

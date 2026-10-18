@@ -70,6 +70,7 @@ add_executable(scroller
   src/boot/uefi_keyboard.cpp
   src/boot/video.cpp
   src/drivers/debug_log.cpp
+  src/drivers/e1000.cpp
   src/drivers/hda.cpp
   src/drivers/intel_display.cpp
   src/drivers/io_apic.cpp
@@ -78,11 +79,13 @@ add_executable(scroller
   src/drivers/sb16.cpp
   src/drivers/pci.cpp
   src/drivers/ps2_keyboard.cpp
+  src/drivers/rtl8168.cpp
   src/drivers/vga_retrace.cpp
   src/lib/cxx_support.cpp
   src/lib/mem.c
   src/platform/game_loop.cpp
   src/platform/interrupt_controllers.cpp
+  src/platform/network.cpp
   src/platform/panic.cpp
   src/platform/reset.cpp
   src/platform/sound.cpp
