@@ -135,6 +135,63 @@ Decided: pure "reach the goal", placeholder text-art style, no title screen.
       beginner level, has none so far)
 - [x] 15 levels: 6-15 generated (`tools/levelgen.py`); after the last one THE END, a key goes back to level 1
 
+## M10 (future): cooperative network play
+
+Two machines on one wired LAN (the HP Pavilion's Wi-Fi chip is not supported; its Ethernet is) play the same level
+together and both go to the same goal. It has to work on the single-player levels as they are: cooperation makes
+hard parts easier, it is never required (`levelcheck` keeps proving every level solvable alone).
+
+### Mechanics
+
+- A second player, the same character in another colour. Each machine's camera follows its own player; when the
+  partner is off screen, a small arrow at the screen edge points to them.
+- **Standing on each other:** the top of a player is a one-way platform (solid from above only). You can stand on
+  your partner's head, and you ride along: when they walk, you move with them.
+- **Head jump:** jumping from the partner's head is a normal jump from 14 px higher; together with a jump of the
+  partner at the same moment (both press jump within a few ticks) the top player gets the duck-jump speed. That is
+  the "better player helps the weaker one" move: stand at the obstacle, let the partner climb on, jump together.
+- **Carry:** the top player can hold Down to hold on; the bottom player then carries them (walks and jumps, a bit
+  lower than alone) over gaps and enemies. Releasing Down or jumping lets go.
+- **Shared checkpoints:** a checkpoint reached by either player counts for both. A fall or an enemy sends only that
+  player back, to the checkpoint, or next to the partner if the partner stands on solid ground nearby (so nobody has
+  to replay a long part alone).
+- **Catch up:** a key (e.g. Tab) brings a player who is stuck far behind to the partner after a short countdown.
+- **Goal:** the level is done when both players have touched the goal; the first one there can go back to help.
+- Enemies are shared and behave as now; touching one affects only the player who touched it.
+
+### Networking
+
+- **Deterministic lockstep:** the simulation is integer and fixed point, so both machines run the same game from
+  the same inputs and never send positions. Every tick each machine sends its input (held/pressed key bits) for tick
+  T + 3 (an input delay of 50 ms, unnoticeable on a LAN) in one UDP datagram that also repeats its last 8 inputs, so
+  an occasional lost packet costs nothing and needs no acknowledgement. A tick runs when both inputs for it are
+  known; if the partner's is late the game waits (on a LAN at most a frame or two).
+- **Desync check:** every second both send a hash of the game state (players, enemies, checkpoint, tick); a
+  mismatch is logged (and later answered by the host sending its full state, a few hundred bytes).
+- **Session:** a key (e.g. F3) looks for a partner by UDP broadcast on the LAN (like `devlink.py discover`) and
+  shows WAITING FOR PARTNER; when two machines find each other, the one with the lower address is the host, and both
+  start the host's current level at the same tick. Port 5556, next to the debug link's 5555, on the existing
+  `net::Stack` (DHCP or the network-boot address).
+- **Leaving:** no input from the partner for 3 seconds ends the session; the remaining player continues alone.
+
+### Code
+
+- `game/`: `Game` with one or two players and the interactions above (pure logic, host-tested: two players, scripted
+  inputs, riding, head jump, carry, shared checkpoints, goal for both).
+- `platform/coop`: discovery, the lockstep input exchange, the desync check.
+- Tests: host tests that run two `Game` instances in lockstep from the same inputs and compare state hashes; two
+  QEMU instances connected by a socket network (`-netdev socket,mcast=...`) on one PC; then the HP Pavilion with a
+  second PC.
+
+### Steps
+
+- [ ] Two players in `Game` on one machine (second set of keys, e.g. WASD, for testing): standing on heads, riding,
+      head jump, carry, shared checkpoints, goal for both; host tests
+- [ ] Second player's colour, off-screen arrow, catch-up key
+- [ ] Lockstep over UDP with input delay and redundancy; state hash; host test with simulated packet loss
+- [ ] Discovery and session start/end; two QEMU instances
+- [ ] Two real PCs
+
 ## M9: later
 
 - [ ] Gamepad: USB HID gamepads (report descriptor parsing), then mapping to the same keys
@@ -146,6 +203,7 @@ Decided: pure "reach the goal", placeholder text-art style, no title screen.
       (only needed for saves or levels outside the image)
 - [ ] Optional: NVMe for internal drives (QEMU `-device nvme`), saves (write support)
 - [ ] Optional: simplified TCP (design in M6), then gdb connects to the game directly
+- (Cooperative network play: M10 above.)
 
 ### Done earlier (polish)
 
