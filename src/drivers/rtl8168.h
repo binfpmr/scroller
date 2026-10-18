@@ -20,6 +20,7 @@ class Driver final : public nic::Driver {
   size_t Receive(const uint8_t** frame) override;
   int LinkSpeed() override;
   void Describe(char* out, size_t size) override;
+  bool Restart() override;
 
  private:
   struct Descriptor {
@@ -29,12 +30,14 @@ class Driver final : public nic::Driver {
   };
   static_assert(sizeof(Descriptor) == 16);
 
+  void Setup();
   void GiveRx(int index);
-  void StartRx();  // (re)initialises the receive ring and enables the receiver
 
   uint32_t version_ = 0;
+  uint32_t misc_at_boot_ = 0;  // as the firmware left them
+  uint8_t mcu_at_boot_ = 0;
   uint16_t seen_status_ = 0;  // every interrupt status bit seen since boot
-  uint32_t rx_restarts_ = 0;
+  uint32_t restarts_ = 0;
 
   volatile uint8_t* mmio_ = nullptr;
   volatile Descriptor* rx_ = nullptr;

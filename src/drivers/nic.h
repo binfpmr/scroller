@@ -18,6 +18,9 @@ class Driver : public net::Link {
   virtual size_t Receive(const uint8_t** frame) = 0;
   // Link speed in Mbit/s, 0 while the cable is unplugged or negotiation is still running.
   virtual int LinkSpeed() = 0;
+  // Resets the controller and sets it up again (recovery when receiving has stalled). False if the driver has no
+  // need for that.
+  virtual bool Restart() { return false; }
   // Register state for the F1 overlay when bringing up a driver on new hardware; empty if there is nothing to show.
   virtual void Describe(char* out, size_t size) {
     if (size > 0) {

@@ -11,6 +11,10 @@ namespace platform {
 namespace {
 
 constexpr int kFramesPerPoll = 16;
+// Nothing received for this long while the link is up: restart the controller (the RTL8168H on the HP Pavilion stopped
+// receiving after one pass through the ring). A busy LAN has broadcasts every few seconds; on a quiet one the restart
+// costs nothing.
+constexpr uint64_t kReceiveWatchdogMs = 3000;
 
 // constinit: the drivers have vtables, which must be set up statically (no global constructors run).
 constinit e1000::Driver g_e1000;
@@ -19,10 +23,13 @@ nic::Driver* g_nic = nullptr;
 pci::Device g_device;
 constinit net::Stack g_stack;
 bool g_from_pxe = false;
+uint64_t g_last_receive_ms = 0;
+uint64_t g_last_link_check_ms = 0;
+uint32_t g_restarts = 0;
 uint64_t g_tsc_hz = 0;
 bool g_was_configured = false;
 char g_status[64] = "NONE";
-char g_detail[80] = "";
+char g_detail[128] = "";
 
 uint64_t NowMs() { return x86::Rdtsc() / (g_tsc_hz / 1000); }
 
@@ -48,6 +55,7 @@ void InitNetwork(const BootInfo& boot, lib::Arena& arena) {
     return;
   }
   g_stack.Init(g_nic, g_nic->mac());
+  g_last_receive_ms = NowMs();
   if (boot.netboot.valid) {
     net::Config config;
     lib::Copy(config.ip.b, boot.netboot.ip, 4);
@@ -72,6 +80,17 @@ void PollNetwork() {
       break;
     }
     g_stack.HandleFrame(frame, length, now);
+    g_last_receive_ms = now;
+  }
+  if (now - g_last_receive_ms >= kReceiveWatchdogMs && now - g_last_link_check_ms >= 1000) {
+    g_last_link_check_ms = now;
+    if (g_nic->LinkSpeed() != 0) {
+      const uint64_t quiet_ms = now - g_last_receive_ms;
+      if (g_nic->Restart() && ++g_restarts <= 5) {
+        Log("net: nothing received for %llu ms, controller restarted\n", static_cast<unsigned long long>(quiet_ms));
+      }
+      g_last_receive_ms = now;
+    }
   }
   g_stack.Tick(now);
   if (g_stack.configured() && !g_was_configured) {
