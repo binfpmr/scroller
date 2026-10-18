@@ -74,7 +74,7 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] Debug link on the HP Pavilion: ping, log stream, screenshots, keys, remote reboot into the new build (~30 s)
 - [x] GDB stub over the debug link + `tools/devlink.py gdb` bridge (TCP on localhost:2345 for gdb / VS Code):
       breakpoints, single steps, registers, memory, Ctrl+C, crashes stop in gdb, kill = reboot (verified in QEMU)
-- [ ] GDB on the HP Pavilion (needs the new build there)
+- [x] GDB on the HP Pavilion (three sessions in a row: breakpoint, variables, next, stepi, detach)
 - [ ] Optional: simplified TCP in `net/` (design below), then gdb connects to the game directly
 
 ### Simplified TCP (design, not scheduled)
@@ -103,15 +103,20 @@ connection at a time, LAN only, so most of TCP's machinery can go:
 ## M7: USB keyboard
 
 - [x] PCI enumeration
-- [ ] xHCI controller init, device enumeration
-- [ ] HID boot-protocol keyboard -> same `InputState`
-- [ ] Develop in QEMU with `-device qemu-xhci -device usb-kbd`, then real hardware
+- [ ] xHCI: BIOS handoff, reset, command and event rings (polled), No-Op command; ports listed in the log
+- [ ] Device enumeration on root ports: Enable Slot, Address Device, device and configuration descriptors (logged)
+- [ ] HID boot-protocol keyboard (interrupt IN endpoint, 8-byte reports) -> same `InputState`, next to PS/2
+- [ ] QEMU: `tools/qemu.py --usb-kbd` (qemu-xhci + usb-kbd); then the HP Pavilion with an external keyboard
+- [ ] Remove the `uefi-input` build
+- [ ] Later: hubs, HID gamepads (report descriptor parsing)
 
-## M8: runtime disk access
+## M8: disk access (re-scoped)
 
-- [ ] Read a raw data partition via AHCI (QEMU default on q35)
-- [ ] NVMe (QEMU `-device nvme`) for modern PCs
-- [ ] Optional: saves (write support); USB mass storage is out of scope unless needed
+The assets are inside the image, so a disk is only needed for saves or levels loaded separately.
+
+- [ ] USB mass storage (bulk-only transport, SCSI READ(10)) on the xHCI driver: read the stick we booted from
+- [ ] Optional, later: NVMe for internal drives (QEMU `-device nvme`)
+- [ ] Optional: saves (write support)
 
 ## M9: polish
 
