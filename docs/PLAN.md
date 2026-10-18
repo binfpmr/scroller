@@ -66,10 +66,12 @@ Milestones are ordered; each one ends in something that boots and can be seen wo
 - [x] Network boot (PXE) in QEMU (`tools/qemu.py --netboot`); PXE addresses passed in `BootInfo`
 - [x] `scripts/netboot-server.sh` (dnsmasq: `proxy` next to the router's DHCP, or `direct` cable)
 - [ ] Network boot on the HP Pavilion (needs a human: cable, BIOS boot order)
-- [ ] NIC driver for the HP Pavilion's controller (ID from the F1 overlay) and e1000 for QEMU, behind one interface
-- [ ] Minimal ARP/IPv4/UDP (addresses from the PXE boot)
-- [ ] UDP debug protocol + `tools/devlink.py`: log stream, screenshots, key injection, reboot (= load the new build),
-      memory peek/poke
+- [x] NIC drivers behind one interface: e1000 for QEMU (verified), RTL8168 `10EC:8168` for the HP Pavilion (written,
+      not yet tried on hardware)
+- [x] Minimal ARP/IPv4/ICMP/UDP + DHCP client (address from the PXE boot, else DHCP), host-tested
+- [x] UDP debug protocol + `tools/devlink.py`: log stream, screenshots, key injection, reboot (= load the new build),
+      memory peek/poke (verified in QEMU)
+- [ ] Debug link on the HP Pavilion (needs a human: cable, `SCROLLER_TARGET`)
 - [ ] Optional: GDB remote stub over UDP (`target remote udp:...`)
 
 ## M7: USB keyboard

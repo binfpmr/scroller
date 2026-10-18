@@ -94,6 +94,28 @@ the test PC (Esc in the game) to get the new build. On the test PC: Secure Boot 
 and first in the boot order (or picked from the boot menu). F1 shows `NETBOOT <ip> FROM <server>` when it worked.
 In QEMU: `scripts/run-qemu.sh --netboot` (QEMU's own DHCP/TFTP server, no dnsmasq needed).
 
+## Debug link (log, screenshots, keys, reboot over the network)
+
+When the game has a supported Ethernet controller (e1000 in QEMU, RTL8168 on the HP Pavilion) it takes the PXE
+address, or asks DHCP, and listens on UDP port 5555 (F1: `NET` line with link speed and address).
+`tools/devlink.py` is the PC side:
+
+```sh
+export SCROLLER_TARGET=192.168.178.40    # the test PC (F1 NET line, or: tools/devlink.py discover); QEMU: unset
+tools/devlink.py info                    # version, boot id, image base, screen address
+tools/devlink.py log --all               # log since boot, then live; follows reboots; Ctrl+C stops
+tools/devlink.py shot out.png            # screenshot of the 320x240 game screen
+tools/devlink.py keys "right:2 jump wait:1 shot:a.png"   # inject keys (left right down jump esc f1 volup voldown mute)
+tools/devlink.py peek 0x... 64           # memory (unmapped pages are refused, MMIO reads are not)
+tools/devlink.py poke 0x... 90 90
+tools/devlink.py reboot                  # with network boot first: loads the current build
+```
+
+It keeps working on the crash screen, so a crash report can be read with `log --all`. The loop on real hardware:
+rebuild, `tools/devlink.py reboot`, `tools/devlink.py log` / `shot`. In QEMU the port is forwarded from localhost
+(any `tools/qemu.py` run), so the same commands work without `SCROLLER_TARGET`. No authentication: use it on a
+trusted network only.
+
 ## Write to a USB stick / disk
 
 **Double-check the device name; `dd` will overwrite whatever you point it at.**
@@ -103,7 +125,7 @@ lsblk                                              # find the stick, e.g. /dev/s
 sudo dd if=build/uefi/scroller.img of=/dev/sdX bs=4M conv=fsync status=progress
 ```
 
-Into an existing partition instead of a whole disk: either copy `EFI/BOOT/BOOTX64.EFI` and the `scroller/` asset folder onto an existing FAT ESP, or `dd` `build/uefi/esp.img` into a partition at least as large as the image. Then boot it from the firmware's boot menu (Secure Boot must be off; the binary is unsigned).
+Into an existing partition instead of a whole disk: either copy `build/uefi/scroller.efi` as `EFI/BOOT/BOOTX64.EFI` onto an existing FAT ESP (the assets are inside it), or `dd` `build/uefi/esp.img` into a partition at least as large as the image. Then boot it from the firmware's boot menu (Secure Boot must be off; the binary is unsigned).
 
 ## Development loop
 

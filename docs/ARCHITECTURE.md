@@ -57,6 +57,7 @@ src/
   platform/      the interface the game sees (input state, time, present, assets) + its bare-metal implementation
   gfx/           Surface (320x240 XRGB), blits, sprites, tilemap renderer, scaler to GOP
   game/          pure game logic: level, tile collision, player physics, camera
+  net/           network stack (ARP, IPv4, ICMP, UDP, DHCP client), platform independent
   lib/           freestanding runtime: mem*/str* functions, fmt/log formatting, arena allocator, fixed-point math
 tools/           host tools: qemu.py runner, pack_assets.py, version_header.py, gdb helper, levelcheck (C++)
 assets/          text-art sprite sheets (sprites/), text levels (levels/), see docs/ASSETS.md
@@ -102,6 +103,19 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
   steps of 10 % by the volume keys.
 - Game sound events: `Player::events` (jump, wall-jump, land) and the goal, collected by `Game::TakeEvents()`.
 
+## Network
+
+- `src/net/stack` (shared core, host-tested): Ethernet II, ARP (8-entry cache, one datagram parked while resolving),
+  IPv4 without fragments, ICMP echo, UDP with checksums, a DHCP client (no lease renewal). Single-threaded and
+  polled: the main loop feeds received frames and calls `Tick`.
+- Drivers implement `nic::Driver` (`drivers/nic.h`: send a frame, receive the next one, link speed), polled with
+  32-entry descriptor rings in arena memory (identity mapped, so virtual = physical for DMA): `drivers/e1000`
+  (Intel 8254x, QEMU) and `drivers/rtl8168` (Realtek 8168/8111, relies on the firmware's PHY setup).
+- `platform/network` picks the first supported Ethernet controller; the address comes from the PXE boot
+  (`BootInfo.netboot`), else DHCP. `platform/devlink` is the UDP debug protocol for `tools/devlink.py` (header comment
+  in `devlink.h`); it reads the log from the history ring in `drivers/debug_log` (last 32 KiB). The main loop, the
+  start-up error screen and the crash screen all poll the network.
+
 ## Freestanding C++ rules
 
 - Compile flags (roughly): `-std=c++23` / `-std=c23`, `-ffreestanding -fpie -fvisibility=hidden -fno-plt -fno-exceptions -fno-rtti -fno-stack-protector -fno-stack-check -fcf-protection=none -fno-asynchronous-unwind-tables -mno-red-zone`.
@@ -114,7 +128,7 @@ Dependency rule: `game/` and `gfx/` depend only on `lib/` and the `platform/` in
 
 ## Known risks
 
-- **USB-only keyboards** need an xHCI + HID driver after `ExitBootServices` (milestone M6). Until then: PS/2 or the `SCROLLER_UEFI_INPUT` fallback.
+- **USB-only keyboards** need an xHCI + HID driver after `ExitBootServices` (milestone M7). Until then: PS/2 or the `SCROLLER_UEFI_INPUT` fallback.
 - **Framebuffer speed on real hardware**: the GOP framebuffer is typically mapped uncached; writing ~2.8 MB/frame (x3; now ~4.9 MB at x4) gave only a few FPS on an HP Pavilion (present 167 ms/frame uncached, 0.40 ms with WC; render 0.05 ms; CPU at 3.9 GHz). `x86::EnableWriteCombining` reprograms PAT entry 7 to WC and points the framebuffer's page table entries at it (splitting large pages), after ExitBootServices only. F1 shows a performance overlay.
 - **GOP pixel formats**: handle BGRX and RGBX; bitmask formats only if we meet one. `BltOnly` modes (no framebuffer) are not supported.
 - **No vsync** under GOP: frames are copied at times unrelated to the display refresh, so a tear line drifts across the screen. `platform::Vsync` picks what the hardware offers and waits for a new frame before presenting: on Intel GPUs the enabled pipe's scanline counter (PIPEDSL in BAR0, `drivers/intel_display`), otherwise the legacy VGA retrace bit (port 0x3DA) if it shows a steady 30-125 Hz rhythm (QEMU's fake bit is rejected; the UHD 630 in the HP Pavilion does not emulate it). Pipe selection uses the counter that actually runs: on Gen9 an eDP panel goes through the eDP transcoder and all PIPECONF registers read 0. Verified on the HP Pavilion (i5-8300H, UHD 630): no tearing, smooth. AMD would need its own CRTC scanline register. If vsync is off, F1 shows the Intel diagnostics (BAR0, pipe, lines, rate). The F1 overlay shows the CPU, the GPU's PCI ID and the vsync state.
