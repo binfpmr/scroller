@@ -56,6 +56,9 @@ bool MapUsage(uint8_t usage, Key* key) {
     case 0x7f:  // mute
       *key = Key::kVolumeMute;
       return true;
+    case 0x15:  // 'R'
+      *key = Key::kReload;
+      return true;
     case 0x11:  // 'N'
       *key = Key::kToggleMusic;
       return true;

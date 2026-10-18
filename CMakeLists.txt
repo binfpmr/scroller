@@ -41,6 +41,7 @@ set(SCROLLER_CORE_SOURCES
   src/lib/pack.cpp
   src/lib/pe.cpp
   src/net/stack.cpp
+  src/net/tftp.cpp
   src/platform/input.cpp
 )
 

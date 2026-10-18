@@ -20,6 +20,7 @@ enum class Key : uint8_t {
   kAlt,          // left Alt or AltGr
   kDelete,       // Delete (or keypad Del)
   kToggleMusic,  // 'N': background music on/off
+  kReload,       // 'R': with Ctrl+Alt, hot reload from the network-boot server
   kCount,
 };
 
@@ -34,6 +35,8 @@ struct InputState {
   bool Released(Key key) const { return (released & Bit(key)) != 0; }
   // Ctrl+Alt+Delete: reboot (a combination, so it is not pressed by accident).
   bool RebootRequested() const { return Pressed(Key::kDelete) && Held(Key::kCtrl) && Held(Key::kAlt); }
+  // Ctrl+Alt+R: fetch the current build from the network-boot server and hot-reload it.
+  bool ReloadRequested() const { return Pressed(Key::kReload) && Held(Key::kCtrl) && Held(Key::kAlt); }
 };
 
 // Two physical keys mapped to the same Key (Space and Up) share one state: releasing either releases the Key.

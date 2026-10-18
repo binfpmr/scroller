@@ -6,6 +6,7 @@
 #include "lib/format.h"
 #include "lib/mem.h"
 #include "lib/pe.h"
+#include "net/tftp.h"
 #include "platform/gdb_stub.h"
 #include "platform/reload.h"
 #include "platform/reset.h"
@@ -59,11 +60,17 @@ struct State {
   uint8_t* upload = nullptr;
   uint32_t upload_size = 0;
   bool reload = false;
+  net::TftpClient tftp;
+  bool tftp_ready = false;
+  char message[72] = "";
+  uint64_t message_until_ms = 0;
 };
 
 constexpr uint32_t kMaxUpload = 3 * 1024 * 1024;
 
 State g_state;
+
+bool EnsureUploadBuffer();
 
 uint64_t Get64(const uint8_t* p) {
   uint64_t v = 0;
@@ -191,10 +198,7 @@ void OnDatagram(void*, const net::UdpDatagram& d) {
       break;
     case kReloadBegin: {
       const uint32_t size = body_length >= 4 ? Get32(body) : 0;
-      if (g_state.upload == nullptr && g_state.arena != nullptr) {
-        g_state.upload = static_cast<uint8_t*>(g_state.arena->Allocate(kMaxUpload, 4096));
-      }
-      if (g_state.upload == nullptr || size == 0 || size > kMaxUpload) {
+      if (!EnsureUploadBuffer() || size == 0 || size > kMaxUpload) {
         Reply(d, 1, nullptr, 0);
         break;
       }
@@ -235,7 +239,80 @@ void OnDatagram(void*, const net::UdpDatagram& d) {
   }
 }
 
+uint64_t NowMs() { return x86::Rdtsc() / (g_state.boot->tsc_hz / 1000); }
+
+void SetMessage(const char* text, uint64_t duration_ms) {
+  lib::Format(g_state.message, sizeof(g_state.message), "%s", text);
+  g_state.message_until_ms = NowMs() + duration_ms;
+}
+
+bool EnsureUploadBuffer() {
+  if (g_state.upload == nullptr && g_state.arena != nullptr) {
+    g_state.upload = static_cast<uint8_t*>(g_state.arena->Allocate(kMaxUpload, 4096));
+  }
+  return g_state.upload != nullptr;
+}
+
+// Watches a running TFTP fetch; when the file is complete, loads it for the reload.
+void PollNetworkReload() {
+  if (!g_state.tftp_ready) {
+    return;
+  }
+  net::TftpClient& tftp = g_state.tftp;
+  if (tftp.state() == net::TftpClient::State::kRunning) {
+    tftp.Tick(NowMs());
+    return;
+  }
+  if (tftp.state() == net::TftpClient::State::kFailed) {
+    char text[72];
+    lib::Format(text, sizeof(text), "RELOAD FAILED: %s", tftp.error());
+    Log("reload: %s\n", text);
+    SetMessage(text, 5000);
+  } else if (tftp.state() == net::TftpClient::State::kDone) {
+    const char* error = nullptr;
+    Log("reload: fetched %llu bytes by TFTP\n", static_cast<unsigned long long>(tftp.size()));
+    if (PrepareReload(*g_state.boot, g_state.upload, tftp.size(), &error)) {
+      g_state.reload = true;
+    } else {
+      char text[72];
+      lib::Format(text, sizeof(text), "RELOAD REFUSED: %s", error);
+      Log("reload: %s\n", text);
+      SetMessage(text, 5000);
+    }
+  } else {
+    return;
+  }
+  tftp.Reset();
+}
+
 }  // namespace
+
+void RequestNetworkReload() {
+  if (g_state.stack == nullptr || !g_state.stack->configured()) {
+    SetMessage("RELOAD: NO NETWORK", 3000);
+    return;
+  }
+  if (!g_state.boot->netboot.valid) {
+    SetMessage("RELOAD: NOT NETWORK-BOOTED (USE DEVLINK.PY RELOAD)", 4000);
+    return;
+  }
+  if (!EnsureUploadBuffer()) {
+    SetMessage("RELOAD: OUT OF MEMORY", 3000);
+    return;
+  }
+  net::Ip4 server;
+  lib::Copy(server.b, g_state.boot->netboot.server, 4);
+  Log("reload: fetching scroller.efi from %u.%u.%u.%u\n", server.b[0], server.b[1], server.b[2], server.b[3]);
+  g_state.tftp.Start(server, "scroller.efi", g_state.upload, kMaxUpload, NowMs());
+  SetMessage("RELOADING...", 10000);
+}
+
+const char* DevlinkMessage() {
+  if (g_state.boot == nullptr || g_state.message[0] == '\0' || NowMs() > g_state.message_until_ms) {
+    return "";
+  }
+  return g_state.message;
+}
 
 void InitDevlink(net::Stack* stack, const BootInfo& boot, InputTracker* tracker, const gfx::Surface* screen,
                  lib::Arena* arena) {
@@ -247,6 +324,7 @@ void InitDevlink(net::Stack* stack, const BootInfo& boot, InputTracker* tracker,
   g_state.tracker = tracker;
   g_state.screen = screen;
   g_state.arena = arena;
+  g_state.tftp_ready = g_state.tftp.Init(stack);
   g_state.boot_id = x86::Rdtsc();
   stack->Bind(kDevlinkPort, &OnDatagram, nullptr);
   Log("devlink: UDP port %u\n", kDevlinkPort);
@@ -259,6 +337,7 @@ void PollDevlink() {
   if (g_state.reload) {
     ExecuteReload(*g_state.boot);
   }
+  PollNetworkReload();
   if (g_state.reboot) {
     Reboot(g_state.boot->runtime_services, g_state.reboot_method);
   }

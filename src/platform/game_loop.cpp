@@ -282,6 +282,9 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
       if (input.RebootRequested()) {
         Reboot(boot.runtime_services);
       }
+      if (input.ReloadRequested()) {
+        RequestNetworkReload();
+      }
       if (input.Pressed(Key::kEscape)) {
         game.RestartFromFirstLevel();
       }
@@ -323,6 +326,12 @@ void RunGame(const BootInfo& boot, KeyboardSource& keyboard) {
     const uint64_t render_start = x86::Rdtsc();
     game.Render(screen);
     stats.Draw(screen);
+    if (const char* message = DevlinkMessage(); message[0] != '\0') {
+      const int w = gfx::TextWidth(message) + 8;
+      const int y = 8 + gfx::kLineHeight + 8;  // under the volume message, clear of the level banner
+      gfx::FillRect(screen, (screen.width - w) / 2, y, w, gfx::kLineHeight + 4, gfx::Rgb(20, 20, 40));
+      gfx::DrawText(screen, (screen.width - w) / 2 + 4, y + 2, message, gfx::Rgb(255, 220, 120));
+    }
     if (ticks < volume_shown_until) {
       char text[24];
       if (music_message) {

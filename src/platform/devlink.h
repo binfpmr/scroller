@@ -39,7 +39,12 @@ inline constexpr uint32_t kMaxRead = 1024;
 void InitDevlink(net::Stack* stack, const BootInfo& boot, InputTracker* tracker, const gfx::Surface* screen,
                  lib::Arena* arena);
 
-// Streams new log output to the subscriber and carries out a requested reboot. Call after PollNetwork.
+// Streams new log output to the subscriber and carries out a requested reboot or reload. Call after PollNetwork.
 void PollDevlink();
+
+// Ctrl+Alt+R: fetches scroller.efi by TFTP from the server that network-booted the machine and hot-reloads it.
+void RequestNetworkReload();
+// A short status line for the screen while a reload is fetched or after it failed; empty otherwise.
+const char* DevlinkMessage();
 
 }  // namespace platform
