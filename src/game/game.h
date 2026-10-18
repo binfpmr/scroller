@@ -43,6 +43,7 @@ struct Frames {
   const gfx::Sprite* checkpoint;
   const gfx::Sprite* checkpoint_on;
   const gfx::Sprite* cloud;  // background
+  const gfx::Sprite* cloud_big;
   const gfx::Sprite* bush;
   const gfx::Sprite* walker[2];
   const gfx::Sprite* jumper;

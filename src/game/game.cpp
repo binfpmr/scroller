@@ -39,7 +39,9 @@ bool Game::Init(lib::Arena& arena, const LevelText* levels, int level_count, con
       FindFrame(t, tn, "stone", &frames_.stone, message, ms) && FindFrame(t, tn, "flag", &frames_.flag, message, ms) &&
       FindFrame(t, tn, "checkpoint", &frames_.checkpoint, message, ms) &&
       FindFrame(t, tn, "checkpoint_on", &frames_.checkpoint_on, message, ms) &&
-      FindFrame(t, tn, "cloud", &frames_.cloud, message, ms) && FindFrame(t, tn, "bush", &frames_.bush, message, ms);
+      FindFrame(t, tn, "cloud", &frames_.cloud, message, ms) &&
+      FindFrame(t, tn, "cloud_big", &frames_.cloud_big, message, ms) &&
+      FindFrame(t, tn, "bush", &frames_.bush, message, ms);
   const gfx::SpriteSheet* e = assets.enemies;
   const char* en = "sprites/enemies.txt";
   const bool enemy_frames_ok = frames_ok && FindFrame(e, en, "walker1", &frames_.walker[0], message, ms) &&

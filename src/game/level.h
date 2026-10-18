@@ -37,6 +37,7 @@ struct Level {
   int start_y = 0;
   EnemySpawn* enemies = nullptr;  // where enemies start (their tiles are empty)
   int enemy_count = 0;
+  int ground_rows = 0;  // rows at the bottom that are mostly solid: the ground the background's bushes stand on
 
   // Outside the map: solid to the left and right (walls), empty above and below (below: a bottomless pit).
   Tile At(int tx, int ty) const {

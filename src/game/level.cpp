@@ -96,6 +96,17 @@ bool ParseLevel(const char* text, size_t length, lib::Arena& arena, Level* level
   level->tiles = tiles;
   level->enemies = enemies;
   level->enemy_count = enemy_count;
+  level->ground_rows = 0;
+  for (int row = height - 1; row >= 0; --row) {
+    int solid = 0;
+    for (int col = 0; col < width; ++col) {
+      solid += level->IsSolid(col, row) ? 1 : 0;
+    }
+    if (solid * 2 < width) {
+      break;
+    }
+    ++level->ground_rows;
+  }
   return true;
 }
 

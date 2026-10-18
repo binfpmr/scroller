@@ -28,20 +28,22 @@ void DrawSky(gfx::Surface& screen, const Camera& camera, const Level& level) {
   }
 }
 
-// Parallax: a layer at depth num/den moves num/den as fast as the camera. Its base line (the horizon the hills and
-// bushes stand on) is `lift` pixels above the screen bottom when the camera is at the bottom of the level, and sinks as
-// the camera climbs.
+// Parallax: a layer moves x_num/x_den as fast as the camera horizontally and y_num/y_den vertically. Its base line
+// is `lift` pixels above the level's ground (Level::ground_rows) when the camera is at the bottom of the level. With a
+// vertical factor of 1 the layer stays on the ground (bushes); smaller factors make it sink as the camera climbs.
 struct Layer {
-  int num;
-  int den;
+  int x_num;
+  int x_den;
+  int y_num;
+  int y_den;
   int lift;
 };
 
-int LayerOffsetX(const Camera& camera, const Layer& layer) { return camera.x * layer.num / layer.den; }
+int LayerOffsetX(const Camera& camera, const Layer& layer) { return camera.x * layer.x_num / layer.x_den; }
 
 int LayerBaseY(const gfx::Surface& screen, const Camera& camera, const Level& level, const Layer& layer) {
   const int below_top = lib::Max(level.pixel_height() - screen.height - camera.y, 0);  // how far the camera climbed
-  return screen.height - layer.lift + below_top * layer.num / layer.den;
+  return screen.height - level.ground_rows * kTileSize - layer.lift + below_top * layer.y_num / layer.y_den;
 }
 
 int Wrap(int value, int period) { return ((value % period) + period) % period; }
@@ -71,24 +73,29 @@ void DrawHills(gfx::Surface& screen, const Camera& camera, const Level& level, c
   }
 }
 
+// Sprites spaced along a layer; every third one is `big` instead (if given).
 void DrawSprites(gfx::Surface& screen, const Camera& camera, const Level& level, const Layer& layer,
-                 const gfx::Sprite& sprite, int spacing, int jitter_x, int min_up, int range_up) {
+                 const gfx::Sprite& sprite, const gfx::Sprite* big, int spacing, int jitter_x, int min_up,
+                 int range_up) {
   const int base = LayerBaseY(screen, camera, level, layer);
   const int offset = LayerOffsetX(camera, layer);
   for (int i = offset / spacing - 1; i * spacing - offset < screen.width + spacing; ++i) {
     const uint32_t h = Hash(i);
     const int x = i * spacing + static_cast<int>(h % static_cast<uint32_t>(jitter_x)) - offset;
     const int up = min_up + (range_up > 0 ? static_cast<int>((h >> 8) % static_cast<uint32_t>(range_up)) : 0);
-    gfx::DrawSprite(screen, sprite, x, base - up - sprite.height);
+    const gfx::Sprite& chosen = big != nullptr && (h >> 20) % 3 == 0 ? *big : sprite;
+    gfx::DrawSprite(screen, chosen, x, base - up - chosen.height);
   }
 }
 
 void DrawBackground(gfx::Surface& screen, const Camera& camera, const Level& level, const Frames& frames) {
   DrawSky(screen, camera, level);
-  DrawSprites(screen, camera, level, {1, 6, 0}, *frames.cloud, 150, 70, 120, 60);  // clouds high above the hills
-  DrawHills(screen, camera, level, {1, 4, 72}, 30, 230, 34, 120, 14, Rgb(116, 170, 168), Rgb(136, 190, 184));
-  DrawHills(screen, camera, level, {1, 2, 64}, 10, 170, 28, 90, 10, Rgb(84, 160, 92), Rgb(110, 190, 110));
-  DrawSprites(screen, camera, level, {3, 4, 66}, *frames.bush, 110, 60, 0, 0);
+  // Clouds high above the hills, some big; far hills without an outline; near hills; bushes on the ground.
+  DrawSprites(screen, camera, level, {1, 6, 1, 6, 0}, *frames.cloud, frames.cloud_big, 150, 70, 60, 60);
+  const Color far = Rgb(116, 170, 168);
+  DrawHills(screen, camera, level, {1, 4, 1, 4, 8}, 30, 230, 34, 120, 14, far, far);
+  DrawHills(screen, camera, level, {1, 2, 1, 2, 0}, 10, 170, 28, 90, 10, Rgb(84, 160, 92), Rgb(110, 190, 110));
+  DrawSprites(screen, camera, level, {3, 4, 1, 1, 0}, *frames.bush, nullptr, 110, 60, 0, 0);
 }
 
 void DrawTiles(gfx::Surface& screen, const Level& level, const Camera& camera, const Frames& frames, int checkpoint_tx,

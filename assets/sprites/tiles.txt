@@ -130,7 +130,7 @@ frame checkpoint_on
 .....sPPs.......
 ....ssssss......
 
-# Background (parallax layers): a cloud and a bush, drawn behind the tiles.
+# Background (parallax layers): clouds (small and big) and a bush, drawn behind the tiles.
 size 32 12
 
 frame cloud
@@ -146,6 +146,28 @@ wWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWw
 .wwWWWWWWWWWWWWWWWWWWWWWWWWWWww.
 ...wwwwwwwwwwwwwwwwwwwwwwwwww...
 ................................
+
+size 48 18
+
+frame cloud_big
+....................WWWWWWW.....................
+...............WWWWWWWWWWWWWW......WWWW.........
+............WWWWWWWWWWWWWWWWWWW..WWWWWWWWW......
+..........WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW....
+.......WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW..
+.....WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW.
+...WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+..WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+.WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+wWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWw
+wwWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWww
+.wwwWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwww.
+...wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww..
+.....wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww...
+................................................
 
 size 24 12
 
